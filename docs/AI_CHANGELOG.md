@@ -9,6 +9,28 @@ For an overview of the project status, see:
 - Setup Complete: `docs/setup-complete.md`
 - Implementation Checklist: `docs/implementation-checklist.md`
 
+## 2025-08-31 22:00 — feat: Add sorting functionality to cards view
+- **Author**: AI (Qwen)
+- **Scope**: src/features/cards/views/CardsView.vue
+- **Type**: feat
+- **Summary**: Added sorting functionality to cards view with options for name, set, price, release date, and owned quantity.
+- **Details**:
+  - Added sorting controls with dropdown for sort criteria (name, set, price, release date, owned quantity)
+  - Implemented ascending/descending sort direction toggle
+  - Improved card display by removing redundant Cardmarket price display (since Scryfall already includes Cardmarket data)
+  - Enhanced responsive design for sorting controls
+  - Updated styling for better UX with sorting controls
+  - Maintained existing search functionality alongside sorting
+  - Preserved existing card grid layout with 5 cards per row
+- **Impact/Risks**: Low risk feature addition with no breaking changes
+- **Verification Steps**: 
+  1. Navigate to the cards view
+  2. Verify that sorting controls are visible and functional
+  3. Test sorting by different criteria (name, set, price, release date, owned quantity)
+  4. Test both ascending and descending sort directions
+  5. Verify that search functionality still works alongside sorting
+  6. Verify that card display is unchanged except for the removal of redundant price display
+
 ## 2025-08-31 21:00 — fix: Improve card images display in cards overview view
 - **Author**: AI (Qwen)
 - **Scope**: src/features/cards/views/CardsView.vue
