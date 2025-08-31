@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Cardmarket Tracker v2.2 (IndexedDB)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/idb@7/build/umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-btn {
+            padding: .5rem 1rem;
+            border-radius: .375rem .375rem 0 0;
+            background-color: #e2e8f0; /* bg-slate-200 */
+            font-size: .875rem;
+            color: #475569; /* text-slate-600 */
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            border: 1px solid transparent;
+            border-bottom: 1px solid #cbd5e1; /* border-slate-300 */
+        }
+        .tab-btn:hover {
+            background-color: #cbd5e1; /* bg-slate-300 */
+        }
+        .tab-btn.active {
+            background-color: #ffffff; /* bg-white */
+            border-color: #cbd5e1; /* border-slate-300 */
+            border-bottom-color: #ffffff;
+            font-weight: 600;
+            color: #1e293b; /* text-slate-800 */
+        }
+        .tab-pane { display: none }
+        .tab-pane.active { display: block }
+        th, td { white-space: nowrap; padding: 0.5rem 0.75rem; }
+        td.num { text-align: right }
+        table { border-collapse: collapse; width: 100%; }
+        th { background-color: #f1f5f9; /* bg-slate-100 */ }
+        caption {
+            padding: 0.5rem;
+            text-align: left;
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            color: #334155; /* text-slate-700 */
+            border-bottom: 1px solid #e2e8f0; /* border-slate-200 */
+            margin-bottom: 0.5rem;
+        }
+        #debug::-webkit-scrollbar, .modal-content::-webkit-scrollbar {
+            width: 8px; height: 8px;
+        }
+        #debug::-webkit-scrollbar-track, .modal-content::-webkit-scrollbar-track {
+            background: #f1f5f9; border-radius: 10px;
+        }
+        #debug::-webkit-scrollbar-thumb, .modal-content::-webkit-scrollbar-thumb {
+            background: #cbd5e1; border-radius: 10px;
+        }
+        #debug::-webkit-scrollbar-thumb:hover, .modal-content::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        #csv-input::file-selector-button {
+            padding: 0.5rem 1rem; margin-right: 0.5rem; border-radius: 0.375rem;
+            background-color: #2563eb; color: white; border: none; cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        #csv-input::file-selector-button:hover { background-color: #1d4ed8; }
+        select, input[type="month"], input[type="date"], input[type="text"], input[type="number"] {
+            padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1;
+            border-radius: 0.375rem; background-color: white;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        select:focus, input[type="month"]:focus, input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus {
+            outline: none; border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .btn {
+            padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.1s ease; cursor: pointer;
+        }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background-color: #2563eb; color: white; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-red { background-color: #dc2626; color: white; }
+        .btn-red:hover { background-color: #b91c1c; }
+        .btn-red:disabled { background-color: #fca5a5; cursor: not-allowed; }
+        .btn-yellow { background-color: #f59e0b; color: white; }
+        .btn-yellow:hover { background-color: #d97706; }
+        .btn-gray { background-color: #6b7280; color: white; }
+        .btn-gray:hover { background-color: #4b5563; }
+
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .close-btn {
+            color: #aaa;
+            font-size: 1.75rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover, .close-btn:focus {
+            color: black; text-decoration: none;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500; color: #374151; }
+        .form-group input { width: 100%; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased">
+<div class="container mx-auto p-4 lg:p-8 max-w-7xl"> <header class="text-center mb-10">
+    <h1 class="text-4xl font-bold text-slate-800">Cardmarket Tracker</h1>
+    <p class="text-slate-600 mt-2 text-base">CSV‑Import ▶︎ Lokale Auswertung &amp; Gewinn/Verlust Rechnung</p>
+</header>
+
+    <section class="flex flex-col md:flex-row gap-6 justify-between items-center mb-8 p-6 bg-white rounded-lg shadow">
+        <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <input id="csv-input" type="file" accept=".csv" multiple class="text-sm file:text-sm file:font-medium"/>
+            <button id="clear-btn" class="btn btn-red text-sm disabled:opacity-60" disabled>Daten löschen</button>
+        </div>
+        <div class="flex flex-wrap gap-3 items-center text-sm">
+            <label for="scope" class="text-slate-700 font-medium">Zeitraum:</label>
+            <select id="scope" class="text-sm">
+                <option value="all">Gesamt</option>
+                <option value="year">Jahr</option>
+                <option value="month" selected>Monat</option>
+            </select>
+            <div id="scope-dynamic-controls" class="flex gap-2">
+            </div>
+        </div>
+    </section>
+
+    <section id="summary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10"></section>
+
+    <div>
+        <nav class="ms-2 flex gap-0 flex-wrap" id="tabs-nav">
+            <button data-tab="tab-sales" class="tab-btn active">Verkäufe</button>
+            <button data-tab="tab-purchases" class="tab-btn">Einkäufe</button>
+            <button data-tab="tab-external-purchases" class="tab-btn">Externe Käufe</button>
+            <button data-tab="tab-debug" class="tab-btn">Log</button>
+        </nav>
+
+        <div id="tabs-wrapper" class="bg-white rounded-lg shadow p-4 md:p-6">
+            <div id="tab-sales" class="tab-pane active"></div>
+            <div id="tab-purchases" class="tab-pane"></div>
+            <div id="tab-external-purchases" class="tab-pane">
+                <button id="add-external-purchase-btn" class="btn btn-primary mb-4 text-sm">Externen Kauf hinzufügen</button>
+                <div id="external-purchases-table-container"></div>
+            </div>
+            <div id="tab-debug" class="tab-pane">
+                <pre id="debug" class="bg-slate-50 p-4 border border-slate-200 rounded-md text-xs overflow-auto h-72"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="externalPurchaseModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Externen Kauf hinzufügen</h2>
+            <span class="close-btn" id="closeExternalPurchaseModal">&times;</span>
+        </div>
+        <form id="externalPurchaseForm">
+            <div class="form-group">
+                <label for="ep-description">Beschreibung:</label>
+                <input type="text" id="ep-description" required placeholder="z.B. Booster Display, Commander Deck">
+            </div>
+            <div class="form-group">
+                <label for="ep-price">Preis (€):</label>
+                <input type="number" id="ep-price" step="0.01" required placeholder="z.B. 89.99">
+            </div>
+            <div class="form-group">
+                <label for="ep-date">Kaufdatum:</label>
+                <input type="date" id="ep-date" required>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" id="cancelExternalPurchase" class="btn btn-gray">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script type="module">
+    //------------------------------------------------------------------
+    // Helper / Util
+    //------------------------------------------------------------------
+    const euro = (c) => {
+        const value = (c / 100);
+        return `€${value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+    const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('de-DE') : '';
+    const logEl = document.getElementById('debug');
+    const log = (msg) => {
+        console.log(msg);
+        if (logEl) {
+            logEl.textContent += msg + "\n";
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+    };
+    const parseCMDate = (s) => {
+        if (!s) return null;
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s.substring(0, 10));
+        const m = s.match(/^(\d{2})[\.\/](\d{2})[\.\/](\d{4})/);
+        if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}`);
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    const ym = (d) => d ? d.toISOString().slice(0, 7) : '';
+    const toCent = (v) => {
+        if (typeof v === 'number') return Math.round(v * 100);
+        const strVal = String(v || 0).trim();
+        const cleanedVal = strVal.replace(/€|\s/g, '').replace(/\./g, (match, offset, original) => {
+            return original.includes(',') && original.indexOf(',') > offset ? '' : match;
+        }).replace(',', '.');
+        const num = parseFloat(cleanedVal);
+        return isNaN(num) ? 0 : Math.round(num * 100);
+    };
+    const F = {
+        get(r, ...a) {
+            for (const k of a) if (k in r && r[k] !== "" && r[k] !== null) return r[k];
+            return "";
+        }
+    };
+
+    //------------------------------------------------------------------
+    // IndexedDB Setup
+    //------------------------------------------------------------------
+    const dbPromise = idb.openDB('cardmarketDB', 5, { // Version bumped to 5
+        upgrade(db, oldVersion, newVersion, transaction) {
+            log(`Upgrading DB from v${oldVersion} to v${newVersion}`);
+            // Transactions Store
+            if (!db.objectStoreNames.contains('transactions')) {
+                db.createObjectStore('transactions', {keyPath: 'transactionId'}).createIndex('month', 'month');
+            } else {
+                const store = transaction.objectStore('transactions');
+                if (!store.indexNames.contains('month')) store.createIndex('month', 'month');
+            }
+            // Orders Store
+            if (!db.objectStoreNames.contains('orders')) {
+                const store = db.createObjectStore('orders', {keyPath: 'orderId'});
+                store.createIndex('direction', 'direction');
+                store.createIndex('month', 'month');
+            } else {
+                const store = transaction.objectStore('orders');
+                if (!store.indexNames.contains('direction')) store.createIndex('direction', 'direction');
+                if (!store.indexNames.contains('month')) store.createIndex('month', 'month');
+            }
+            // Articles Store
+            if (!db.objectStoreNames.contains('articles')) {
+                db.createObjectStore('articles', { autoIncrement: true }).createIndex('orderId', 'orderId');
+            } else {
+                const store = transaction.objectStore('articles');
+                if (!store.indexNames.contains('orderId')) store.createIndex('orderId', 'orderId');
+            }
+            // Aggregates Store
+            if (!db.objectStoreNames.contains('aggregates')) {
+                db.createObjectStore('aggregates', {keyPath: 'key'});
+            }
+            // External Purchases Store (NEW)
+            if (!db.objectStoreNames.contains('externalPurchases')) {
+                const epStore = db.createObjectStore('externalPurchases', {keyPath: 'id', autoIncrement: true});
+                epStore.createIndex('purchaseDate', 'purchaseDate');
+                epStore.createIndex('month', 'month'); // For aggregation
+            } else {
+                const epStore = transaction.objectStore('externalPurchases');
+                if(!epStore.indexNames.contains('purchaseDate')) epStore.createIndex('purchaseDate', 'purchaseDate');
+                if(!epStore.indexNames.contains('month')) epStore.createIndex('month', 'month');
+            }
+        }
+    });
+
+    //------------------------------------------------------------------
+    // DOM refs
+    //------------------------------------------------------------------
+    const csvInput = document.getElementById('csv-input');
+    const clearBtn = document.getElementById('clear-btn');
+    const scopeSel = document.getElementById('scope');
+    const scopeDynamicControlsEl = document.getElementById('scope-dynamic-controls');
+    const summaryEl = document.getElementById('summary');
+    const tabsNav = document.getElementById('tabs-nav');
+    // External Purchase Modal elements
+    const externalPurchaseModal = document.getElementById('externalPurchaseModal');
+    const addExternalPurchaseBtn = document.getElementById('add-external-purchase-btn');
+    const closeExternalPurchaseModalBtn = document.getElementById('closeExternalPurchaseModal');
+    const externalPurchaseForm = document.getElementById('externalPurchaseForm');
+    const cancelExternalPurchaseBtn = document.getElementById('cancelExternalPurchase');
+    const externalPurchasesTableContainer = document.getElementById('external-purchases-table-container');
+
+    let availableYears = [];
+    let availableMonths = {}; // { "YYYY": [MM, MM, ...] }
+
+    //------------------------------------------------------------------
+    // CSV Import & Routing
+    //------------------------------------------------------------------
+    csvInput.addEventListener('change', async (e) => {
+        const files = [...e.target.files];
+        if (files.length === 0) return;
+        log(`⏳ ${files.length} Datei(en) werden importiert...`);
+        for (const f of files) {
+            try {
+                const text = await f.text();
+                let delimiter = ';';
+                const firstLines = text.substring(0, 1024);
+                if ((firstLines.match(/,/g) || []).length > (firstLines.match(/;/g) || []).length && (firstLines.match(/,/g) || []).length > 5) {
+                    delimiter = ',';
+                }
+                log(`ℹ️ Using delimiter: '${delimiter}' for ${f.name}`);
+                const rows = Papa.parse(text, {header: true, delimiter: delimiter, skipEmptyLines: true}).data;
+                await routeRows(f.name.toLowerCase(), rows);
+            } catch (error) {
+                log(`❌ Fehler beim Verarbeiten von ${f.name}: ${error.message}`);
+                console.error(error);
+            }
+        }
+        csvInput.value = '';
+        log('⚙️ Berechne Aggregatdaten...');
+        await rebuildAggregates();
+        log('📊 Aktualisiere Zusammenfassung & Filter...');
+        await populateScopeDropdowns(); // This will call refreshSummary indirectly
+        // Removed redundant await refreshSummary(); call here
+        log('📑 Erstelle Tabellenansichten...');
+        await renderAllTables();
+        clearBtn.disabled = false;
+        log('✅ Import und Verarbeitung abgeschlossen.');
+    });
+
+    async function routeRows(name, rows) {
+        log(` routing ${name}`);
+        if (name.includes('transaction') || name.includes('transaktionen')) return importTransactions(rows);
+        if (name.includes('sold orders') || name.includes('verkaufte bestellungen')) return importOrders(rows, 'sale');
+        if (name.includes('purchased orders') || name.includes('gekaufte bestellungen')) return importOrders(rows, 'purchase');
+        if (name.includes('sold articles') || name.includes('verkaufte artikel')) return importArticles(rows, 'sale');
+        if (name.includes('purchased articles') || name.includes('gekaufte artikel')) return importArticles(rows, 'purchase');
+        log(`⚠️ Unbekannter Dateityp oder Name nicht erkannt: ${name}. Bitte Namenskonvention prüfen.`);
+    }
+
+    //--------------------------------------------------
+    // Importers
+    //--------------------------------------------------
+    async function importTransactions(rows) {
+        const db = await dbPromise;
+        const tx = db.transaction('transactions', 'readwrite');
+        let n = 0, skipped = 0;
+        for (const r of rows) {
+            const id = F.get(r, 'Reference', 'Referenz', 'Transaktions-ID');
+            if (!id) { skipped++; continue; }
+            const dateRaw = F.get(r, 'Date Paid', 'Date', 'Datum');
+            const d = parseCMDate(dateRaw);
+            if (!d) { skipped++; log(`Skipped transaction due to invalid date: ${dateRaw}`); continue; }
+            await tx.store.put({
+                transactionId: String(id), date: d.toISOString(), month: ym(d),
+                category: F.get(r, 'Category', 'Kategorie') || '', type: F.get(r, 'Type', 'Typ') || '',
+                counterpart: F.get(r, 'Counterpart', 'Gegenpartei') || '', amountCent: toCent(F.get(r, 'Amount', 'Betrag')),
+                currency: 'EUR', balanceAfterCent: toCent(F.get(r, 'Closing balance (EUR)', 'Balance After', 'Saldo danach (EUR)'))
+            });
+            n++;
+        }
+        await tx.done;
+        log(`✔︎ ${n} Transaktionen importiert. ${skipped > 0 ? skipped + ' übersprungen.' : ''}`);
+    }
+
+    async function importOrders(rows, dir) {
+        const db = await dbPromise;
+        const tx = db.transaction('orders', 'readwrite');
+        let n = 0, skipped = 0;
+        for (const r of rows) {
+            const id = F.get(r, 'Order ID', 'OrderID', 'Bestellnummer');
+            if (!id) { skipped++; continue; }
+            const dateRaw = F.get(r, 'Date of Purchase', 'Date', 'Date of Payment', 'Kaufdatum', 'Zahlungsdatum');
+            const d = parseCMDate(dateRaw);
+            if (!d) { log(`⚠️ Bestellung ${id} hat kein gültiges Datum: ${dateRaw}. Monat wird null.`);}
+            await tx.store.put({
+                orderId: String(id), date: d ? d.toISOString() : null, month: d ? ym(d) : null, direction: dir,
+                username: F.get(r, 'Username', 'Benutzername') || '', country: F.get(r, 'Country', 'Land') || '',
+                city: F.get(r, 'City', 'Stadt') || '', articleCount: Number(F.get(r, 'Article Count', 'Items', 'Anzahl Artikel')) || 0,
+                merchandiseValueCent: toCent(F.get(r, 'Merchandise Value', 'Warenwert')),
+                shipmentCostsCent: toCent(F.get(r, 'Shipment Costs', 'Versandkosten')),
+                commissionCent: toCent(F.get(r, 'Commission', 'Trustee service fee', 'Provision')),
+                totalValueCent: toCent(F.get(r, 'Total Value', 'Gesamtwert')), currency: 'EUR'
+            });
+            n++;
+        }
+        await tx.done;
+        log(`✔︎ ${n} ${dir === 'sale' ? 'Verkaufs' : 'Einkaufs'}bestellungen importiert. ${skipped > 0 ? skipped + ' übersprungen.' : ''}`);
+    }
+
+    async function importArticles(rows, dir) {
+        const db = await dbPromise;
+        const tx = db.transaction('articles', 'readwrite');
+        let n = 0, skipped = 0;
+        for (const r of rows) {
+            const orderId = F.get(r, 'Shipment nr.', 'Shipment nr', 'Shipment ID', 'Order ID', 'Bestellnummer');
+            if (!orderId) { skipped++; continue; }
+            const dateRaw = F.get(r, 'Date of purchase', 'Date');
+            const d = parseCMDate(dateRaw);
+            const qty = Number(F.get(r, 'Amount', 'Anzahl')) || 1;
+            const unit = toCent(F.get(r, 'Article Value', 'Price', 'Preis'));
+            await tx.store.add({
+                orderId: String(orderId), date: d ? d.toISOString() : null, month: d ? ym(d) : null, direction: dir,
+                productId: F.get(r, 'Product ID', 'Produkt ID') || '', name: F.get(r, 'Article', 'Artikel', 'Produktname') || '',
+                expansion: F.get(r, 'Expansion', 'Erweiterung') || '', category: F.get(r, 'Category', 'Kategorie') || '',
+                quantity: qty, unitPriceCent: unit, totalCent: unit * qty, currency: 'EUR'
+            });
+            n++;
+        }
+        await tx.done;
+        log(`✔︎ ${n} ${dir} Artikel importiert. ${skipped > 0 ? skipped + ' übersprungen.' : ''}`);
+    }
+
+    // ------------------------------------------------------------------
+    // External Purchases Modal & CRUD
+    // ------------------------------------------------------------------
+    addExternalPurchaseBtn.addEventListener('click', () => {
+        externalPurchaseForm.reset();
+        document.getElementById('ep-date').valueAsDate = new Date(); // Default to today
+        externalPurchaseModal.style.display = 'flex';
+    });
+    closeExternalPurchaseModalBtn.addEventListener('click', () => externalPurchaseModal.style.display = 'none');
+    cancelExternalPurchaseBtn.addEventListener('click', () => externalPurchaseModal.style.display = 'none');
+    window.addEventListener('click', (event) => {
+        if (event.target === externalPurchaseModal) externalPurchaseModal.style.display = 'none';
+    });
+
+    externalPurchaseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const description = document.getElementById('ep-description').value.trim();
+        const price = parseFloat(document.getElementById('ep-price').value);
+        const purchaseDateRaw = document.getElementById('ep-date').value;
+
+        if (!description || isNaN(price) || price <= 0 || !purchaseDateRaw) {
+            log('❌ Bitte alle Felder für externen Kauf korrekt ausfüllen.');
+            alert('Bitte alle Felder korrekt ausfüllen. Preis muss größer als 0 sein.');
+            return;
+        }
+        const purchaseDate = new Date(purchaseDateRaw);
+
+        const db = await dbPromise;
+        await db.add('externalPurchases', {
+            description,
+            priceCent: Math.round(price * 100),
+            purchaseDate: purchaseDate.toISOString(),
+            month: ym(purchaseDate)
+        });
+        log(`✔︎ Externer Kauf hinzugefügt: ${description}`);
+        externalPurchaseModal.style.display = 'none';
+        await rebuildAggregates();
+        await populateScopeDropdowns();
+        // await refreshSummary(); // This call is redundant as populateScopeDropdowns -> updateScopeControls -> refreshSummary
+        await renderExternalPurchasesTable();
+    });
+
+    async function renderExternalPurchasesTable() {
+        externalPurchasesTableContainer.innerHTML = '<p class="text-slate-500 p-4">Lade externe Käufe...</p>';
+        const db = await dbPromise;
+        const purchases = await db.getAllFromIndex('externalPurchases', 'purchaseDate');
+        purchases.sort((a,b) => b.purchaseDate.localeCompare(a.purchaseDate));
+
+        if (!purchases || purchases.length === 0) {
+            externalPurchasesTableContainer.innerHTML = '<p class="text-slate-500 p-4">Keine externen Käufe erfasst.</p>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'min-w-full bg-white border border-slate-200 rounded-md shadow-sm';
+        table.innerHTML = `<caption class="bg-slate-50 p-3">Externe Käufe (${purchases.length})</caption>
+        <thead class="bg-slate-100 text-xs text-slate-600 uppercase"><tr>
+            <th class="px-3 py-2 text-left">Datum</th><th class="px-3 py-2 text-left">Beschreibung</th>
+            <th class="px-3 py-2 num">Preis</th><th class="px-3 py-2 text-center">Aktion</th>
+        </tr></thead><tbody></tbody>`;
+        const tbody = table.querySelector('tbody');
+        purchases.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-t border-slate-200 hover:bg-slate-50';
+            tr.innerHTML = `
+                <td class="px-3 py-2 text-sm">${fmtDate(p.purchaseDate)}</td>
+                <td class="px-3 py-2 text-sm">${p.description}</td>
+                <td class="px-3 py-2 text-sm num">${euro(p.priceCent)}</td>
+                <td class="px-3 py-2 text-sm text-center">
+                    <button data-id="${p.id}" class="delete-ep-btn text-red-500 hover:text-red-700 text-xs">Löschen</button>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+        externalPurchasesTableContainer.innerHTML = '';
+        externalPurchasesTableContainer.appendChild(table);
+
+        tbody.querySelectorAll('.delete-ep-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idToDelete = parseInt(e.target.dataset.id);
+                if (confirm('Diesen externen Kauf wirklich löschen?')) { // Consider custom modal for confirm
+                    await db.delete('externalPurchases', idToDelete);
+                    log(`🗑️ Externer Kauf ID ${idToDelete} gelöscht.`);
+                    await rebuildAggregates();
+                    await populateScopeDropdowns();
+                    // await refreshSummary(); // Redundant
+                    await renderExternalPurchasesTable();
+                }
+            });
+        });
+    }
+
+
+    // ------------------------------------------------------------------
+    // Aggregates
+    // ------------------------------------------------------------------
+    async function rebuildAggregates() {
+        const db = await dbPromise;
+        await db.clear('aggregates');
+        log('🧹 Alte Aggregate gelöscht.');
+
+        const sums = {};
+        const initMonthData = () => ({
+            salesRevenueCent: 0, shippingRevenueCent: 0, purchaseCostsCent: 0,
+            shippingExpensesCent: 0, commissionFeesCent: 0, otherFeesCent: 0,
+            externalPurchaseCostsCent: 0
+        });
+
+        // 1. Process Orders
+        const ordersTx = db.transaction('orders', 'readonly');
+        let orderCursor = await ordersTx.store.index('month').openCursor();
+        log('⚙️ Verarbeite Bestellungen für Aggregate...');
+        while (orderCursor) {
+            const order = orderCursor.value;
+            const month = order.month;
+            if (!month) { orderCursor = await orderCursor.continue(); continue; }
+            sums[month] ??= initMonthData();
+            if (order.direction === 'sale') {
+                sums[month].salesRevenueCent += order.merchandiseValueCent || 0;
+                sums[month].shippingRevenueCent += order.shipmentCostsCent || 0;
+                sums[month].commissionFeesCent += order.commissionCent || 0;
+                sums[month].shippingExpensesCent += order.shipmentCostsCent || 0;
+            } else if (order.direction === 'purchase') {
+                sums[month].purchaseCostsCent += order.merchandiseValueCent || 0;
+                sums[month].shippingExpensesCent += order.shipmentCostsCent || 0;
+            }
+            orderCursor = await orderCursor.continue();
+        }
+        await ordersTx.done;
+
+        // 2. Process External Purchases
+        const epTx = db.transaction('externalPurchases', 'readonly');
+        let epCursor = await epTx.store.index('month').openCursor();
+        log('⚙️ Verarbeite externe Käufe für Aggregate...');
+        while(epCursor) {
+            const ep = epCursor.value;
+            const month = ep.month;
+            if (!month) { epCursor = await epCursor.continue(); continue; }
+            sums[month] ??= initMonthData();
+            sums[month].externalPurchaseCostsCent += ep.priceCent || 0;
+            epCursor = await epCursor.continue();
+        }
+        await epTx.done;
+
+        // 3. Process Transactions for 'Other Fees'
+        const transTx = db.transaction('transactions', 'readonly');
+        let transCursor = await transTx.store.index('month').openCursor();
+        log('⚙️ Verarbeite Transaktionen für zusätzliche Gebühren...');
+        while (transCursor) {
+            const transaction = transCursor.value;
+            const month = transaction.month;
+            if (!month) { transCursor = await transCursor.continue(); continue; }
+            sums[month] ??= initMonthData();
+            if (transaction.category === 'Fees' || transaction.category === 'Gebühren') {
+                sums[month].otherFeesCent += Math.abs(transaction.amountCent || 0);
+            }
+            transCursor = await transCursor.continue();
+        }
+        await transTx.done;
+
+        // 4. Save Aggregates
+        log('💾 Speichere neue Aggregate...');
+        const aggregatesWriteTx = db.transaction('aggregates', 'readwrite');
+        for (const [m, v] of Object.entries(sums)) {
+            const totalPurchaseCosts = v.purchaseCostsCent + v.externalPurchaseCostsCent;
+            const profit = (v.salesRevenueCent + v.shippingRevenueCent) -
+                (totalPurchaseCosts + v.shippingExpensesCent + v.commissionFeesCent + v.otherFeesCent);
+            await aggregatesWriteTx.store.put({
+                key: m, salesRevenueCent: v.salesRevenueCent, shippingRevenueCent: v.shippingRevenueCent,
+                purchaseCostsCent: totalPurchaseCosts,
+                shippingExpensesCent: v.shippingExpensesCent, commissionFeesCent: v.commissionFeesCent,
+                otherFeesCent: v.otherFeesCent, profitCent: profit
+            });
+        }
+        await aggregatesWriteTx.done;
+        log('✔︎ Aggregate neu erstellt und gespeichert.');
+    }
+
+    //------------------------------------------------------------------
+    // Scope Dropdown Management
+    //------------------------------------------------------------------
+    async function populateScopeDropdowns() {
+        const db = await dbPromise;
+        const allAggregates = await db.getAll('aggregates');
+        const newAvailableYears = new Set();
+        const newAvailableMonths = {};
+
+        allAggregates.forEach(agg => {
+            const [year, month] = agg.key.split('-');
+            newAvailableYears.add(year);
+            if (!newAvailableMonths[year]) {
+                newAvailableMonths[year] = new Set();
+            }
+            newAvailableMonths[year].add(month);
+        });
+
+        availableYears = Array.from(newAvailableYears).sort((a, b) => b.localeCompare(a));
+        for (const year in newAvailableMonths) {
+            availableMonths[year] = Array.from(newAvailableMonths[year]).sort((a,b) => a.localeCompare(b));
+        }
+        updateScopeControls();
+    }
+
+    function updateScopeControls() {
+        const scope = scopeSel.value;
+        scopeDynamicControlsEl.innerHTML = '';
+
+        if (scope === 'year') {
+            const yearSelect = document.createElement('select');
+            yearSelect.id = 'scope-year-val';
+            yearSelect.className = 'text-sm';
+            if (availableYears.length === 0) {
+                yearSelect.innerHTML = '<option value="">Keine Daten</option>';
+                yearSelect.disabled = true;
+            } else {
+                availableYears.forEach(y => yearSelect.add(new Option(y, y)));
+            }
+            yearSelect.addEventListener('change', refreshSummary);
+            scopeDynamicControlsEl.appendChild(yearSelect);
+        } else if (scope === 'month') {
+            const yearSelect = document.createElement('select');
+            yearSelect.id = 'scope-month-year-val';
+            yearSelect.className = 'text-sm';
+
+            const monthSelect = document.createElement('select');
+            monthSelect.id = 'scope-month-val';
+            monthSelect.className = 'text-sm';
+
+            if (availableYears.length === 0) {
+                yearSelect.innerHTML = '<option value="">Keine Jahre</option>';
+                yearSelect.disabled = true;
+                monthSelect.innerHTML = '<option value="">Keine Monate</option>';
+                monthSelect.disabled = true;
+            } else {
+                availableYears.forEach(y => yearSelect.add(new Option(y, y)));
+
+                const populateMonthsForYear = (selectedYear) => {
+                    monthSelect.innerHTML = '';
+                    if (availableMonths[selectedYear] && availableMonths[selectedYear].length > 0) {
+                        availableMonths[selectedYear].forEach(m => {
+                            const monthDate = new Date(`${selectedYear}-${m}-01`);
+                            const monthName = monthDate.toLocaleString('de-DE', { month: 'long' });
+                            monthSelect.add(new Option(`${monthName} (${m})`, m));
+                        });
+                        monthSelect.disabled = false;
+                    } else {
+                        monthSelect.innerHTML = '<option value="">Keine Monate</option>';
+                        monthSelect.disabled = true;
+                    }
+                };
+
+                yearSelect.addEventListener('change', () => {
+                    populateMonthsForYear(yearSelect.value);
+                    refreshSummary();
+                });
+                monthSelect.addEventListener('change', refreshSummary);
+
+                if(availableYears.length > 0) {
+                    populateMonthsForYear(availableYears[0]);
+                    const currentFullMonth = new Date().toISOString().slice(5,7);
+                    if (availableMonths[availableYears[0]] && availableMonths[availableYears[0]].includes(currentFullMonth)) {
+                        monthSelect.value = currentFullMonth;
+                    }
+                }
+            }
+            scopeDynamicControlsEl.appendChild(yearSelect);
+            scopeDynamicControlsEl.appendChild(monthSelect);
+        }
+        refreshSummary();
+    }
+
+
+    //------------------------------------------------------------------
+    // UI Updates (Summary, Tables, Tabs)
+    //------------------------------------------------------------------
+    scopeSel.addEventListener('change', updateScopeControls);
+    tabsNav.addEventListener('click', switchTab);
+
+    function switchTab(e) {
+        const btn = e.target.closest('.tab-btn');
+        if (!btn || btn.classList.contains('active')) return;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const id = btn.dataset.tab;
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === id));
+    }
+
+    async function renderAllTables() {
+        await renderOrdersTable('sale', '#tab-sales', 'Verkaufte Bestellungen');
+        await renderOrdersTable('purchase', '#tab-purchases', 'Gekaufte Bestellungen (Cardmarket)');
+        await renderExternalPurchasesTable();
+    }
+
+    async function renderOrdersTable(direction, selector, title) {
+        const wrap = document.querySelector(selector);
+        if (!wrap) return;
+        wrap.innerHTML = '<p class="text-slate-500 p-4">Lade Daten...</p>';
+        const db = await dbPromise;
+        const orders = await db.getAllFromIndex('orders', 'direction', direction);
+        if (!orders || orders.length === 0) {
+            wrap.innerHTML = `<p class="text-slate-500 p-4">Keine ${direction === 'sale' ? 'Verkaufs' : 'Einkaufs'}bestellungen gefunden.</p>`;
+            return;
+        }
+        orders.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const table = document.createElement('table');
+        table.className = 'min-w-full bg-white border border-slate-200 rounded-md shadow-sm';
+        table.innerHTML = `<caption class="bg-slate-50 p-3">${title} (${orders.length})</caption>
+        <thead class="bg-slate-100 text-xs text-slate-600 uppercase"> <tr>
+          <th class="px-3 py-2 text-left">Datum</th><th class="px-3 py-2 text-left">Order ID</th><th class="px-3 py-2 text-left">User</th>
+          <th class="px-3 py-2 num">Artikel</th><th class="px-3 py-2 num">Warenwert</th><th class="px-3 py-2 num">Versand</th><th class="px-3 py-2 num">Provision</th><th class="px-3 py-2 num">Gesamt</th>
+        </tr></thead><tbody></tbody>`;
+        const tbody = table.querySelector('tbody');
+        orders.forEach(o => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-t border-slate-200 hover:bg-slate-50 transition-colors duration-150';
+            tr.innerHTML = `
+                <td class="px-3 py-2 text-sm">${fmtDate(o.date)}</td><td class="px-3 py-2 text-sm">${o.orderId}</td>
+                <td class="px-3 py-2 text-sm truncate max-w-xs">${o.username}</td><td class="px-3 py-2 text-sm num">${o.articleCount}</td>
+                <td class="px-3 py-2 text-sm num">${euro(o.merchandiseValueCent)}</td><td class="px-3 py-2 text-sm num">${euro(o.shipmentCostsCent)}</td>
+                <td class="px-3 py-2 text-sm num">${euro(o.commissionCent)}</td><td class="px-3 py-2 text-sm num font-semibold">${euro(o.totalValueCent)}</td>`;
+            tbody.appendChild(tr);
+        });
+        wrap.innerHTML = '';
+        wrap.appendChild(table);
+    }
+
+    async function refreshSummary() {
+        const db = await dbPromise;
+        const sc = scopeSel.value;
+        summaryEl.innerHTML = '';
+
+        let aggregatesData = [];
+        if (sc === 'all') {
+            aggregatesData = await db.getAll('aggregates');
+        } else if (sc === 'year') {
+            const yearVal = document.getElementById('scope-year-val')?.value;
+            if (yearVal) {
+                aggregatesData = (await db.getAll('aggregates')).filter(a => a.key.startsWith(yearVal));
+            }
+        } else if (sc === 'month') {
+            const yearVal = document.getElementById('scope-month-year-val')?.value;
+            const monthVal = document.getElementById('scope-month-val')?.value;
+            if (yearVal && monthVal) {
+                const monthKey = `${yearVal}-${monthVal}`;
+                const rec = await db.get('aggregates', monthKey);
+                if (rec) aggregatesData = [rec];
+            }
+        }
+
+        if (!aggregatesData.length && sc !== 'all') {
+            summaryEl.innerHTML = '<p class="col-span-full text-slate-500 text-center py-10">Keine Daten für den ausgewählten Zeitraum.</p>';
+            return;
+        }
+        if (!aggregatesData.length && sc === 'all' && !(await db.count('orders')) && !(await db.count('externalPurchases'))) { // Check if any data exists at all
+            summaryEl.innerHTML = '<p class="col-span-full text-slate-500 text-center py-10">Keine Daten vorhanden. Bitte CSVs importieren oder externe Käufe hinzufügen.</p>';
+            return;
+        }
+
+
+        const totals = aggregatesData.reduce((acc, d) => {
+            acc.salesRevenueCent += d.salesRevenueCent || 0;
+            acc.shippingRevenueCent += d.shippingRevenueCent || 0;
+            acc.purchaseCostsCent += d.purchaseCostsCent || 0;
+            acc.shippingExpensesCent += d.shippingExpensesCent || 0;
+            acc.commissionFeesCent += d.commissionFeesCent || 0;
+            acc.otherFeesCent += d.otherFeesCent || 0;
+            acc.profitCent += d.profitCent || 0;
+            return acc;
+        }, {
+            salesRevenueCent: 0, shippingRevenueCent: 0, purchaseCostsCent: 0,
+            shippingExpensesCent: 0, commissionFeesCent: 0, otherFeesCent: 0, profitCent: 0
+        });
+
+        const netOperatingCosts = (totals.commissionFeesCent + totals.otherFeesCent + totals.shippingExpensesCent) - totals.shippingRevenueCent;
+        const tiles = [
+            {label: 'Verkäufe', value: totals.salesRevenueCent, colorClass: 'text-green-600'},
+            {label: 'Einkäufe', value: totals.purchaseCostsCent, colorClass: 'text-orange-600'},
+            {label: 'Nebenkosten', value: netOperatingCosts, colorClass: netOperatingCosts >= 0 ? 'text-red-600' : 'text-sky-600'},
+            {label: 'Gewinn / Verlust', value: totals.profitCent, colorClass: totals.profitCent >= 0 ? 'text-blue-600' : 'text-red-700 font-bold'}
+        ];
+        tiles.forEach(tile => {
+            const div = document.createElement('div');
+            div.className = 'p-5 bg-white border border-slate-200 rounded-lg shadow-md flex flex-col justify-between';
+            div.innerHTML = `<div>
+                <p class="text-sm text-slate-500 font-medium">${tile.label}</p>
+                <p class="text-2xl font-semibold ${tile.colorClass} mt-1">${euro(tile.value)}</p>
+            </div>`;
+            summaryEl.appendChild(div);
+        });
+    }
+
+    //------------------------------------------------------------------
+    // Clear Data Button
+    //------------------------------------------------------------------
+    let confirmClearState = false;
+    let confirmClearTimeout = null;
+    clearBtn.addEventListener('click', async () => {
+        if (!confirmClearState) {
+            clearBtn.textContent = 'Wirklich löschen?';
+            clearBtn.classList.remove('btn-red'); clearBtn.classList.add('btn-yellow');
+            confirmClearState = true;
+            if (confirmClearTimeout) clearTimeout(confirmClearTimeout);
+            confirmClearTimeout = setTimeout(() => {
+                if (confirmClearState) {
+                    clearBtn.textContent = 'Daten löschen';
+                    clearBtn.classList.remove('btn-yellow'); clearBtn.classList.add('btn-red');
+                    confirmClearState = false;
+                }
+            }, 3000);
+            return;
+        }
+        log('🗑️ Alle Daten werden gelöscht...');
+        const db = await dbPromise;
+        await Promise.all(['transactions', 'orders', 'articles', 'aggregates', 'externalPurchases'].map(s => db.clear(s)));
+        summaryEl.innerHTML = '<p class="col-span-full text-slate-500 text-center py-10">Alle Daten wurden gelöscht.</p>';
+        document.getElementById('tab-sales').innerHTML = '<p class="text-slate-500 p-4">Keine Verkaufsbestellungen gefunden.</p>';
+        document.getElementById('tab-purchases').innerHTML = '<p class="text-slate-500 p-4">Keine Einkaufsbestellungen gefunden.</p>';
+        externalPurchasesTableContainer.innerHTML = '<p class="text-slate-500 p-4">Keine externen Käufe erfasst.</p>';
+        logEl.textContent = 'ℹ️ Datenbank geleert.\n';
+        clearBtn.disabled = true;
+        clearBtn.textContent = 'Daten löschen';
+        clearBtn.classList.remove('btn-yellow'); clearBtn.classList.add('btn-red');
+        confirmClearState = false;
+        if (confirmClearTimeout) clearTimeout(confirmClearTimeout);
+        log('✅ Alle Daten erfolgreich gelöscht.');
+        await populateScopeDropdowns();
+        await refreshSummary();
+    });
+
+    //------------------------------------------------------------------
+    // Initial Load
+    //------------------------------------------------------------------
+    async function initializeApp() {
+        log('🚀 Anwendung initialisiert. Lade vorhandene Daten...');
+        const db = await dbPromise;
+        // Use db.count for checking if stores have data, it's more efficient
+        const ordersCount = await db.count('orders');
+        const externalCount = await db.count('externalPurchases');
+
+        if (ordersCount > 0 || externalCount > 0) {
+            clearBtn.disabled = false;
+            log('ℹ️ Vorhandene Daten gefunden.');
+            await rebuildAggregates();
+        } else {
+            log('ℹ️ Keine vorhandenen Daten in der Datenbank.');
+        }
+        await populateScopeDropdowns();
+        await renderAllTables();
+        log('✅ Initialisierung abgeschlossen. Bereit für CSV-Import oder manuelle Eingaben.');
+    }
+    initializeApp();
+</script>
+</body>
+</html>
