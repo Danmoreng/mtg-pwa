@@ -9,6 +9,23 @@ For an overview of the project status, see:
 - Setup Complete: `docs/setup-complete.md`
 - Implementation Checklist: `docs/implementation-checklist.md`
 
+## 2025-08-31 21:00 — fix: Improve card images display in cards overview view
+- **Author**: AI (Qwen)
+- **Scope**: src/features/cards/views/CardsView.vue
+- **Type**: fix
+- **Summary**: Improved card images display in cards overview view to match deck view styling and increase cards per row.
+- **Details**:
+  - Updated card image display to use full-width container with proper image scaling
+  - Changed grid layout to show 5 cards per row (matching deck view)
+  - Added image error handling with placeholder images
+  - Improved card details styling for better readability
+- **Impact/Risks**: Low risk UI improvements with no functional changes
+- **Verification Steps**: 
+  1. Navigate to the cards overview view
+  2. Verify that card images fill their containers properly
+  3. Verify that 5 cards are displayed per row (matching deck view)
+  4. Verify that image error handling works correctly
+
 ## 2025-08-31 15:30 — fix: Improve deck import process and deck detail view
 - **Author**: AI (Qwen)
 - **Scope**: src/features/decks/DeckImportService.ts, src/features/decks/views/DeckImportView.vue, src/features/decks/views/DeckDetailView.vue
