@@ -2,6 +2,13 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+For an overview of the project status, see:
+- Project Plan: `docs/project_plan.md`
+- Implementation Status: `docs/project-status.md`
+- Implementation Summary: `docs/implementation-summary.md`
+- Setup Complete: `docs/setup-complete.md`
+- Implementation Checklist: `docs/implementation-checklist.md`
+
 ## 2025-08-31 15:30 — fix: Improve deck import process and deck detail view
 - **Author**: AI (Qwen)
 - **Scope**: src/features/decks/DeckImportService.ts, src/features/decks/views/DeckImportView.vue, src/features/decks/views/DeckDetailView.vue

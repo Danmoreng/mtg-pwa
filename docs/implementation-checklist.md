@@ -2,7 +2,7 @@
 
 This checklist tracks the implementation of features according to the project plan.
 
-## Milestone 1: Foundation
+## Milestone 1: Foundation ✅ COMPLETE
 - [x] Set up Vue 3 + TypeScript project with Vite
 - [x] Add PWA support with vite-plugin-pwa
 - [x] Configure ESLint + Prettier with strict TypeScript
@@ -13,49 +13,49 @@ This checklist tracks the implementation of features according to the project pl
 - [x] Create Dexie database with initial schema
 - [x] Define core domain types
 - [x] Create Money utility
-- [ ] Create basic UI components
+- [x] Create basic UI components
 
-## Milestone 2: Cardmarket Import
-- [ ] Create Cardmarket CSV parser worker
-- [ ] Implement transaction repository
-- [ ] Create import service for Cardmarket data
+## Milestone 2: Cardmarket Import 🚧 IN PROGRESS
+- [x] Create Cardmarket CSV parser worker (basic implementation)
+- [x] Implement transaction repository
+- [x] Create import service for Cardmarket data (basic implementation)
 - [ ] Build import wizard UI
-- [ ] Update holdings based on imports
-- [ ] Implement valuation engine
+- [x] Update holdings based on imports (partially implemented)
+- [ ] Implement complete valuation engine
 
-## Milestone 3: Pricing & Snapshots
-- [ ] Create Scryfall provider
+## Milestone 3: Pricing & Snapshots 🚧 IN PROGRESS
+- [x] Create Scryfall provider (basic implementation)
 - [ ] Implement price sync worker
-- [ ] Create snapshot service
+- [x] Create snapshot service (basic implementation)
 - [ ] Build dashboard with KPIs
 - [ ] Implement manual price refresh
 
-## Milestone 4: ManaBox Scans
+## Milestone 4: ManaBox Scans 🔲 NOT STARTED
 - [ ] Create ManaBox CSV parser
 - [ ] Implement scan repository
 - [ ] Build scan matching algorithm
 - [ ] Create scans view with sold/owned status
 
-## Milestone 5: Moxfield Decks
-- [ ] Create deck import service
-- [ ] Implement deck repository
-- [ ] Build deck import UI
-- [ ] Calculate ownership coverage
-- [ ] Create deck view
+## Milestone 5: Moxfield Decks 🚧 IN PROGRESS
+- [x] Create deck import service (basic implementation)
+- [x] Implement deck repository
+- [x] Build deck import UI (text format)
+- [x] Calculate ownership coverage (basic implementation)
+- [x] Create deck view (with images)
 
-## Milestone 6: PWA Polish
+## Milestone 6: PWA Polish 🔲 NOT STARTED
 - [ ] Implement service worker caching
 - [ ] Add background sync for price updates
-- [ ] Implement backup/restore functionality
+- [x] Implement backup/restore functionality
 - [ ] Add offline support for imports
 
-## Milestone 7: Analytics Deep-Dive
+## Milestone 7: Analytics Deep-Dive 🔲 NOT STARTED
 - [ ] Enhance valuation engine with FIFO calculations
 - [ ] Create time series charts with SVG
 - [ ] Build per-card P/L views
 - [ ] Add advanced filtering and sorting
 
-## Testing & Quality
+## Testing & Quality 🔲 NOT STARTED
 - [ ] Unit tests for core utilities
 - [ ] Component tests for UI
 - [ ] E2E tests with Playwright

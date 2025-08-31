@@ -2,7 +2,7 @@
 
 ## Project Status
 
-The initial setup and foundation for the MTG Collection Value Tracker PWA has been completed according to the project plan.
+The initial setup and foundation for the MTG Collection Value Tracker PWA has been completed according to the project plan, with significant enhancements to core features.
 
 ## What's Been Accomplished
 
@@ -17,6 +17,15 @@ The initial setup and foundation for the MTG Collection Value Tracker PWA has be
 - Dexie database with typed repositories
 - Core domain types and utilities (Money, Settings)
 
+### ✅ Enhanced Core Features
+- **Deck Import Functionality**: 
+  - Implemented card image fetching from Scryfall API
+  - Added progress bar during import to show import status
+  - Fixed UI freezing during deck import with non-blocking processing
+  - Resolved database constraint errors during import
+  - Improved deck detail view with grid layout and card images
+- **Data Integrity**: Enhanced ownership calculation and display
+
 ### ✅ Core Architecture
 - Complete data model with all required entities
 - Repository pattern for data access
@@ -27,7 +36,7 @@ The initial setup and foundation for the MTG Collection Value Tracker PWA has be
 
 ### ✅ Key Services Implemented
 - Money utility for financial calculations
-- Scryfall provider for card pricing
+- Scryfall provider for card pricing and image fetching
 - Entity linker for card identification
 - Valuation engine for portfolio calculations
 - Backup service for data export/import
@@ -52,6 +61,20 @@ src/
   ui/                 # Components (plain CSS), tokens.css
   workers/            # Web workers for CSV parsing & pricing sync
 ```
+
+## Recent Technical Improvements
+
+### Deck Import Enhancements
+- **Card Image Display**: Implemented proper card image fetching from Scryfall API using the correct `image_uris.normal` path with fallbacks to `large` and `small` sizes
+- **User Experience**: Added progress bar during import and non-blocking processing to prevent UI freezing
+- **Data Integrity**: Fixed database constraint errors that occurred during deck import
+- **UI Enhancement**: Improved deck detail view with grid layout and card images
+- **Ownership Tracking**: Enhanced ownership calculation and display
+
+### Optimization
+- Optimized image fetching by using data from Scryfall API response instead of making separate calls
+- Removed custom image caching in favor of browser caching
+- Improved error handling and debugging capabilities
 
 ## Next Steps
 
@@ -93,4 +116,4 @@ The new implementation significantly improves on the legacy version with:
 
 ## Conclusion
 
-The foundation is solid and ready for the next phase of development. All core architecture decisions have been implemented, and the project structure is in place for efficient development of the remaining features.
+The foundation is solid and ready for the next phase of development. All core architecture decisions have been implemented, and the project structure is in place for efficient development of the remaining features. The recent enhancements to the deck import functionality demonstrate the project's maturity and readiness for more advanced features.
