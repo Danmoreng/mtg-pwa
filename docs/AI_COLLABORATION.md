@@ -1,17 +1,44 @@
 # Working with the AI Assistant
 
-This document provides guidelines for collaborating with the AI assistant on this project.
+This document explains how to work effectively with the AI assistant for the MTG Value Tracker project.
 
-## How to Work with the AI
+## AI Collaboration Workflow
 
-1. The AI proposes code changes, documentation updates, and implementation suggestions
-2. All code changes must be reviewed and applied manually by the human developer
-3. The AI never runs build commands, dev servers, or tests - these are always done by the human
-4. Every AI-proposed change includes a changelog entry that should be appended to `docs/AI_CHANGELOG.md`
+1. **Human-Centric Development**: The human developer sets up the environment, runs servers/builds, and performs manual testing.
 
-## Change Log Format
+2. **AI as Assistant**: The AI proposes designs, code changes, and tests; it does **not** execute commands.
 
-Every AI proposal must include a changelog entry with this format:
+3. **Clear Boundaries**: The AI never runs `npm run dev/build/test`. It may suggest commands and code, and provide verification steps.
+
+4. **Traceability**: Every AI-proposed change is logged in the `AI_CHANGELOG.md` file.
+
+## Communication Guidelines
+
+### When Providing Instructions
+1. Explain **why** (tradeoffs, performance, privacy, UX).
+2. Break work into **atomic steps** that are easy to review.
+3. Reference **specific files** and code regions.
+4. Clarify how changes fit the **overall architecture** (features, workers, repositories).
+
+### When Discussing Tasks
+1. Mark tasks requiring **human execution** (commands, manual tests).
+2. Provide **exact command syntax** where applicable.
+3. State **expected outcomes** and **how to verify**.
+4. Call out **edge cases** (large CSVs, offline mode, currency formats).
+
+## Code Contribution Format
+
+When proposing changes, the AI replies with these sections:
+
+1. **Summary** — 1–2 sentences of the goal.
+2. **Rationale** — why this approach.
+3. **Changeset** — file-by-file patches.
+4. **Verification** — exact commands for the human to run, expected outputs, and manual UI checks.
+5. **Changelog** — an entry to append to `docs/AI_CHANGELOG.md`.
+
+## Changelog Discipline
+
+Every AI proposal must include a changelog entry in `docs/AI_CHANGELOG.md` with the following format:
 
 ```markdown
 ## YYYY-MM-DD HH:MM — <short title>
@@ -23,12 +50,11 @@ Every AI proposal must include a changelog entry with this format:
   - Bullet points of key changes
 - **Impact/Risks**: migrations? data changes? perf?
 - **Verification Steps**: commands + manual checks
-- **Linked Task/Issue**: optional
 ```
 
 ## Commit Message Format
 
-All commits that include AI-proposed changes should use this format:
+All AI-proposed commits should use the following format:
 
 ```
 [AI] <type>(<scope>): <description>
@@ -38,19 +64,30 @@ All commits that include AI-proposed changes should use this format:
 
 Example:
 ```
-[AI] feat(import): add Moxfield deck import functionality
+[AI] fix(deck-import): resolve database constraint errors
 
-### CHANGELOG ENTRY (to append)
-## 2025-08-31 15:00 — feat: Add Moxfield deck import functionality
+## 2025-08-31 20:15 — fix: Resolve database constraint errors during deck import
 - **Author**: AI (Qwen)
-- **Scope**: src/features/decks/DeckImportService.ts, src/features/decks/views/DeckImportView.vue
-- **Type**: feat
-- **Summary**: Implement Moxfield deck import using text format.
+- **Scope**: src/features/decks/views/DeckImportView.vue
+- **Type**: fix
+- **Summary**: Fixed database constraint errors that occurred during deck import by removing duplicate card additions and using upsert for deck cards.
 - **Details**:
-  - Added DeckImportService with importDeckFromText method
-  - Created DeckImportView with textarea for pasting decklists
-  - Updated router with new import route
-- **Impact/Risks**: No schema changes required.
-- **Verification Steps**: npm run build; npm run dev; paste Moxfield decklist in import view.
-- **Linked Task/Issue**: Milestone 1
+  - Removed duplicate call to cardRepository.add(cardRecord)
+  - Changed db.deck_cards.add to db.deck_cards.put to handle updates properly
+  - This prevents constraint errors when importing the same deck multiple times
+- **Impact/Risks**: Low risk changes that fix database constraint errors
+- **Verification Steps**: 
+  1. Import a deck from Moxfield text format
+  2. Verify that no constraint errors occur
+  3. Import the same deck again
+  4. Verify that no constraint errors occur and the deck is updated properly
 ```
+
+## Getting Started
+
+1. Review the project structure and existing code
+2. Identify the task or issue to be addressed
+3. Propose a small, reviewable changeset
+4. Specify human-run steps (commands & manual checks)
+5. Provide complete code patches and tests
+6. Prepare a changelog entry

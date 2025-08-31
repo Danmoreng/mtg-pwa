@@ -1,6 +1,6 @@
 import { Money } from '../../core/Money';
 
-// Scryfall API provider for card pricing
+// Scryfall API provider for card pricing and images
 export class ScryfallProvider {
   private static readonly BASE_URL = 'https://api.scryfall.com';
 
@@ -44,6 +44,40 @@ export class ScryfallProvider {
       return Money.parse(eurPrice, 'EUR');
     } catch (error) {
       console.error('Error fetching price from Scryfall:', error);
+      return null;
+    }
+  }
+
+  // Get the image URL for a card by Scryfall ID
+  static async getImageUrlById(scryfallId: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/cards/${scryfallId}`);
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      // Use the normal image (about 488x680 pixels)
+      return data.image_uris?.normal || data.image_uris?.large || data.image_uris?.small || null;
+    } catch (error) {
+      console.error('Error fetching image from Scryfall:', error);
+      return null;
+    }
+  }
+
+  // Get the image URL for a card by set code and collector number
+  static async getImageUrlBySetAndNumber(setCode: string, collectorNumber: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/cards/${setCode}/${collectorNumber}`);
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      // Use the normal image (about 488x680 pixels)
+      return data.image_uris?.normal || data.image_uris?.large || data.image_uris?.small || null;
+    } catch (error) {
+      console.error('Error fetching image from Scryfall:', error);
       return null;
     }
   }

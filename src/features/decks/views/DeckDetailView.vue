@@ -36,23 +36,29 @@
         <div v-if="deckCards.length === 0" class="empty-state">
           <p>No cards found in this deck.</p>
         </div>
-        <div v-else class="cards-list">
+        <div v-else class="cards-grid">
           <div 
             v-for="deckCard in deckCards" 
             :key="`${deckCard.deckId}-${deckCard.cardId}`"
-            class="card-item"
+            class="card-grid-item"
           >
-            <div class="card-info">
-              <h3>{{ getCardName(deckCard.cardId) }}</h3>
-              <p class="card-details">
-                <span>{{ getCardSet(deckCard.cardId) }} #{{ getCardNumber(deckCard.cardId) }}</span>
-                <span>Quantity: {{ deckCard.quantity }}</span>
-              </p>
+            <div class="card-image-container">
+              <img 
+                :src="getCardImage(deckCard.cardId)" 
+                :alt="getCardName(deckCard.cardId)"
+                class="card-image"
+                @error="handleImageError"
+              />
             </div>
-            <div class="ownership-status">
-              <span :class="getOwnershipStatus(deckCard.cardId, deckCard.quantity)">
-                {{ getOwnershipText(deckCard.cardId, deckCard.quantity) }}
-              </span>
+            <div class="card-info">
+              <h3 class="card-name">{{ getCardName(deckCard.cardId) }}</h3>
+              <p class="card-set">{{ getCardSet(deckCard.cardId) }} #{{ getCardNumber(deckCard.cardId) }}</p>
+              <p class="card-quantity">Quantity: {{ deckCard.quantity }}</p>
+              <div class="ownership-status">
+                <span :class="getOwnershipStatus(deckCard.cardId, deckCard.quantity)">
+                  {{ getOwnershipText(deckCard.cardId, deckCard.quantity) }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -87,6 +93,9 @@ const totalCards = ref(0);
 const ownedCards = ref(0);
 const coveragePercentage = ref(0);
 
+// Holdings map
+const holdingsMap = ref<Record<string, Record<string, any>>>({});
+
 // Format date
 const formatDate = (date: Date) => {
   return new Date(date).toLocaleDateString();
@@ -105,6 +114,20 @@ const getCardSet = (cardId: string) => {
 // Get card number
 const getCardNumber = (cardId: string) => {
   return cards.value[cardId]?.number || '';
+};
+
+// Get card image
+const getCardImage = (cardId: string) => {
+  const card = cards.value[cardId];
+  if (!card) return 'https://placehold.co/200x280?text=Card+Image';
+  
+  // Return the actual image URL from the card data, or a placeholder if not available
+  return card.imageUrl || 'https://placehold.co/200x280?text=Card+Image';
+};
+
+// Handle image error
+const handleImageError = (event: any) => {
+  event.target.src = 'https://placehold.co/200x280?text=Card+Image';
 };
 
 // Get ownership status
@@ -143,9 +166,6 @@ const getOwnershipText = (cardId: string, neededQuantity: number) => {
   }
 };
 
-// Holdings map
-const holdingsMap = ref<Record<string, Record<string, any>>>({});
-
 // Load deck data
 const loadDeck = async () => {
   try {
@@ -162,7 +182,7 @@ const loadDeck = async () => {
     const cardsInDeck = await db.deck_cards.where('deckId').equals(deckId).toArray();
     deckCards.value = cardsInDeck;
     
-    // Calculate stats
+    // Calculate stats correctly by summing quantities
     totalCards.value = cardsInDeck.reduce((sum, card) => sum + card.quantity, 0);
     
     // Get card details
@@ -295,39 +315,70 @@ onMounted(() => {
   color: var(--color-text-secondary);
 }
 
-.cards-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-lg);
 }
 
-.card-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.card-grid-item {
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  padding: var(--space-md);
+  overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.card-info h3 {
+.card-grid-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.card-image-container {
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+  background-color: var(--color-border);
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-info {
+  padding: var(--space-sm);
+}
+
+.card-name {
   margin: 0 0 var(--space-xs);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
+  line-height: 1.3;
 }
 
-.card-details {
-  display: flex;
-  gap: var(--space-lg);
-  margin: 0;
+.card-set {
+  margin: 0 0 var(--space-xs);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+.card-quantity {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.ownership-status {
+  text-align: center;
 }
 
 .ownership-status span {
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-md);
   font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
 }
 
 .ownership-status .owned {
