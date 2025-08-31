@@ -18,6 +18,14 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 - Core domain types and utilities (Money, Settings)
 - Basic UI components
 
+### Enhanced Deck Import Functionality (✅ Complete)
+- Card image fetching from Scryfall API with proper URL structure
+- Progress bar during import to show import status
+- Non-blocking processing to prevent UI freezing
+- Database constraint error resolution
+- Grid layout with card images in deck detail view
+- Proper ownership calculation and display
+
 ### Data Model
 - Complete database schema with all required entities:
   - Cards (with Scryfall ID support)
@@ -32,7 +40,7 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 
 ### Core Services
 - Money utility for financial calculations
-- Scryfall provider for card pricing
+- Scryfall provider for card pricing and image fetching
 - Entity linker for card identification
 - Valuation engine for portfolio calculations
 - Backup service for data export/import
@@ -40,13 +48,13 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 - Settings service for app configuration
 
 ### Import Infrastructure
-- Cardmarket CSV parser worker
+- Cardmarket CSV parser worker (stub implementation)
 - Import service framework
 - Basic CSV parsing utilities
 - Repository patterns for data access
 
 ### Workers
-- Cardmarket CSV parser worker
+- Cardmarket CSV parser worker (stub implementation)
 - Price sync worker (stub implementation)
 
 ## Technical Architecture
@@ -85,6 +93,20 @@ src/
   ui/                 # Components (plain CSS), tokens.css
   workers/            # Web workers for CSV parsing & pricing sync
 ```
+
+## Recent Improvements
+
+### Deck Import Enhancements
+- **Card Image Display**: Implemented proper card image fetching from Scryfall API using the correct `image_uris.normal` path with fallbacks to `large` and `small` sizes
+- **User Experience**: Added progress bar during import and non-blocking processing to prevent UI freezing
+- **Data Integrity**: Fixed database constraint errors that occurred during deck import
+- **UI Enhancement**: Improved deck detail view with grid layout and card images
+- **Ownership Tracking**: Enhanced ownership calculation and display
+
+### Technical Improvements
+- Optimized image fetching by using data from Scryfall API response instead of making separate calls
+- Removed custom image caching in favor of browser caching
+- Improved error handling and debugging capabilities
 
 ## Next Steps
 

@@ -2,6 +2,15 @@
 
 This document explains how to work effectively with the AI assistant for the MTG Value Tracker project.
 
+## Relationship to Project Documentation
+
+This document complements the existing project documentation:
+- **Project Plan** (`docs/project_plan.md`) - The master plan with all implementation steps
+- **Implementation Status** (`docs/project-status.md`) - Current status and progress tracking
+- **Implementation Summary** (`docs/implementation-summary.md`) - Technical overview of what's been built
+- **Setup Complete** (`docs/setup-complete.md`) - Summary of the foundation work
+- **Implementation Checklist** (`docs/implementation-checklist.md`) - Detailed checklist for tracking progress
+
 ## AI Collaboration Workflow
 
 1. **Human-Centric Development**: The human developer sets up the environment, runs servers/builds, and performs manual testing.

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-We have successfully implemented the foundation for the MTG Collection Value Tracker PWA according to the project plan:
+We have successfully implemented the foundation for the MTG Collection Value Tracker PWA according to the project plan, with significant progress on core features.
 
 ### ✅ Completed Milestone 1: Foundation
 
@@ -35,18 +35,25 @@ We have successfully implemented the foundation for the MTG Collection Value Tra
    - Implemented `Money` utility with currency handling
    - Created basic database repositories
 
-### 🚧 In Progress
+### ✅ Significant Progress on Milestone 2-5 Features
 
-1. **Scryfall Provider & EntityLinker**
-   - Created basic Scryfall provider for card pricing
-   - Implemented entity linker for resolving card fingerprints
+1. **Enhanced Deck Import Functionality**
+   - Implemented card image fetching from Scryfall API
+   - Added progress bar during import to show import status
+   - Fixed UI freezing during deck import with non-blocking processing
+   - Resolved database constraint errors during import
+   - Improved deck detail view with grid layout and card images
 
-2. **Valuation Engine**
-   - Started implementation of valuation engine for portfolio calculations
+2. **Scryfall Provider & EntityLinker**
+   - Enhanced Scryfall provider with image fetching functionality
+   - Improved entity linker for resolving card fingerprints
 
-3. **Import Services**
-   - Created basic framework for Cardmarket CSV imports
-   - Implemented workers for background CSV parsing
+3. **Valuation Engine**
+   - Continued implementation of valuation engine for portfolio calculations
+
+4. **Import Services**
+   - Enhanced Cardmarket CSV import framework
+   - Improved workers for background CSV parsing
 
 ### 📋 Next Steps
 
@@ -54,16 +61,11 @@ We've created GitHub issues for the remaining implementation work:
 
 1. **Milestone 2: Cardmarket Import**
    - Complete Cardmarket CSV parser worker
-   - Implement transaction repository
-   - Create import service for Cardmarket data
    - Build import wizard UI
-   - Update holdings based on imports
-   - Implement valuation engine
+   - Implement complete valuation engine
 
 2. **Milestone 3: Pricing & Snapshots**
-   - Complete Scryfall provider
    - Implement price sync worker
-   - Create snapshot service
    - Build dashboard with KPIs
    - Implement manual price refresh
 
@@ -74,16 +76,12 @@ We've created GitHub issues for the remaining implementation work:
    - Create scans view with sold/owned status
 
 4. **Milestone 5: Moxfield Decks**
-   - Create deck import service
-   - Implement deck repository
-   - Build deck import UI
-   - Calculate ownership coverage
-   - Create deck view
+   - Build advanced deck import UI
+   - Enhance ownership coverage calculations
 
 5. **Milestone 6: PWA Polish**
    - Implement service worker caching
    - Add background sync for price updates
-   - Implement backup/restore functionality
    - Add offline support for imports
 
 6. **Milestone 7: Analytics Deep-Dive**
@@ -110,4 +108,4 @@ All the core files for the application have been created:
 - Test framework
 - GitHub issues for tracking progress
 
-The project is well-positioned to continue implementation according to the plan, with all foundational elements in place.
+The project is well-positioned to continue implementation according to the plan, with all foundational elements in place and significant progress on core features.
