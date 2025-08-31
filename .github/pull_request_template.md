@@ -2,7 +2,7 @@
 
 ## Summary
 
-<!-- Brief description of the changes in this PR -->
+<!-- Brief summary of the changes in this PR -->
 
 ## Why
 
@@ -10,16 +10,17 @@
 
 ## Changes
 
-<!--
-- List of key changes
-- Reference files that were modified
+<!-- 
+- List of specific changes made
+- Reference to files modified
 -->
 
 ## Testing
 
-<!--
+<!-- 
 - Commands to run
 - Manual steps to verify
+- Expected outcomes
 -->
 
 ## Screenshots (optional)
@@ -28,8 +29,11 @@
 
 ## Risks & Rollback
 
-<!-- Any potential risks or how to rollback -->
+<!-- 
+- Potential risks of these changes
+- How to rollback if needed
+-->
 
 ## CHANGELOG ENTRY
 
-<!-- Paste the entry for docs/AI_CHANGELOG.md -->
+<!-- Paste the changelog entry for docs/AI_CHANGELOG.md -->

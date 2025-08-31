@@ -1,6 +1,7 @@
 // Deck import service for importing decks from text files
 import { cardRepository, holdingRepository } from '../../data/repos';
 import { EntityLinker } from '../linker/EntityLinker';
+import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import db from '../../data/db';
 
 export class DeckImportService {
@@ -63,20 +64,56 @@ export class DeckImportService {
             if (cardId) {
               const existingCard = await cardRepository.getById(cardId);
               if (!existingCard) {
+                // Get full card data from Scryfall
+                const scryfallData = await ScryfallProvider.hydrateCard({
+                  scryfall_id: cardId,
+                  name: cardName.trim(),
+                  setCode: setCode.trim(),
+                  collectorNumber: collectorNumber.trim()
+                });
+                
+                // Get image URL from Scryfall
+                const imageUrl = await ScryfallProvider.getImageUrlById(cardId);
+                
                 const cardRecord = {
                   id: cardId,
-                  oracleId: '',
+                  oracleId: scryfallData?.oracle_id || '',
                   name: cardName.trim(),
-                  set: setCode.trim(),
+                  set: scryfallData?.set_name || setCode.trim(),
                   setCode: setCode.trim(),
                   number: collectorNumber.trim(),
-                  lang: 'en',
+                  lang: scryfallData?.lang || 'en',
                   finish: 'nonfoil',
-                  imageUrl: ''
+                  imageUrl: imageUrl || ''
                 };
                 
                 await cardRepository.add(cardRecord);
                 console.log('Added new card to database:', cardRecord);
+              }
+              
+              // Add card to collection (holdings) when importing a deck
+              // This ensures that importing a deck adds the cards to your collection
+              const existingHoldings = await holdingRepository.getByCardId(cardId);
+              const totalOwned = existingHoldings.reduce((sum, holding) => sum + holding.quantity, 0);
+              
+              // Only add to holdings if we don't already own enough of this card
+              if (totalOwned < quantity) {
+                const neededQuantity = quantity - totalOwned;
+                
+                const holding = {
+                  id: `holding-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                  cardId: cardId,
+                  quantity: neededQuantity,
+                  unitCost: 0, // Default to 0 cost
+                  source: 'deck_import',
+                  condition: 'unknown',
+                  language: 'en',
+                  foil: false,
+                  createdAt: new Date()
+                };
+                
+                await holdingRepository.add(holding);
+                console.log('Added card to holdings:', holding);
               }
             }
             
