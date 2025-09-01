@@ -2,6 +2,20 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-01 15:30 — feat: Implement rate limiting and caching for Scryfall API
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/ScryfallProvider.ts
+- **Type**: feat
+- **Summary**: Implement rate limiting and in-memory caching for Scryfall API requests to improve performance and reduce redundant requests.
+- **Details**:
+  - Added rate limiting with 100ms delay between requests to respect Scryfall API limits
+  - Implemented in-memory caching with 24-hour expiration for API responses
+  - Added caching for price and image requests by Scryfall ID and set/collector number
+  - Added caching for card hydration requests
+- **Impact/Risks**: These changes improve performance and reduce API usage, but the cache is in-memory and will be cleared on app restart.
+- **Verification Steps**: `npm run build` completes successfully.
+- **Linked Task/Issue**: Scryfall API caching
+
 ## 2025-09-01 15:00 — fix: Fix database schema issues and build errors
 - **Author**: AI (Qwen)
 - **Scope**: src/core/SettingsService.ts, src/features/analytics/SnapshotService.ts, src/features/decks/DeckImportService.ts, src/features/decks/views/DeckImportView.vue, src/features/imports/ImportService.ts, src/features/cards/views/CardsView.vue, src/features/dashboard/HomeView.vue, src/workers/priceSync.ts
