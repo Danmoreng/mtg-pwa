@@ -1,7 +1,8 @@
 // Import service for handling CSV imports
-import { transactionRepository, holdingRepository } from '../../data/repos';
+import { transactionRepository, holdingRepository, cardRepository } from '../../data/repos';
 import { EntityLinker, type CardFingerprint } from '../linker/EntityLinker.ts';
 import { Money } from '../../core/Money';
+import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import db from '../../data/db';
 
 export class ImportService {
@@ -127,6 +128,95 @@ export class ImportService {
           
           // Save holding
           await holdingRepository.add(holding);
+        }
+        
+        // If we have a card ID, fetch and save price data
+        if (cardId) {
+          // Check if the card exists in our database
+          const existingCard = await cardRepository.getById(cardId);
+          if (!existingCard) {
+            // Get full card data from Scryfall
+            const scryfallData = await ScryfallProvider.hydrateCard({
+              scryfall_id: cardId,
+              name: article.name,
+              setCode: article.expansion,
+              collectorNumber: '' // Not available in articles CSV
+            });
+            
+            // Get image URL from Scryfall
+            const imageUrl = await ScryfallProvider.getImageUrlById(cardId);
+            
+            const cardRecord = {
+              id: cardId,
+              oracleId: scryfallData?.oracle_id || '',
+              name: article.name,
+              set: scryfallData?.set_name || article.expansion,
+              setCode: article.expansion,
+              number: '', // Not available in articles CSV
+              lang: scryfallData?.lang || 'en',
+              finish: 'nonfoil', // Default to nonfoil
+              imageUrl: imageUrl || '',
+              createdAt: now,
+              updatedAt: now
+            };
+            
+            await cardRepository.add(cardRecord);
+            
+            // Fetch and save price data for the new card
+            try {
+              const price = await ScryfallProvider.getPriceById(cardId);
+              if (price) {
+                // Create price point ID with date
+                const dateStr = now.toISOString().split('T')[0];
+                const pricePointId = `${cardId}:scryfall:${dateStr}`;
+                
+                // Create price point
+                const pricePoint = {
+                  id: pricePointId,
+                  cardId: cardId,
+                  provider: 'scryfall',
+                  currency: price.getCurrency(),
+                  price: price.getCents(),
+                  asOf: now,
+                  createdAt: now
+                };
+                
+                // Save price point
+                await db.price_points.put(pricePoint);
+              }
+            } catch (error) {
+              console.error(`Error fetching price for new card ${cardId}:`, error);
+            }
+          } else {
+            // Card already exists, but we might want to update its price data
+            // For now, we'll just make sure there's a price point for today
+            try {
+              const dateStr = now.toISOString().split('T')[0];
+              const pricePointId = `${cardId}:scryfall:${dateStr}`;
+              const existingPricePoint = await db.price_points.get(pricePointId);
+              
+              if (!existingPricePoint) {
+                const price = await ScryfallProvider.getPriceById(cardId);
+                if (price) {
+                  // Create price point
+                  const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall',
+                    currency: price.getCurrency(),
+                    price: price.getCents(),
+                    asOf: now,
+                    createdAt: now
+                  };
+                  
+                  // Save price point
+                  await db.price_points.put(pricePoint);
+                }
+              }
+            } catch (error) {
+              console.error(`Error checking/updating price for existing card ${cardId}:`, error);
+            }
+          }
         }
         
         // Create transaction record

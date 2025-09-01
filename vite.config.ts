@@ -11,6 +11,9 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'MTG Collection Value Tracker',
         short_name: 'MTG Tracker',

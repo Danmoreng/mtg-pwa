@@ -74,7 +74,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import db from '../../../data/db';
-import { ScryfallProvider } from '../../pricing/ScryfallProvider';
 import { Money } from '../../../core/Money';
 
 // Reactive state
@@ -155,25 +154,39 @@ const handleImageError = (event: any) => {
   event.target.src = 'https://placehold.co/200x280?text=Card+Image';
 };
 
-// Load prices for cards
+// Load prices for cards from the database
 const loadCardPrices = async () => {
   if (cards.value.length === 0) return;
   
   loadingPrices.value = true;
   
   try {
-    // Create an array of promises for price fetching
+    // Create an array of promises for price fetching from database
     const pricePromises = cards.value.map(async (card) => {
       try {
-        // Fetch Scryfall price
-        const scryfallPrice = await ScryfallProvider.getPriceById(card.id);
+        // Fetch price points from database
+        const pricePoints = await db.price_points.where('cardId').equals(card.id).toArray();
+        
+        // Find the most recent price point
+        if (pricePoints.length > 0) {
+          // Sort by date descending to get the most recent price
+          pricePoints.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
+          const latestPricePoint = pricePoints[0];
+          
+          const price = new Money(latestPricePoint.price, latestPricePoint.currency);
+          
+          return {
+            cardId: card.id,
+            prices: {
+              scryfall: price,
+              // We won't show Cardmarket prices separately since Scryfall already includes them
+            }
+          };
+        }
         
         return {
           cardId: card.id,
-          prices: {
-            scryfall: scryfallPrice || undefined,
-            // We won't show Cardmarket prices separately since Scryfall already includes them
-          }
+          prices: {}
         };
       } catch (error) {
         console.error(`Error loading prices for card ${card.id}:`, error);

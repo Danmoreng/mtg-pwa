@@ -2,6 +2,68 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-01 17:30 — feat: Implement automatic price updates and fix price data saving
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/PriceUpdateService.ts, src/features/dashboard/HomeView.vue, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/workers/priceSync.ts
+- **Type**: feat
+- **Summary**: Implement automatic price updates and ensure price data is saved when cards are imported.
+- **Details**:
+  - Created PriceUpdateService to handle price updates and checking if updates are needed
+  - Modified HomeView to automatically check for and update prices when the app starts (if more than 24 hours since last update)
+  - Updated DeckImportService to fetch and save price data when new cards are imported
+  - Updated ImportService to fetch and save price data when new cards are imported
+  - Modified price sync worker to use put instead of add to handle updates
+  - This ensures that price data is always available in the database for valuation calculations
+- **Impact/Risks**: These changes ensure that price data is properly saved and updated, improving the accuracy of valuation calculations.
+- **Verification Steps**: `npm run build` completes successfully.
+- **Linked Task/Issue**: Price data saving and updates
+
+## 2025-09-01 17:00 — fix: Use database price data in CardsView instead of API calls
+- **Author**: AI (Qwen)
+- **Scope**: src/features/cards/views/CardsView.vue
+- **Type**: fix
+- **Summary**: Modified CardsView to use price data from the database instead of making API calls every time the page is visited.
+- **Details**:
+  - Updated loadCardPrices method to fetch price data from the price_points table
+  - Implemented logic to find the most recent price point for each card
+  - Removed dependency on ScryfallProvider in CardsView
+  - This change ensures that the cards page loads pricing data from the database, not from the API
+  - API requests will only happen when adding new cards or when manually triggering price updates
+- **Impact/Risks**: These changes improve app performance and reduce API usage by using cached price data from the database.
+- **Verification Steps**: `npm run build` completes successfully.
+- **Linked Task/Issue**: Cards view optimization
+
+## 2025-09-01 16:30 — fix: Use database price data for valuation instead of API calls
+- **Author**: AI (Qwen)
+- **Scope**: src/features/analytics/ValuationEngine.ts
+- **Type**: fix
+- **Summary**: Modified ValuationEngine to use price data from the database instead of making API calls every time the app opens.
+- **Details**:
+  - Updated calculateHoldingValue method to fetch price data from the price_points table
+  - Implemented logic to find the most recent price point for each card
+  - Removed dependency on ScryfallProvider in ValuationEngine
+  - This change ensures that the dashboard loads pricing data from the database, not from the API
+  - API requests will only happen when adding new cards or when manually triggering price updates
+- **Impact/Risks**: These changes improve app performance and reduce API usage by using cached price data from the database.
+- **Verification Steps**: `npm run build` completes successfully.
+- **Linked Task/Issue**: Valuation engine optimization
+
+## 2025-09-01 16:00 — feat: Implement service worker caching for Scryfall API
+- **Author**: AI (Qwen)
+- **Scope**: vite.config.ts, src/sw.ts, src/features/pricing/ScryfallProvider.ts
+- **Type**: feat
+- **Summary**: Implement service worker caching for Scryfall API requests to provide persistent caching across app restarts.
+- **Details**:
+  - Configured Vite PWA plugin to use injectManifest mode for custom service worker
+  - Created service worker with caching strategies for Scryfall API and images
+  - Implemented StaleWhileRevalidate strategy for Scryfall API with 24-hour expiration
+  - Implemented CacheFirst strategy for images with 30-day expiration
+  - Simplified ScryfallProvider to remove in-memory caching since service worker handles it
+  - Maintained rate limiting in ScryfallProvider
+- **Impact/Risks**: These changes provide persistent caching that survives app restarts and improves offline capabilities.
+- **Verification Steps**: `npm run build` completes successfully and service worker is generated.
+- **Linked Task/Issue**: Scryfall API caching
+
 ## 2025-09-01 15:30 — feat: Implement rate limiting and caching for Scryfall API
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/ScryfallProvider.ts

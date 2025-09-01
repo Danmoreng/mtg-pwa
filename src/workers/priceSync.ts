@@ -19,9 +19,13 @@ async function syncPrices(): Promise<void> {
         const price = await ScryfallProvider.getPriceById(card.id);
         
         if (price) {
+          // Create price point ID with date
+          const dateStr = now.toISOString().split('T')[0];
+          const pricePointId = `${card.id}:scryfall:${dateStr}`;
+          
           // Create price point
           const pricePoint = {
-            id: `${card.id}:scryfall:${new Date().toISOString().split('T')[0]}`,
+            id: pricePointId,
             cardId: card.id,
             provider: 'scryfall',
             currency: price.getCurrency(),
@@ -30,8 +34,8 @@ async function syncPrices(): Promise<void> {
             createdAt: now
           };
           
-          // Save price point
-          await db.price_points.add(pricePoint);
+          // Save price point (use put instead of add to handle updates)
+          await db.price_points.put(pricePoint);
         }
       } catch (error) {
         console.error(`Error syncing price for card ${card.id}:`, error);
