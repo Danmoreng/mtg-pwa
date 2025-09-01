@@ -8,6 +8,8 @@ export class DeckImportService {
   // Process a deck from text data
   static async importDeckFromText(deckName: string, deckText: string): Promise<void> {
     try {
+      const now = new Date();
+      
       // Create deck record
       const deckId = `deck-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const deck = {
@@ -16,7 +18,9 @@ export class DeckImportService {
         name: deckName,
         commander: '',
         url: '',
-        importedAt: new Date()
+        importedAt: now,
+        createdAt: now,
+        updatedAt: now
       };
       
       // Save deck
@@ -37,7 +41,7 @@ export class DeckImportService {
         // Parse the line (format: "quantity cardName (setCode) collectorNumber")
         // Example: "1 Captain America, First Avenger (SLD) 1726"
         // Also handle foil indicators like "*F*"
-        const match = trimmedLine.match(/^(\d+)\s+(.+?)\s*\(([^)]+)\)\s*(\d+)(?:\s*\*F\*\s*)?$/i);
+        const match = trimmedLine.match(/^(\d+)\s+(.+?)\s*$([^)]+)$\s*(\d+)(?:\s*\*F\*\s*)?$/i);
         
         if (match) {
           const [, quantityStr, cardName, setCode, collectorNumber] = match;
@@ -84,7 +88,9 @@ export class DeckImportService {
                   number: collectorNumber.trim(),
                   lang: scryfallData?.lang || 'en',
                   finish: 'nonfoil',
-                  imageUrl: imageUrl || ''
+                  imageUrl: imageUrl || '',
+                  createdAt: now,
+                  updatedAt: now
                 };
                 
                 await cardRepository.add(cardRecord);
@@ -109,7 +115,8 @@ export class DeckImportService {
                   condition: 'unknown',
                   language: 'en',
                   foil: false,
-                  createdAt: new Date()
+                  createdAt: now,
+                  updatedAt: now
                 };
                 
                 await holdingRepository.add(holding);
@@ -122,7 +129,8 @@ export class DeckImportService {
               deckId,
               cardId: cardId || '',
               quantity,
-              role: 'main' as const
+              role: 'main' as const,
+              createdAt: now
             };
             
             // Save deck card

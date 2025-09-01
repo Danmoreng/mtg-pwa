@@ -8,6 +8,7 @@ export class SnapshotService {
     try {
       // Get current date
       const asOf = new Date();
+      const now = new Date();
       
       // Calculate portfolio metrics
       const totalValue = await ValuationEngine.calculatePortfolioValue();
@@ -20,7 +21,8 @@ export class SnapshotService {
         asOf,
         totalValue: totalValue.getCents(),
         totalCostBasis: totalCostBasis.getCents(),
-        realizedPnLToDate: realizedPnLToDate.getCents()
+        realizedPnLToDate: realizedPnLToDate.getCents(),
+        createdAt: now
       };
       
       // Save snapshot to database

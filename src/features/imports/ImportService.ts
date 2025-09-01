@@ -8,6 +8,8 @@ export class ImportService {
   // Import Cardmarket transactions
   static async importCardmarketTransactions(transactions: any[]): Promise<void> {
     try {
+      const now = new Date();
+      
       for (const transaction of transactions) {
         // Create external reference to avoid duplicates
         const externalRef = `cardmarket:${transaction.reference}`;
@@ -30,7 +32,9 @@ export class ImportService {
           currency: 'EUR',
           source: 'cardmarket',
           externalRef,
-          happenedAt: new Date(transaction.date)
+          happenedAt: new Date(transaction.date),
+          createdAt: now,
+          updatedAt: now
         };
         
         // Save transaction
@@ -45,6 +49,8 @@ export class ImportService {
   // Import Cardmarket orders
   static async importCardmarketOrders(orders: any[]): Promise<void> {
     try {
+      const now = new Date();
+      
       for (const order of orders) {
         // Create external reference to avoid duplicates
         const externalRef = `cardmarket:order:${order.orderId}`;
@@ -69,7 +75,9 @@ export class ImportService {
           currency: 'EUR',
           source: 'cardmarket',
           externalRef,
-          happenedAt: new Date(order.dateOfPurchase)
+          happenedAt: new Date(order.dateOfPurchase),
+          createdAt: now,
+          updatedAt: now
         };
         
         // Save transaction
@@ -84,6 +92,8 @@ export class ImportService {
   // Import Cardmarket articles
   static async importCardmarketArticles(articles: any[]): Promise<void> {
     try {
+      const now = new Date();
+      
       for (const article of articles) {
         // Create a card fingerprint
         const fingerprint: CardFingerprint = {
@@ -111,7 +121,8 @@ export class ImportService {
             condition: '', // Not available in articles CSV
             language: '', // Not available in articles CSV
             foil: false, // Not available in articles CSV
-            createdAt: new Date(article.dateOfPurchase)
+            createdAt: new Date(article.dateOfPurchase),
+            updatedAt: now
           };
           
           // Save holding
@@ -130,7 +141,9 @@ export class ImportService {
           currency: 'EUR',
           source: 'cardmarket',
           externalRef: `cardmarket:article:${article.shipmentId}:${article.productId}`,
-          happenedAt: new Date(article.dateOfPurchase)
+          happenedAt: new Date(article.dateOfPurchase),
+          createdAt: now,
+          updatedAt: now
         };
         
         // Save transaction

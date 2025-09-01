@@ -16,7 +16,13 @@ export class SettingsService {
   // Set a setting value
   static async set(key: string, value: any): Promise<void> {
     try {
-      await db.settings.put({ k: key, v: value });
+      const now = new Date();
+      await db.settings.put({ 
+        k: key, 
+        v: value,
+        createdAt: now,
+        updatedAt: now
+      });
     } catch (error) {
       console.error(`Error setting ${key}:`, error);
     }

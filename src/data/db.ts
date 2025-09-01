@@ -11,6 +11,8 @@ export interface Card {
   lang: string;
   finish: string;
   imageUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Holding {
@@ -24,6 +26,7 @@ export interface Holding {
   language: string;
   foil: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Transaction {
@@ -38,6 +41,8 @@ export interface Transaction {
   source: string;
   externalRef: string;
   happenedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Scan {
@@ -50,6 +55,8 @@ export interface Scan {
   soldTransactionId?: string;
   soldAt?: Date;
   soldQuantity?: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Deck {
@@ -59,6 +66,8 @@ export interface Deck {
   commander?: string;
   url?: string;
   importedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface DeckCard {
@@ -66,6 +75,7 @@ export interface DeckCard {
   cardId: string;
   quantity: number;
   role: 'main' | 'side' | 'maybeboard';
+  createdAt: Date;
 }
 
 export interface PricePoint {
@@ -75,6 +85,7 @@ export interface PricePoint {
   currency: string;
   price: number; // in cents
   asOf: Date;
+  createdAt: Date;
 }
 
 export interface Valuation {
@@ -83,11 +94,24 @@ export interface Valuation {
   totalValue: number; // in cents
   totalCostBasis: number; // in cents
   realizedPnLToDate: number; // in cents
+  createdAt: Date;
 }
 
 export interface Setting {
   k: string;
   v: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Scan to Sale matching link
+export interface ScanSaleLink {
+  id: string;
+  scanId: string;
+  transactionId: string;
+  quantity: number;
+  matchedAt: Date;
+  createdAt: Date;
 }
 
 // Create Dexie database
@@ -101,9 +125,12 @@ class MtgTrackerDb extends Dexie {
   price_points!: EntityTable<PricePoint, 'id'>;
   valuations!: EntityTable<Valuation, 'id'>;
   settings!: EntityTable<Setting, 'k'>;
+  scan_sale_links!: EntityTable<ScanSaleLink, 'id'>;
 
   constructor() {
     super('MtgTrackerDb');
+    
+    // Version 1 - Initial schema
     this.version(1).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish',
       holdings: 'id, cardId, acquisitionId, source, createdAt',
@@ -114,6 +141,88 @@ class MtgTrackerDb extends Dexie {
       price_points: 'id, cardId, provider, asOf',
       valuations: 'id, asOf',
       settings: 'k'
+    });
+    
+    // Version 2 - Enhanced schema with better indexing and new tables
+    this.version(2).stores({
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
+      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
+      transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
+      scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
+      decks: 'id, platform, name, importedAt, createdAt, updatedAt',
+      deck_cards: '[deckId+cardId], deckId, cardId, createdAt',
+      price_points: 'id, cardId, provider, asOf, createdAt',
+      valuations: 'id, asOf, createdAt',
+      settings: 'k, createdAt, updatedAt',
+      scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
+    }).upgrade(async tx => {
+      // Add createdAt and updatedAt to existing records
+      const now = new Date();
+      
+      // Update cards
+      await tx.table('cards').toCollection().modify(card => {
+        card.createdAt = card.createdAt || now;
+        card.updatedAt = card.updatedAt || now;
+      });
+      
+      // Update holdings
+      await tx.table('holdings').toCollection().modify(holding => {
+        holding.createdAt = holding.createdAt || now;
+        holding.updatedAt = holding.updatedAt || now;
+      });
+      
+      // Update transactions
+      await tx.table('transactions').toCollection().modify(transaction => {
+        transaction.createdAt = transaction.createdAt || now;
+        transaction.updatedAt = transaction.updatedAt || now;
+      });
+      
+      // Update scans
+      await tx.table('scans').toCollection().modify(scan => {
+        scan.createdAt = scan.createdAt || now;
+        scan.updatedAt = scan.updatedAt || now;
+      });
+      
+      // Update decks
+      await tx.table('decks').toCollection().modify(deck => {
+        deck.createdAt = deck.createdAt || now;
+        deck.updatedAt = deck.updatedAt || now;
+      });
+      
+      // Update deck_cards
+      await tx.table('deck_cards').toCollection().modify(deckCard => {
+        deckCard.createdAt = deckCard.createdAt || now;
+      });
+      
+      // Update price_points
+      await tx.table('price_points').toCollection().modify(pricePoint => {
+        pricePoint.createdAt = pricePoint.createdAt || now;
+      });
+      
+      // Update valuations
+      await tx.table('valuations').toCollection().modify(valuation => {
+        valuation.createdAt = valuation.createdAt || now;
+      });
+      
+      // Update settings
+      await tx.table('settings').toCollection().modify(setting => {
+        setting.createdAt = setting.createdAt || now;
+        setting.updatedAt = setting.updatedAt || now;
+      });
+    });
+    
+    // Version 3 - Enhanced schema for historical pricing
+    this.version(3).stores({
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
+      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
+      transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
+      scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
+      decks: 'id, platform, name, importedAt, createdAt, updatedAt',
+      deck_cards: '[deckId+cardId], deckId, cardId, createdAt',
+      price_points: 'id, cardId, provider, currency, asOf, createdAt, [cardId+asOf], [provider+asOf]',
+      valuations: 'id, asOf, createdAt, [asOf+createdAt]',
+      settings: 'k, createdAt, updatedAt',
+      scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
     });
   }
 }

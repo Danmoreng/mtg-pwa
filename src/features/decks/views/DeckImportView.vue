@@ -104,13 +104,16 @@ const importDeck = async () => {
     
     // Import the deck with progress updates
     const deckId = `deck-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date();
     const deck = {
       id: deckId,
       platform: 'csv' as const,
       name: deckName.value.trim(),
       commander: '',
       url: '',
-      importedAt: new Date()
+      importedAt: now,
+      createdAt: now,
+      updatedAt: now
     };
     
     // Save deck
@@ -166,6 +169,7 @@ const importDeck = async () => {
                               scryfallData?.image_uris?.small || 
                               '';
               
+              const now = new Date();
               const cardRecord = {
                 id: cardId,
                 oracleId: scryfallData?.oracle_id || '',
@@ -175,7 +179,9 @@ const importDeck = async () => {
                 number: collectorNumber.trim(),
                 lang: scryfallData?.lang || 'en',
                 finish: 'nonfoil',
-                imageUrl: imageUrl
+                imageUrl: imageUrl,
+                createdAt: now,
+                updatedAt: now
               };
               
               await cardRepository.add(cardRecord);
@@ -188,6 +194,7 @@ const importDeck = async () => {
             if (totalOwned < quantity) {
               const neededQuantity = quantity - totalOwned;
               
+              const now = new Date();
               const holding = {
                 id: `holding-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 cardId: cardId,
@@ -197,7 +204,8 @@ const importDeck = async () => {
                 condition: 'unknown',
                 language: 'en',
                 foil: false,
-                createdAt: new Date()
+                createdAt: now,
+                updatedAt: now
               };
               
               await holdingRepository.add(holding);
@@ -205,11 +213,13 @@ const importDeck = async () => {
           }
           
           // Create deck card record
+          const now = new Date();
           const deckCard = {
             deckId,
             cardId: cardId || '',
             quantity,
-            role: 'main' as const
+            role: 'main' as const,
+            createdAt: now
           };
           
           // Save deck card (use put instead of add to handle updates)
