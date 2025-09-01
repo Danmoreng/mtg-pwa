@@ -16,9 +16,9 @@ Create the Cardmarket CSV parser as specified in the project plan:
 
 ## Acceptance Criteria
 
-- [ ] Worker parses Cardmarket transaction CSVs
-- [ ] Worker parses Cardmarket order CSVs
-- [ ] Worker parses Cardmarket article CSVs
-- [ ] Parsed data is correctly stored in database
-- [ ] Duplicate imports are handled correctly
+- [x] Worker parses Cardmarket transaction CSVs
+- [x] Worker parses Cardmarket order CSVs
+- [x] Worker parses Cardmarket article CSVs
+- [x] Parsed data is correctly stored in database
+- [x] Duplicate imports are handled correctly
 - [ ] Unit tests pass for CSV parsing and storage

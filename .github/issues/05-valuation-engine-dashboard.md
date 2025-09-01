@@ -16,9 +16,9 @@ Create the valuation engine and dashboard as specified in the project plan:
 
 ## Acceptance Criteria
 
-- [ ] Valuation engine calculates portfolio value
-- [ ] Valuation engine calculates cost basis with FIFO
-- [ ] Valuation engine calculates realized/unrealized P/L
+- [x] Valuation engine calculates portfolio value
+- [x] Valuation engine calculates cost basis with FIFO
+- [x] Valuation engine calculates realized/unrealized P/L
 - [ ] Dashboard displays KPIs correctly
 - [ ] Dashboard shows sparkline charts
 - [ ] Unit tests pass for valuation calculations
