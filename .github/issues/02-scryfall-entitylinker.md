@@ -16,9 +16,9 @@ Create Scryfall provider and EntityLinker as specified in the project plan:
 
 ## Acceptance Criteria
 
-- [ ] ScryfallProvider can fetch prices by card ID
-- [ ] ScryfallProvider can fetch prices by set/collector number
-- [ ] ScryfallProvider can hydrate cards with full data
-- [ ] EntityLinker can resolve fingerprints to card IDs
-- [ ] EntityLinker handles fallback resolution
+- [x] ScryfallProvider can fetch prices by card ID
+- [x] ScryfallProvider can fetch prices by set/collector number
+- [x] ScryfallProvider can hydrate cards with full data
+- [x] EntityLinker can resolve fingerprints to card IDs
+- [x] EntityLinker handles fallback resolution
 - [ ] Unit tests pass with mocked API calls

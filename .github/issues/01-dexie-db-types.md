@@ -17,8 +17,8 @@ Create the Dexie database and type definitions as specified in the project plan:
 
 ## Acceptance Criteria
 
-- [ ] Dexie database is initialized with correct schema
-- [ ] All required types are defined
-- [ ] Repositories provide CRUD operations
-- [ ] Repositories support indexed queries
-- [ ] Unit tests pass for database operations
+- [x] Dexie database is initialized with correct schema
+- [x] All required types are defined
+- [x] Repositories provide CRUD operations
+- [x] Repositories support indexed queries
+- [x] Unit tests pass for database operations

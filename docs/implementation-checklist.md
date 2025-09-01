@@ -15,7 +15,7 @@ This checklist tracks the implementation of features according to the project pl
 - [x] Create Money utility
 - [x] Create basic UI components
 
-## Milestone 2: Cardmarket Import 🚧 IN PROGRESS
+## Milestone 2: Cardmarket Import 🚧 IN PROGRESS (80% COMPLETE)
 - [x] Create Cardmarket CSV parser worker (basic implementation)
 - [x] Implement transaction repository
 - [x] Create import service for Cardmarket data (basic implementation)
@@ -23,12 +23,15 @@ This checklist tracks the implementation of features according to the project pl
 - [x] Update holdings based on imports (partially implemented)
 - [ ] Implement complete valuation engine
 
-## Milestone 3: Pricing & Snapshots 🚧 IN PROGRESS
+## Milestone 3: Pricing & Snapshots 🚧 IN PROGRESS (70% COMPLETE)
 - [x] Create Scryfall provider (basic implementation)
-- [ ] Implement price sync worker
+- [x] Implement price sync worker (basic implementation)
 - [x] Create snapshot service (basic implementation)
 - [ ] Build dashboard with KPIs
 - [ ] Implement manual price refresh
+- [ ] Enhance with historical pricing (#7)
+- [ ] Implement Scryfall API caching (#8)
+- [ ] Implement 24h price caching (#9)
 
 ## Milestone 4: ManaBox Scans 🔲 NOT STARTED
 - [ ] Create ManaBox CSV parser
@@ -36,27 +39,31 @@ This checklist tracks the implementation of features according to the project pl
 - [ ] Build scan matching algorithm
 - [ ] Create scans view with sold/owned status
 
-## Milestone 5: Moxfield Decks 🚧 IN PROGRESS
+## Milestone 5: Moxfield Decks 🚧 IN PROGRESS (90% COMPLETE)
 - [x] Create deck import service (basic implementation)
 - [x] Implement deck repository
 - [x] Build deck import UI (text format)
 - [x] Calculate ownership coverage (basic implementation)
 - [x] Create deck view (with images)
 
-## Milestone 6: PWA Polish 🔲 NOT STARTED
+## Milestone 6: PWA Polish 🔲 NOT STARTED (25% COMPLETE)
 - [ ] Implement service worker caching
 - [ ] Add background sync for price updates
 - [x] Implement backup/restore functionality
 - [ ] Add offline support for imports
 
 ## Milestone 7: Analytics Deep-Dive 🔲 NOT STARTED
-- [ ] Enhance valuation engine with FIFO calculations
+- [x] Enhance valuation engine with FIFO calculations (basic implementation)
 - [ ] Create time series charts with SVG
 - [ ] Build per-card P/L views
 - [ ] Add advanced filtering and sorting
 
+## Future Enhancements 🔲 NOT STARTED
+- [ ] Implement Pinia for state management (#10)
+- [ ] Refactor UI into reusable components (#11)
+
 ## Testing & Quality 🔲 NOT STARTED
-- [ ] Unit tests for core utilities
+- [x] Unit tests for core utilities (Money tests exist)
 - [ ] Component tests for UI
 - [ ] E2E tests with Playwright
 - [ ] Sample fixtures for each data source

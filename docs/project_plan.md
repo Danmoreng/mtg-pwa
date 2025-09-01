@@ -233,13 +233,21 @@ settings         (k, v)
 
 ## 12) Implementation Order (Milestones)
 
-1. **M1: Foundation** — Bootstrap, DB schema, Money utils, minimal UI shell.
-2. **M2: Cardmarket Import** — Parser, transactions, holdings updates, valuation.
-3. **M3: Pricing & Snapshots** — Scryfall provider, daily snapshots, dashboard KPIs.
-4. **M4: ManaBox Scans** — Import + Sold/Owned matching view.
-5. **M5: Moxfield Decks** — Deck import + ownership coverage.
-6. **M6: PWA polish** — Offline, background sync, backup/export.
-7. **M7: Analytics Deep‑Dive** — Per‑card P/L, time series SVG charts.
+1. **M1: Foundation** — Bootstrap, DB schema, Money utils, minimal UI shell. ✅ COMPLETE
+2. **M2: Cardmarket Import** — Parser, transactions, holdings updates, valuation. 🚧 IN PROGRESS (80% COMPLETE)
+3. **M3: Pricing & Snapshots** — Scryfall provider, daily snapshots, dashboard KPIs. 🚧 IN PROGRESS (70% COMPLETE)
+4. **M4: ManaBox Scans** — Import + Sold/Owned matching view. 🔲 NOT STARTED
+5. **M5: Moxfield Decks** — Deck import + ownership coverage. 🚧 IN PROGRESS (90% COMPLETE)
+6. **M6: PWA polish** — Offline, background sync, backup/export. 🔲 NOT STARTED (25% COMPLETE)
+7. **M7: Analytics Deep‑Dive** — Per‑card P/L, time series SVG charts. 🔲 NOT STARTED
+
+## 13) Enhanced Milestone 3 with Pricing Improvements
+
+To enhance the pricing functionality in Milestone 3, the following improvements should be implemented:
+
+1. **Historical Pricing** — Store price points over time to enable trend analysis
+2. **API Caching** — Implement comprehensive caching for Scryfall API requests
+3. **24h Price Caching** — Cache prices for 24 hours to reduce API usage
 
 ---
 
