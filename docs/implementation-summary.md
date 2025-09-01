@@ -46,6 +46,7 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 - Backup service for data export/import
 - Snapshot service for historical tracking
 - Settings service for app configuration
+- Price update service for automatic price updates
 
 ### Import Infrastructure
 - Cardmarket CSV parser worker (stub implementation)
@@ -57,6 +58,18 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 - Cardmarket CSV parser worker (stub implementation)
 - Price sync worker (stub implementation)
 
+### State Management
+- Pinia implementation for state management
+- Stores for cards, holdings, transactions, decks, and settings
+- Unified MTG store that combines all individual stores
+
+### Pricing & Caching
+- Automatic price updates (every 24 hours)
+- Price data saving to database during card imports
+- Service worker caching for Scryfall API requests
+- Rate limiting for Scryfall API requests
+- 24-hour price caching mechanism
+
 ## Technical Architecture
 
 ### Frontend
@@ -65,6 +78,7 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 - Vue Router for navigation
 - Plain CSS with utility classes
 - No external UI libraries
+- Pinia for state management
 
 ### Data Layer
 - Dexie.js (IndexedDB wrapper)
@@ -81,6 +95,7 @@ This project implements a client-only Vue 3 + TypeScript PWA for tracking Magic:
 - PWA caching strategies
 - Local data persistence
 - Service worker implementation
+- Automatic price updates with 24-hour intervals
 
 ## Folder Structure
 
@@ -102,6 +117,18 @@ src/
 - **Data Integrity**: Fixed database constraint errors that occurred during deck import
 - **UI Enhancement**: Improved deck detail view with grid layout and card images
 - **Ownership Tracking**: Enhanced ownership calculation and display
+
+### Pricing System Enhancements
+- **Automatic Price Updates**: Implemented automatic price updates that run when the app starts (if more than 24 hours since last update)
+- **Price Data Persistence**: Ensured price data is saved to the database when cards are imported
+- **Service Worker Caching**: Added service worker caching for Scryfall API requests to improve performance and reduce API usage
+- **Rate Limiting**: Implemented rate limiting for Scryfall API requests to respect API limits
+- **24-Hour Caching**: Added 24-hour caching mechanism to reduce redundant API requests
+- **Database Integration**: Modified UI components to use price data from the database instead of making API calls
+
+### State Management
+- **Pinia Implementation**: Implemented Pinia for state management with stores for cards, holdings, transactions, decks, and settings
+- **Unified Store**: Created a unified MTG store that combines all individual stores for easier access
 
 ### Technical Improvements
 - Optimized image fetching by using data from Scryfall API response instead of making separate calls
@@ -136,3 +163,6 @@ The new implementation improves on the legacy version with:
 - PWA capabilities for offline use
 - IndexedDB for better data management
 - Modular, testable code structure
+- Automatic price updates with caching
+- Service worker implementation for offline support
+- Pinia state management for better data flow
