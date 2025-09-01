@@ -32,12 +32,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useMtgStore } from '../../stores';
+import { useCardsStore } from '../../stores/cards';
+import { useHoldingsStore } from '../../stores/holdings';
+import { useTransactionsStore } from '../../stores/transactions';
 import { ValuationEngine } from '../analytics/ValuationEngine.ts';
 import { Money } from '../../core/Money';
+import { PriceUpdateService } from '../pricing/PriceUpdateService';
 
-// Get the store
-const store = useMtgStore();
+// Get the stores
+const cardsStore = useCardsStore();
+const holdingsStore = useHoldingsStore();
+const transactionsStore = useTransactionsStore();
 
 // Reactive state
 const portfolioValue = ref('€0.00');
@@ -54,9 +59,9 @@ const formatMoney = (money: Money): string => {
 const loadData = async () => {
   try {
     // Load data from stores
-    await store.loadCards();
-    await store.loadHoldings();
-    await store.loadTransactions();
+    await cardsStore.loadCards();
+    await holdingsStore.loadHoldings();
+    await transactionsStore.loadTransactions();
     
     const value = await ValuationEngine.calculatePortfolioValue();
     const cost = await ValuationEngine.calculateTotalCostBasis();
@@ -74,8 +79,15 @@ const loadData = async () => {
 
 // Refresh prices
 const refreshPrices = async () => {
-  // In a real implementation, this would trigger price updates for all cards
-  alert('Price refresh triggered');
+  try {
+    await PriceUpdateService.syncPrices();
+    // Reload data to reflect updated prices
+    await loadData();
+    alert('Prices refreshed successfully');
+  } catch (error) {
+    console.error('Error refreshing prices:', error);
+    alert('Failed to refresh prices: ' + (error as Error).message);
+  }
 };
 
 // Take snapshot
@@ -85,8 +97,19 @@ const takeSnapshot = async () => {
 };
 
 // Load data when component mounts
-onMounted(() => {
-  loadData();
+onMounted(async () => {
+  // Check if we need to update prices
+  const needsUpdate = await PriceUpdateService.needsPriceUpdate();
+  if (needsUpdate) {
+    try {
+      await PriceUpdateService.syncPrices();
+    } catch (error) {
+      console.error('Error updating prices on app start:', error);
+    }
+  }
+  
+  // Load the dashboard data
+  await loadData();
 });
 </script>
 

@@ -1,15 +1,22 @@
 import { Money } from '../../core/Money';
 import { holdingRepository, transactionRepository } from '../../data/repos';
-import { ScryfallProvider } from '../pricing/ScryfallProvider';
+import { pricePointRepository } from '../../data/repos';
 
 // Valuation engine for calculating portfolio value and P/L
 export class ValuationEngine {
   // Calculate the current value of a holding
   static async calculateHoldingValue(holding: any): Promise<Money> {
-    // Get the latest price for the card
+    // Get the latest price for the card from the database
     if (holding.cardId) {
-      const price = await ScryfallProvider.getPriceById(holding.cardId);
-      if (price) {
+      const pricePoints = await pricePointRepository.getByCardId(holding.cardId);
+      
+      // Find the most recent price point
+      if (pricePoints.length > 0) {
+        // Sort by date descending to get the most recent price
+        pricePoints.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
+        const latestPricePoint = pricePoints[0];
+        
+        const price = new Money(latestPricePoint.price, latestPricePoint.currency);
         return price.multiply(holding.quantity);
       }
     }

@@ -95,6 +95,32 @@ export class DeckImportService {
                 
                 await cardRepository.add(cardRecord);
                 console.log('Added new card to database:', cardRecord);
+                
+                // Fetch and save price data for the new card
+                try {
+                  const price = await ScryfallProvider.getPriceById(cardId);
+                  if (price) {
+                    // Create price point ID with date
+                    const dateStr = now.toISOString().split('T')[0];
+                    const pricePointId = `${cardId}:scryfall:${dateStr}`;
+                    
+                    // Create price point
+                    const pricePoint = {
+                      id: pricePointId,
+                      cardId: cardId,
+                      provider: 'scryfall',
+                      currency: price.getCurrency(),
+                      price: price.getCents(),
+                      asOf: now,
+                      createdAt: now
+                    };
+                    
+                    // Save price point
+                    await db.price_points.put(pricePoint);
+                  }
+                } catch (error) {
+                  console.error(`Error fetching price for new card ${cardId}:`, error);
+                }
               }
               
               // Add card to collection (holdings) when importing a deck
