@@ -32,8 +32,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useMtgStore } from '../../stores';
 import { ValuationEngine } from '../analytics/ValuationEngine.ts';
 import { Money } from '../../core/Money';
+
+// Get the store
+const store = useMtgStore();
 
 // Reactive state
 const portfolioValue = ref('€0.00');
@@ -49,6 +53,11 @@ const formatMoney = (money: Money): string => {
 // Load initial data
 const loadData = async () => {
   try {
+    // Load data from stores
+    await store.loadCards();
+    await store.loadHoldings();
+    await store.loadTransactions();
+    
     const value = await ValuationEngine.calculatePortfolioValue();
     const cost = await ValuationEngine.calculateTotalCostBasis();
     const unrealized = await ValuationEngine.calculateUnrealizedPnL();

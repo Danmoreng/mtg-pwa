@@ -59,7 +59,7 @@
           <div v-if="cardPrices[card.id]" class="card-prices">
             <div v-if="cardPrices[card.id].scryfall" class="price scryfall-price">
               <span class="price-label">Price:</span>
-              <span class="price-value">{{ cardPrices[card.id].scryfall.format('de-DE') }}</span>
+              <span class="price-value">{{ cardPrices[card.id]?.scryfall?.format('de-DE') || 'N/A' }}</span>
             </div>
           </div>
           <div v-else-if="loadingPrices" class="price-loading">

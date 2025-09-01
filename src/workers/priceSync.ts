@@ -7,6 +7,8 @@ import db from '../data/db';
 // Sync prices for all cards in the collection
 async function syncPrices(): Promise<void> {
   try {
+    const now = new Date();
+    
     // Get all cards with Scryfall IDs
     const cards = await db.cards.where('id').notEqual('').toArray();
     
@@ -24,7 +26,8 @@ async function syncPrices(): Promise<void> {
             provider: 'scryfall',
             currency: price.getCurrency(),
             price: price.getCents(),
-            asOf: new Date()
+            asOf: new Date(),
+            createdAt: now
           };
           
           // Save price point

@@ -1,4 +1,15 @@
-import db, { type Card, type Holding, type Transaction } from '../data/db';
+import db, { 
+  type Card, 
+  type Holding, 
+  type Transaction, 
+  type Scan, 
+  type Deck, 
+  type DeckCard, 
+  type PricePoint, 
+  type Valuation, 
+  type Setting,
+  type ScanSaleLink
+} from './db';
 
 // Card repository
 export const cardRepository = {
@@ -78,5 +89,161 @@ export const transactionRepository = {
 
   async delete(id: string): Promise<void> {
     await db.transactions.delete(id);
+  }
+};
+
+// Scan repository
+export const scanRepository = {
+  async add(scan: Scan): Promise<string> {
+    return await db.scans.add(scan);
+  },
+
+  async getById(id: string): Promise<Scan | undefined> {
+    return await db.scans.get(id);
+  },
+
+  async getAll(): Promise<Scan[]> {
+    return await db.scans.toArray();
+  },
+
+  async update(id: string, scan: Partial<Scan>): Promise<number> {
+    return await db.scans.update(id, scan);
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.scans.delete(id);
+  }
+};
+
+// Deck repository
+export const deckRepository = {
+  async add(deck: Deck): Promise<string> {
+    return await db.decks.add(deck);
+  },
+
+  async getById(id: string): Promise<Deck | undefined> {
+    return await db.decks.get(id);
+  },
+
+  async getAll(): Promise<Deck[]> {
+    return await db.decks.toArray();
+  },
+
+  async update(id: string, deck: Partial<Deck>): Promise<number> {
+    return await db.decks.update(id, deck);
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.decks.delete(id);
+  }
+};
+
+// DeckCard repository
+export const deckCardRepository = {
+  async add(deckCard: DeckCard): Promise<void> {
+    await db.deck_cards.add(deckCard);
+  },
+
+  async getByDeckId(deckId: string): Promise<DeckCard[]> {
+    return await db.deck_cards.where('deckId').equals(deckId).toArray();
+  },
+
+  async getByCardId(cardId: string): Promise<DeckCard[]> {
+    return await db.deck_cards.where('cardId').equals(cardId).toArray();
+  },
+
+  async deleteByDeckId(deckId: string): Promise<void> {
+    await db.deck_cards.where('deckId').equals(deckId).delete();
+  }
+};
+
+// PricePoint repository
+export const pricePointRepository = {
+  async add(pricePoint: PricePoint): Promise<string> {
+    return await db.price_points.add(pricePoint);
+  },
+
+  async getById(id: string): Promise<PricePoint | undefined> {
+    return await db.price_points.get(id);
+  },
+
+  async getByCardId(cardId: string): Promise<PricePoint[]> {
+    return await db.price_points.where('cardId').equals(cardId).toArray();
+  },
+
+  async update(id: string, pricePoint: Partial<PricePoint>): Promise<number> {
+    return await db.price_points.update(id, pricePoint);
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.price_points.delete(id);
+  }
+};
+
+// Valuation repository
+export const valuationRepository = {
+  async add(valuation: Valuation): Promise<string> {
+    return await db.valuations.add(valuation);
+  },
+
+  async getById(id: string): Promise<Valuation | undefined> {
+    return await db.valuations.get(id);
+  },
+
+  async getAll(): Promise<Valuation[]> {
+    return await db.valuations.toArray();
+  },
+
+  async update(id: string, valuation: Partial<Valuation>): Promise<number> {
+    return await db.valuations.update(id, valuation);
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.valuations.delete(id);
+  }
+};
+
+// Setting repository
+export const settingRepository = {
+  async set(key: string, value: any): Promise<string> {
+    const setting = {
+      k: key,
+      v: value,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    return await db.settings.put(setting);
+  },
+
+  async get(key: string): Promise<any> {
+    const setting = await db.settings.get(key);
+    return setting?.v;
+  },
+
+  async getAll(): Promise<Setting[]> {
+    return await db.settings.toArray();
+  },
+
+  async delete(key: string): Promise<void> {
+    await db.settings.delete(key);
+  }
+};
+
+// ScanSaleLink repository
+export const scanSaleLinkRepository = {
+  async add(link: ScanSaleLink): Promise<string> {
+    return await db.scan_sale_links.add(link);
+  },
+
+  async getByScanId(scanId: string): Promise<ScanSaleLink[]> {
+    return await db.scan_sale_links.where('scanId').equals(scanId).toArray();
+  },
+
+  async getByTransactionId(transactionId: string): Promise<ScanSaleLink[]> {
+    return await db.scan_sale_links.where('transactionId').equals(transactionId).toArray();
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.scan_sale_links.delete(id);
   }
 };
