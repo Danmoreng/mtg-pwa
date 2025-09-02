@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../features/dashboard/HomeView.vue'
 import CsvImportView from '../features/imports/views/CsvImportView.vue'
+import CardmarketImportWizard from '../features/imports/views/wizard/CardmarketImportWizard.vue'
 import DeckImportView from '../features/decks/views/DeckImportView.vue'
 import DecksView from '../features/decks/views/DecksView.vue'
 import DeckDetailView from '../features/decks/views/DeckDetailView.vue'
@@ -16,6 +17,11 @@ const routes = [
     path: '/import/csv',
     name: 'csv-import',
     component: CsvImportView
+  },
+  {
+    path: '/import/cardmarket',
+    name: 'cardmarket-import',
+    component: CardmarketImportWizard
   },
   {
     path: '/import/deck',

@@ -110,7 +110,13 @@ export class ScryfallProvider {
   }
 
   // Hydrate a card with Scryfall data
-  static async hydrateCard(cardData: any): Promise<any> {
+  static async hydrateCard(cardData: { 
+    scryfall_id?: string; 
+    name?: string; 
+    setCode?: string; 
+    collectorNumber?: string;
+    version?: string;
+  }): Promise<any> {
     try {
       // If we already have a Scryfall ID, use it directly
       if (cardData.scryfall_id) {
@@ -139,7 +145,27 @@ export class ScryfallProvider {
         // Enforce rate limiting
         await this.enforceRateLimit();
         
-        const response = await fetch(`${this.BASE_URL}/cards/named?exact=${encodeURIComponent(cardData.name)}&set=${encodeURIComponent(cardData.setCode)}`);
+        // First try exact name match
+        let response = await fetch(`${this.BASE_URL}/cards/named?exact=${encodeURIComponent(cardData.name)}&set=${encodeURIComponent(cardData.setCode)}`);
+        if (response.ok) {
+          return await response.json();
+        }
+        
+        // If that fails and we have version info, try searching with "include_variations=true"
+        if (cardData.version) {
+          await this.enforceRateLimit();
+          response = await fetch(`${this.BASE_URL}/cards/named?exact=${encodeURIComponent(cardData.name)}&set=${encodeURIComponent(cardData.setCode)}&include_variations=true`);
+          if (response.ok) {
+            const data = await response.json();
+            // If we get multiple results, we might want to filter for the specific version
+            // For now, we'll just return the first result
+            return data;
+          }
+        }
+        
+        // If that fails, try a fuzzy search
+        await this.enforceRateLimit();
+        response = await fetch(`${this.BASE_URL}/cards/named?fuzzy=${encodeURIComponent(cardData.name)}&set=${encodeURIComponent(cardData.setCode)}`);
         if (response.ok) {
           return await response.json();
         }

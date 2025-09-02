@@ -173,6 +173,10 @@ const handleOrdersFileUpload = async (event: Event) => {
   if (!file) return;
   
   try {
+    // Determine direction based on file name
+    const fileName = file.name.toLowerCase();
+    const direction = fileName.includes('purchased') ? 'purchase' : 'sale';
+    
     // Parse CSV file
     const text = await file.text();
     const lines = text.split('\n');
@@ -243,7 +247,7 @@ const handleOrdersFileUpload = async (event: Event) => {
       
       // Only add orders with an ID
       if (order.orderId) {
-        order.direction = 'sale'; // Default to sale
+        order.direction = direction;
         order.currency = 'EUR'; // Assume EUR for now
         orders.push(order);
       }
@@ -251,7 +255,7 @@ const handleOrdersFileUpload = async (event: Event) => {
     
     // Import orders
     await ImportService.importCardmarketOrders(orders);
-    showStatus('success', `Successfully imported ${orders.length} orders`);
+    showStatus('success', `Successfully imported ${orders.length} ${direction} orders`);
     
     // Reset file input
     target.value = '';
@@ -269,6 +273,10 @@ const handleArticlesFileUpload = async (event: Event) => {
   if (!file) return;
   
   try {
+    // Determine direction based on file name
+    const fileName = file.name.toLowerCase();
+    const direction = fileName.includes('purchased') ? 'purchase' : 'sale';
+    
     // Parse CSV file
     const text = await file.text();
     const lines = text.split('\n');
@@ -305,6 +313,7 @@ const handleArticlesFileUpload = async (event: Event) => {
             break;
           case 'article':
           case 'artikel':
+          case 'localized product name':
           case 'produktname':
             article.name = value;
             break;
@@ -325,20 +334,31 @@ const handleArticlesFileUpload = async (event: Event) => {
           case 'preis':
             article.price = value;
             break;
+          case 'total':
+            article.total = value;
+            break;
+          case 'currency':
+            article.currency = value;
+            break;
+          case 'comments':
+            article.comments = value;
+            break;
         }
       }
       
       // Only add articles with a shipment ID
       if (article.shipmentId) {
-        article.direction = 'sale'; // Default to sale
-        article.currency = 'EUR'; // Assume EUR for now
+        article.direction = direction;
+        if (!article.currency) {
+          article.currency = 'EUR'; // Assume EUR for now
+        }
         articles.push(article);
       }
     }
     
     // Import articles
     await ImportService.importCardmarketArticles(articles);
-    showStatus('success', `Successfully imported ${articles.length} articles`);
+    showStatus('success', `Successfully imported ${articles.length} ${direction} articles`);
     
     // Reset file input
     target.value = '';

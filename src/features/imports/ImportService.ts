@@ -1,8 +1,8 @@
 // Import service for handling CSV imports
 import { transactionRepository, holdingRepository, cardRepository } from '../../data/repos';
-import { EntityLinker, type CardFingerprint } from '../linker/EntityLinker.ts';
 import { Money } from '../../core/Money';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
+import { resolveSetCode } from '../pricing/SetCodeResolver';
 import db from '../../data/db';
 
 export class ImportService {
@@ -13,7 +13,7 @@ export class ImportService {
       
       for (const transaction of transactions) {
         // Create external reference to avoid duplicates
-        const externalRef = `cardmarket:${transaction.reference}`;
+        const externalRef = `cardmarket:${transaction.reference}:${transaction.lineNumber}`;
         
         // Check if transaction already exists
         const existing = await db.transactions.where('externalRef').equals(externalRef).first();
@@ -54,7 +54,7 @@ export class ImportService {
       
       for (const order of orders) {
         // Create external reference to avoid duplicates
-        const externalRef = `cardmarket:order:${order.orderId}`;
+        const externalRef = `cardmarket:order:${order.orderId}:${order.lineNumber}`;
         
         // Check if order already exists
         const existing = await db.transactions.where('externalRef').equals(externalRef).first();
@@ -97,16 +97,26 @@ export class ImportService {
       
       for (const article of articles) {
         // Create a card fingerprint
-        const fingerprint: CardFingerprint = {
-          name: article.name,
-          setCode: article.expansion,
-          collectorNumber: '', // Not available in articles CSV
-          finish: '', // Not available in articles CSV
-          language: '' // Not available in articles CSV
-        };
+        const setCode = await resolveSetCode(article.expansion);
+        
+        // Check if card name contains version information
+        let cleanCardName = article.name;
+        let versionInfo = null;
+        const versionMatch = article.name.match(/^(.+?)\s*\((V\.\d+)\)$/i);
+        if (versionMatch) {
+          cleanCardName = versionMatch[1].trim();
+          versionInfo = versionMatch[2]; // e.g., "V.1"
+        }
         
         // Try to resolve to a Scryfall ID
-        const cardId = await EntityLinker.resolveFingerprint(fingerprint);
+        const cardData = await ScryfallProvider.hydrateCard({
+          name: cleanCardName,
+          setCode: setCode || article.expansion, // Fallback to original if we can't resolve
+          collectorNumber: '',
+          version: versionInfo
+        });
+        
+        const cardId = cardData?.id || null;
         
         // Parse price as Money
         const price = Money.parse(article.price, 'EUR');
@@ -151,7 +161,7 @@ export class ImportService {
               oracleId: scryfallData?.oracle_id || '',
               name: article.name,
               set: scryfallData?.set_name || article.expansion,
-              setCode: article.expansion,
+              setCode: setCode || article.expansion,
               number: '', // Not available in articles CSV
               lang: scryfallData?.lang || 'en',
               finish: 'nonfoil', // Default to nonfoil
@@ -230,7 +240,7 @@ export class ImportService {
           shipping: 0, // Shipping would be in order records
           currency: 'EUR',
           source: 'cardmarket',
-          externalRef: `cardmarket:article:${article.shipmentId}:${article.productId}`,
+          externalRef: `cardmarket:article:${article.shipmentId}:${article.lineNumber}`,
           happenedAt: new Date(article.dateOfPurchase),
           createdAt: now,
           updatedAt: now
