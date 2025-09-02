@@ -6,95 +6,56 @@ A Progressive Web App (PWA) for tracking the value of your Magic: The Gathering 
 
 - Track your MTG card collection value
 - Import data from Cardmarket CSV exports
-- Import decks from Moxfield (text format)
+- Import ManaBox scanned cards
+- Import decks from Moxfield
 - View portfolio statistics including value, cost basis, and profit/loss
 - Offline functionality with PWA support
 - Responsive design that works on desktop and mobile
 
-## Tech Stack
+## Quick Start
 
-- Vue 3 with TypeScript
-- Vite for build tooling
-- Dexie.js for IndexedDB database management
-- Vue Router for navigation
-- Vite PWA plugin for PWA functionality
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (version 16 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   ```
-
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-### Development
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-Start the development server:
-```bash
-npm run dev
-```
+3. Build for production:
+   ```bash
+   npm run build
+   ```
 
-### Building
+## Documentation
 
-Build the application for production:
-```bash
-npm run build
-```
+- [Architecture](docs/ARCHITECTURE.md) - Technical architecture and data model
+- [Importers](docs/IMPORTERS.md) - Specifications for Cardmarket, ManaBox, and Moxfield importers
+- [Roadmap](docs/ROADMAP.md) - Project milestones and future plans
+- [AI Collaboration](docs/QWEN.md) - Guidelines for working with the AI assistant
+- [AI Changelog](docs/AI_CHANGELOG.md) - Historical log of AI-proposed changes
 
-### Testing
+## Where did things go?
 
-Run the test suite:
-```bash
-npm run test
-```
-
-## Usage
-
-1. Import your Cardmarket transaction data through the CSV import feature
-2. Import your decks from Moxfield by copying the text export
-3. View your collection value and statistics on the dashboard
-4. Browse your decks and cards through the dedicated views
-
-## Project Structure
-
-```
-src/
-├── app/           # Application shell and routing
-├── components/    # Reusable UI components
-├── core/          # Core utilities and business logic
-├── data/          # Database models and repositories
-├── features/      # Feature modules
-│   ├── analytics/ # Portfolio analytics and calculations
-│   ├── dashboard/ # Dashboard views
-│   ├── decks/     # Deck management
-│   ├── imports/   # Data import functionality
-│   ├── linker/    # Entity linking utilities
-│   ├── pricing/   # Pricing providers
-│   └── scans/     # Scan matching functionality
-├── test/          # Test setup and utilities
-├── ui/            # UI components and styles
-└── workers/       # Web workers for background tasks
-```
+We've recently consolidated our documentation to reduce sprawl:
+- Project plan moved to `docs/ROADMAP.md`
+- Implementation details moved to `docs/ARCHITECTURE.md`
+- Importer specifications moved to `docs/IMPORTERS.md`
+- AI collaboration rules moved to `docs/QWEN.md`
 
 ## Contributing
+
+This project follows a collaborative development model where humans run commands and AI proposes changes:
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Commit your changes
-5. Push to the branch
-6. Create a pull request
+4. Ensure AI changelog entry is added to `docs/AI_CHANGELOG.md`
+5. Commit your changes using Conventional Commits
+6. Push to the branch
+7. Create a pull request
 
 ## License
 

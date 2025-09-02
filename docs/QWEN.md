@@ -1,22 +1,21 @@
-# AI Collaboration Instructions — MTG Value Tracker (Vue PWA)
+# Working with the AI (Qwen)
 
-This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA** for tracking MTG collection value. It is written for an AI assistant (e.g., **Qwen**) partnering with a human developer.
-
----
+- Human runs all commands; AI proposes patches + tests.
+- Every AI change MUST include a **CHANGELOG ENTRY** appended to `docs/AI_CHANGELOG.md`.
+- Use Conventional Commits with `[AI]` prefix, e.g., `[AI] feat(import): add idempotency key`.
 
 ## Core Principles
 
-1. **Human‑Centric Development**: The human sets up the environment, runs servers/builds, and performs manual testing.
-2. **AI as Assistant**: The AI proposes designs, code changes, and tests; it does **not** execute commands.
-3. **Clear Boundaries**: The AI never runs `npm run dev/build/test`. It may suggest commands and code, and provide verification steps.
-4. **Traceability**: Every AI‑proposed change must be logged in a dedicated **AI changelog** (see “Changelog Discipline”).
-
----
+1. **Human‑Centric Development**: The human sets up the environment, runs dev server, and performs manual testing.
+2. **AI as Assistant**: The AI proposes designs, code changes, and tests; it does **not** execute dev server or test commands.
+3. **Clear Boundaries**: The AI never runs `npm run dev/test` but may run `npm run build` to check for compilation errors. For manual testing and verification, the human runs the dev server.
+4. **Traceability**: Every AI‑proposed change must be logged in a dedicated **AI changelog** (see "Changelog Discipline").
 
 ## Development Workflow
 
 ### Environment Management
-- **DO NOT (AI)**: Run dev servers, builds, or tests.
+- **DO NOT (AI)**: Run dev servers or tests.
+- **CAN (AI)**: Run `npm run build` to check for compilation errors.
 - **CAN (AI)**: Recommend exact commands for the human to run, e.g. `npm install dexie`.
 - **CAN (AI)**: Propose concrete code patches, new files, and migrations.
 - **DO (AI)**: Provide step‑by‑step local verification instructions for the human.
@@ -33,8 +32,6 @@ This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA**
 - **DO**: Provide unit/E2E test specs and fixtures.
 - **DO**: Supply documentation updates when altering behavior.
 
----
-
 ## Communication Guidelines
 
 ### When Providing Instructions
@@ -48,8 +45,6 @@ This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA**
 2. Provide **exact command syntax** where applicable.
 3. State **expected outcomes** and **how to verify**.
 4. Call out **edge cases** (large CSVs, offline mode, currency formats).
-
----
 
 ## Project Context
 
@@ -74,8 +69,6 @@ This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA**
 - No secrets required for base (Scryfall public pricing); Cardmarket API can be added later via proxy.
 - Keep the app fully offline‑capable; defer network work when offline.
 
----
-
 ## Collaboration Workflow
 
 ### Typical Interaction Pattern
@@ -89,12 +82,10 @@ This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA**
 2. AI explains likely causes and supplies patches and **targeted reproduction steps**.
 3. Human applies and re‑tests; repeat as needed.
 
----
-
 ## Restrictions
 
 ### The AI must **never**
-- Run dev/build/test commands.
+- Run dev server or test commands.
 - Assume unverified environment details.
 - Provide opaque changes without explaining rationale.
 
@@ -110,8 +101,6 @@ This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA**
 - Confirm understanding of requirements.
 - Target **clean, maintainable** code aligned with project conventions.
 
----
-
 ## Getting Started (for new tasks)
 1. **Review** relevant files and the project plan.
 2. **Identify** dependencies, data flows, and affected tables.
@@ -119,8 +108,6 @@ This guide adapts your collaboration framework to the **Vue 3 + TypeScript PWA**
 4. **Specify** human‑run steps (commands & manual checks).
 5. **Provide** complete code patches and tests.
 6. **Prepare** a **Changelog** entry for the proposed change.
-
----
 
 ## Code Contribution Format (for the AI)
 
@@ -139,13 +126,12 @@ When proposing changes, the AI should reply with these sections:
 ```bash
 npm install
 npm run typecheck
-npm run test # Vitest
-npm run dev   # then open http://localhost:5173 and follow manual steps
+npm run build  # AI can run this to check for compilation errors
+npm run test   # Human runs tests
+npm run dev    # Human runs dev server at http://localhost:5173
 ```
 
----
-
-## Changelog Discipline (Qwen MUST do this every time)
+## Changelog Discipline
 
 Maintain a persistent log at **`docs/AI_CHANGELOG.md`**. Each AI proposal must include an entry the human can paste or commit.
 
@@ -189,8 +175,6 @@ Additionally, for each proposed commit message, prefix with `[AI]` and use Conve
 [AI] feat(db): introduce Dexie schema v1 and money helpers
 ```
 
----
-
 ## Project Conventions & Quality Gates
 
 - **Money** stored as integer cents, typed helpers used everywhere.
@@ -200,8 +184,6 @@ Additionally, for each proposed commit message, prefix with `[AI]` and use Conve
 - **Accessibility**: keyboard focus, proper labels, high contrast.
 - **Performance**: virtualize large tables; avoid main‑thread blocking.
 - **Privacy**: local‑first, no secrets in client; optional proxy for Cardmarket later.
-
----
 
 ## Ready‑Made Templates (the AI may propose these files)
 
@@ -226,21 +208,11 @@ Additionally, for each proposed commit message, prefix with `[AI]` and use Conve
 (Paste the entry for docs/AI_CHANGELOG.md)
 ```
 
-**2) AI Collaboration Readme** — `docs/AI_COLLABORATION.md`
-```markdown
-# Working with the AI Assistant
-- Human runs all commands; AI proposes patches and tests.
-- Every AI change must include a CHANGELOG ENTRY block to append to docs/AI_CHANGELOG.md.
-- Use Conventional Commits with `[AI]` prefix.
-```
-
-**3) Changelog file seed** — `docs/AI_CHANGELOG.md`
+**2) Changelog file seed** — `docs/AI_CHANGELOG.md`
 ```markdown
 # AI Change Log
 (Initialize this file; see format in the main instructions.)
 ```
-
----
 
 ## Task Intake Checklist (for the AI)
 
@@ -250,8 +222,6 @@ Before proposing changes, the AI should confirm:
 - **Inputs/fixtures** (sample CSVs/URLs)
 - **Edge cases** (duplicates, large files, offline)
 - **Telemetry** or logs required (dev‑only)
-
----
 
 ## Example: Small Changeset Proposal (skeleton)
 
@@ -283,13 +253,5 @@ npm run dev
 Open the app; ensure no console errors and DB is created.
 
 ### CHANGELOG ENTRY (to append)
-… (fill with today’s timestamp and details)
+… (fill with today's timestamp and details)
 ```
-
----
-
-## Final Notes
-- Keep proposals **small and reviewable**.
-- Always ship code + tests + docs + CHANGELOG ENTRY.
-- Favor progressive enhancement for PWA/offline features.
-
