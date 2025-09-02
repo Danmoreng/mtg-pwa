@@ -115,6 +115,23 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Verification Steps**: `npm run build` completes successfully. Navigate to Cardmarket Import in the app and verify the wizard loads correctly.
 - **Linked Task/Issue**: M2 Finish: Cardmarket Import (UI & polish)
 
+## 2025-09-02 15:00 — docs: Restructure documentation to reduce sprawl
+- **Author**: AI (Qwen)
+- **Scope**: README.md, docs/ARCHITECTURE.md, docs/IMPORTERS.md, docs/ROADMAP.md, docs/QWEN.md, .github/pull_request_template.md
+- **Type**: docs
+- **Summary**: Restructured documentation according to lean structure to reduce sprawl and improve organization.
+- **Details**:
+    - Created ARCHITECTURE.md with technical architecture, data model, and current capabilities
+    - Created IMPORTERS.md with detailed specifications for Cardmarket, ManaBox, and Moxfield importers
+    - Created ROADMAP.md with project milestones, acceptance criteria, and prioritized tasks
+    - Consolidated AI collaboration rules into QWEN.md
+    - Created standard pull request template
+    - Removed redundant documentation files (project_plan.md, project-status.md, etc.)
+    - Updated README.md with links to new documentation structure
+- **Impact/Risks**: No functional changes; documentation reorganization only. All content preserved in new structure.
+- **Verification Steps**: Review new documentation files to ensure all information migrated correctly.
+- **Linked Task/Issue**: Documentation restructuring
+
 ## 2025-09-01 17:30 — feat: Implement automatic price updates and fix price data saving
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/PriceUpdateService.ts, src/features/dashboard/HomeView.vue, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/workers/priceSync.ts
@@ -257,20 +274,3 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Impact/Risks**: These changes improve the project planning and organization without affecting existing functionality.
 - **Verification Steps**: Review the new issue files and updated documentation to ensure they accurately reflect the planned improvements.
 - **Linked Task/Issue**: Plan Mode
-
-## 2025-09-02 15:00 — docs: Restructure documentation to reduce sprawl
-- **Author**: AI (Qwen)
-- **Scope**: README.md, docs/ARCHITECTURE.md, docs/IMPORTERS.md, docs/ROADMAP.md, docs/QWEN.md, .github/pull_request_template.md
-- **Type**: docs
-- **Summary**: Restructured documentation according to lean structure to reduce sprawl and improve organization.
-- **Details**:
-    - Created ARCHITECTURE.md with technical architecture, data model, and current capabilities
-    - Created IMPORTERS.md with detailed specifications for Cardmarket, ManaBox, and Moxfield importers
-    - Created ROADMAP.md with project milestones, acceptance criteria, and prioritized tasks
-    - Consolidated AI collaboration rules into QWEN.md
-    - Created standard pull request template
-    - Removed redundant documentation files (project_plan.md, project-status.md, etc.)
-    - Updated README.md with links to new documentation structure
-- **Impact/Risks**: No functional changes; documentation reorganization only. All content preserved in new structure.
-- **Verification Steps**: Review new documentation files to ensure all information migrated correctly.
-- **Linked Task/Issue**: Documentation restructuring
