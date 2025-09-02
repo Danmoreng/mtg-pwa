@@ -11,6 +11,7 @@ interface CardmarketTransaction {
   amount: string;
   currency: string;
   balanceAfter: string;
+  lineNumber: number;
 }
 
 interface CardmarketOrder {
@@ -24,6 +25,9 @@ interface CardmarketOrder {
   shipmentCosts: string;
   commission: string;
   totalValue: string;
+  direction: 'sale' | 'purchase';
+  currency: string;
+  lineNumber: number;
 }
 
 interface CardmarketArticle {
@@ -35,6 +39,11 @@ interface CardmarketArticle {
   category: string;
   amount: string;
   price: string;
+  total: string;
+  currency: string;
+  comments: string;
+  direction: 'sale' | 'purchase';
+  lineNumber: number;
 }
 
 
@@ -52,48 +61,44 @@ function parseTransactionsCSV(csvText: string): CardmarketTransaction[] {
     const values = line.split(';');
     const transaction: any = {};
     
+    // Create a map of header to value for easier lookup
+    const rowMap: Record<string, string> = {};
     for (let j = 0; j < headers.length; j++) {
-      const header = headers[j].toLowerCase();
+      const header = headers[j];
       const value = values[j] ? values[j].trim() : '';
-      
-      // Map different possible column names to standard properties
-      switch (header) {
-        case 'reference':
-        case 'referenz':
-        case 'transaktions-id':
-          transaction.reference = value;
-          break;
-        case 'date':
-        case 'datum':
-        case 'date paid':
-          transaction.date = value;
-          break;
-        case 'category':
-        case 'kategorie':
-          transaction.category = value;
-          break;
-        case 'type':
-        case 'typ':
-          transaction.type = value;
-          break;
-        case 'counterpart':
-        case 'gegenpartei':
-          transaction.counterpart = value;
-          break;
-        case 'amount':
-        case 'betrag':
-          transaction.amount = value;
-          break;
-        case 'closing balance (eur)':
-        case 'balance after':
-        case 'saldo danach (eur)':
-          transaction.balanceAfter = value;
-          break;
-      }
+      rowMap[header] = value;
     }
+    
+    // Function to get value by trying multiple possible column names (case-insensitive)
+    const getValue = (...keys: string[]): string => {
+      for (const key of keys) {
+        // Try exact match first
+        if (rowMap[key] !== undefined && rowMap[key] !== '') {
+          return rowMap[key];
+        }
+        // Try case-insensitive match
+        const lowerKey = key.toLowerCase();
+        for (const [header, value] of Object.entries(rowMap)) {
+          if (header.toLowerCase() === lowerKey && value !== '') {
+            return value;
+          }
+        }
+      }
+      return '';
+    };
+    
+    // Extract values using flexible matching
+    transaction.reference = getValue('Reference', 'Referenz', 'Transaktions-ID');
+    transaction.date = getValue('Date', 'Datum', 'Date Paid', 'Date paid', 'Datum Paid');
+    transaction.category = getValue('Category', 'Kategorie');
+    transaction.type = getValue('Type', 'Typ');
+    transaction.counterpart = getValue('Counterpart', 'Gegenpartei');
+    transaction.amount = getValue('Amount', 'Betrag');
+    transaction.balanceAfter = getValue('Closing balance (EUR)', 'Balance After', 'Saldo danach (EUR)');
     
     // Only add transactions with a reference
     if (transaction.reference) {
+      transaction.lineNumber = i; // Add line number for idempotency
       transaction.currency = 'EUR'; // Assume EUR for now
       transactions.push(transaction);
     }
@@ -115,63 +120,47 @@ function parseOrdersCSV(csvText: string, direction: 'sale' | 'purchase'): Cardma
     const values = line.split(';');
     const order: any = {};
     
+    // Create a map of header to value for easier lookup
+    const rowMap: Record<string, string> = {};
     for (let j = 0; j < headers.length; j++) {
-      const header = headers[j].toLowerCase();
+      const header = headers[j];
       const value = values[j] ? values[j].trim() : '';
-      
-      // Map different possible column names to standard properties
-      switch (header) {
-        case 'order id':
-        case 'orderid':
-        case 'bestellnummer':
-          order.orderId = value;
-          break;
-        case 'date of purchase':
-        case 'date':
-        case 'date of payment':
-        case 'kaufdatum':
-        case 'zahlungsdatum':
-          order.dateOfPurchase = value;
-          break;
-        case 'username':
-        case 'benutzername':
-          order.username = value;
-          break;
-        case 'country':
-        case 'land':
-          order.country = value;
-          break;
-        case 'city':
-        case 'stadt':
-          order.city = value;
-          break;
-        case 'article count':
-        case 'items':
-        case 'anzahl artikel':
-          order.articleCount = value;
-          break;
-        case 'merchandise value':
-        case 'warenwert':
-          order.merchandiseValue = value;
-          break;
-        case 'shipment costs':
-        case 'versandkosten':
-          order.shipmentCosts = value;
-          break;
-        case 'commission':
-        case 'trustee service fee':
-        case 'provision':
-          order.commission = value;
-          break;
-        case 'total value':
-        case 'gesamtwert':
-          order.totalValue = value;
-          break;
-      }
+      rowMap[header] = value;
     }
+    
+    // Function to get value by trying multiple possible column names (case-insensitive)
+    const getValue = (...keys: string[]): string => {
+      for (const key of keys) {
+        // Try exact match first
+        if (rowMap[key] !== undefined && rowMap[key] !== '') {
+          return rowMap[key];
+        }
+        // Try case-insensitive match
+        const lowerKey = key.toLowerCase();
+        for (const [header, value] of Object.entries(rowMap)) {
+          if (header.toLowerCase() === lowerKey && value !== '') {
+            return value;
+          }
+        }
+      }
+      return '';
+    };
+    
+    // Extract values using flexible matching
+    order.orderId = getValue('Order ID', 'OrderID', 'Bestellnummer');
+    order.dateOfPurchase = getValue('Date of Purchase', 'Date', 'Date of payment', 'Kaufdatum', 'Zahlungsdatum');
+    order.username = getValue('Username', 'Benutzername');
+    order.country = getValue('Country', 'Land');
+    order.city = getValue('City', 'Stadt');
+    order.articleCount = getValue('Article Count', 'Items', 'Anzahl Artikel');
+    order.merchandiseValue = getValue('Merchandise Value', 'Warenwert');
+    order.shipmentCosts = getValue('Shipment Costs', 'Versandkosten');
+    order.commission = getValue('Commission', 'Trustee service fee', 'Provision');
+    order.totalValue = getValue('Total Value', 'Gesamtwert');
     
     // Only add orders with an ID
     if (order.orderId) {
+      order.lineNumber = i; // Add line number for idempotency
       order.direction = direction;
       order.currency = 'EUR'; // Assume EUR for now
       orders.push(order);
@@ -194,56 +183,52 @@ function parseArticlesCSV(csvText: string, direction: 'sale' | 'purchase'): Card
     const values = line.split(';');
     const article: any = {};
     
+    // Create a map of header to value for easier lookup
+    const rowMap: Record<string, string> = {};
     for (let j = 0; j < headers.length; j++) {
-      const header = headers[j].toLowerCase();
+      const header = headers[j];
       const value = values[j] ? values[j].trim() : '';
-      
-      // Map different possible column names to standard properties
-      switch (header) {
-        case 'shipment nr.':
-        case 'shipment nr':
-        case 'shipment id':
-        case 'order id':
-        case 'bestellnummer':
-          article.shipmentId = value;
-          break;
-        case 'date of purchase':
-        case 'date':
-          article.dateOfPurchase = value;
-          break;
-        case 'product id':
-        case 'produkt id':
-          article.productId = value;
-          break;
-        case 'article':
-        case 'artikel':
-        case 'produktname':
-          article.name = value;
-          break;
-        case 'expansion':
-        case 'erweiterung':
-          article.expansion = value;
-          break;
-        case 'category':
-        case 'kategorie':
-          article.category = value;
-          break;
-        case 'amount':
-        case 'anzahl':
-          article.amount = value;
-          break;
-        case 'article value':
-        case 'price':
-        case 'preis':
-          article.price = value;
-          break;
-      }
+      rowMap[header] = value;
     }
+    
+    // Function to get value by trying multiple possible column names (case-insensitive)
+    const getValue = (...keys: string[]): string => {
+      for (const key of keys) {
+        // Try exact match first
+        if (rowMap[key] !== undefined && rowMap[key] !== '') {
+          return rowMap[key];
+        }
+        // Try case-insensitive match
+        const lowerKey = key.toLowerCase();
+        for (const [header, value] of Object.entries(rowMap)) {
+          if (header.toLowerCase() === lowerKey && value !== '') {
+            return value;
+          }
+        }
+      }
+      return '';
+    };
+    
+    // Extract values using flexible matching
+    article.shipmentId = getValue('Shipment nr.', 'Shipment nr', 'Shipment ID', 'Order ID', 'Bestellnummer');
+    article.dateOfPurchase = getValue('Date of purchase', 'Date');
+    article.productId = getValue('Product ID', 'Produkt ID');
+    article.name = getValue('Article', 'Artikel', 'Localized Product Name', 'Produktname');
+    article.expansion = getValue('Expansion', 'Erweiterung');
+    article.category = getValue('Category', 'Kategorie');
+    article.amount = getValue('Amount', 'Anzahl');
+    article.price = getValue('Article Value', 'Price', 'Preis');
+    article.total = getValue('Total');
+    article.currency = getValue('Currency');
+    article.comments = getValue('Comments');
     
     // Only add articles with a shipment ID
     if (article.shipmentId) {
+      article.lineNumber = i; // Add line number for idempotency
       article.direction = direction;
-      article.currency = 'EUR'; // Assume EUR for now
+      if (!article.currency) {
+        article.currency = 'EUR'; // Assume EUR for now
+      }
       articles.push(article);
     }
   }

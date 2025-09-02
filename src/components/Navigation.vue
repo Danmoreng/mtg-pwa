@@ -21,8 +21,8 @@
           </router-link>
         </li>
         <li>
-          <router-link to="/import/csv" class="nav-link" :class="{ active: $route.name === 'csv-import' }">
-            Import CSV
+          <router-link to="/import/cardmarket" class="nav-link" :class="{ active: $route.name === 'cardmarket-import' }">
+            Cardmarket Import
           </router-link>
         </li>
       </ul>

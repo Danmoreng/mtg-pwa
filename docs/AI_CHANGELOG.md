@@ -2,22 +2,118 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
-## 2025-09-02 15:00 — docs: Restructure documentation to reduce sprawl
+## 2025-09-02 20:00 — feat: Enhanced Cardmarket set code resolution with complex set name handling
 - **Author**: AI (Qwen)
-- **Scope**: README.md, docs/ARCHITECTURE.md, docs/IMPORTERS.md, docs/ROADMAP.md, docs/QWEN.md, .github/pull_request_template.md
-- **Type**: docs
-- **Summary**: Restructured documentation according to lean structure to reduce sprawl and improve organization.
+- **Scope**: src/features/pricing/SetCodeResolver.ts
+- **Type**: feat
+- **Summary**: Improve Cardmarket import reliability by enhancing set code resolution for complex nested set names.
 - **Details**:
-  - Created ARCHITECTURE.md with technical architecture, data model, and current capabilities
-  - Created IMPORTERS.md with detailed specifications for Cardmarket, ManaBox, and Moxfield importers
-  - Created ROADMAP.md with project milestones, acceptance criteria, and prioritized tasks
-  - Consolidated AI collaboration rules into QWEN.md
-  - Created standard pull request template
-  - Removed redundant documentation files (project_plan.md, project-status.md, etc.)
-  - Updated README.md with links to new documentation structure
-- **Impact/Risks**: No functional changes; documentation reorganization only. All content preserved in new structure.
-- **Verification Steps**: Review new documentation files to ensure all information migrated correctly.
-- **Linked Task/Issue**: Documentation restructuring
+  - Added enhanced heuristics for complex nested set names like "Commander: The Lord of the Rings: Tales of Middle-earth: Extras"
+  - Improved handling of "Universes Beyond:" prefixed sets with "Extras" suffix
+  - Enhanced resolution for "Magic: The Gathering -" prefixed sets
+  - Added special case handling for "Stellar Sights" set (fallback to Secret Lair)
+  - Improved debugging output to better track resolution attempts
+  - Enhanced error recovery with more comprehensive cache refresh logic
+- **Impact/Risks**: Further improves Cardmarket import success rate for complex and nested set names. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files with complex set names and verify proper set code resolution.
+- **Linked Task/Issue**: Cardmarket import set code resolution improvements
+
+## 2025-09-02 19:00 — feat: Enhanced Cardmarket Scryfall API integration
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/SetCodeResolver.ts, src/features/imports/ImportService.ts, src/features/pricing/ScryfallProvider.ts
+- **Type**: feat
+- **Summary**: Improve Cardmarket import reliability by enhancing Scryfall API integration with better set code resolution and versioned card handling.
+- **Details**:
+  - Enhanced SetCodeResolver with additional heuristics for complex set names (Universes Beyond, Magic: The Gathering - prefixes)
+  - Added version information stripping from card names (e.g., "Card Name (V.1)" → "Card Name")
+  - Updated ScryfallProvider to handle versioned cards with include_variations parameter
+  - Improved error handling and debugging output for set code resolution
+  - Added support for fuzzy matching as fallback for difficult card lookups
+  - Enhanced caching mechanism with better error recovery
+- **Impact/Risks**: Significantly improves Cardmarket import success rate for complex sets and versioned cards. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files and verify Scryfall API calls use correct set codes and handle versioned cards.
+- **Linked Task/Issue**: Cardmarket import Scryfall API fixes
+
+## 2025-09-02 18:00 — feat: Cardmarket Scryfall set code resolution
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/SetCodeResolver.ts, src/features/imports/ImportService.ts
+- **Type**: feat
+- **Summary**: Implement dynamic set code resolution for Cardmarket imports using Scryfall API.
+- **Details**:
+  - Created SetCodeResolver module to convert Cardmarket full set names to Scryfall set codes
+  - Implemented heuristic rules for handling "Extras", "Commander:", and "Secret Lair Drop Series" variants
+  - Added caching mechanism using IndexedDB to store Scryfall sets data with 7-day refresh policy
+  - Implemented alias table for learning resolved mappings to avoid repeated API calls
+  - Updated ImportService to use dynamic set code resolution instead of hardcoded mapping
+  - Added fallback mechanisms for handling unknown/new sets by refreshing cache
+- **Impact/Risks**: Improves Cardmarket import reliability by correctly resolving Scryfall set codes. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files and verify Scryfall API calls use correct set codes.
+- **Linked Task/Issue**: Cardmarket import Scryfall API fixes
+
+## 2025-09-02 17:00 — fix: Cardmarket CSV field name alignment and validation fixes
+- **Author**: AI (Qwen)
+- **Scope**: src/features/imports/views/wizard/CardmarketImportWizard.vue, src/workers/cardmarketCsv.ts
+- **Type**: fix
+- **Summary**: Fix field name mismatches between CSV parsing worker and validation logic for orders and articles.
+- **Details**:
+  - Fixed field name mismatches between worker parsing and validation functions
+  - Updated articles validation to check for `amount` instead of `quantity` field
+  - Updated articles validation to check for `shipmentId` instead of `orderId` field
+  - Added date validation for orders (was missing)
+  - Updated validation to handle both `date` and `dateOfPurchase` field names
+  - Fixed template to display correct field names for articles and orders
+  - Ensured consistent field naming between worker parsing and UI display
+- **Impact/Risks**: Fixes critical functionality issues preventing Cardmarket orders and articles CSV imports from working. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import sample CSV files and verify all data types (transactions, orders, articles) are correctly parsed and validated.
+- **Linked Task/Issue**: Cardmarket import feature fixes
+
+## 2025-09-02 16:00 — fix: Cardmarket CSV parsing and validation improvements
+- **Author**: AI (Qwen)
+- **Scope**: src/features/imports/views/wizard/CardmarketImportWizard.vue, src/workers/cardmarketCsv.ts
+- **Type**: fix
+- **Summary**: Fix Cardmarket import validation and parsing issues to correctly handle actual CSV formats.
+- **Details**:
+  - Fixed date validation to handle DD.MM.YYYY HH:MM:SS format used in actual CSV files
+  - Updated price validation to accept negative values (for fees)
+  - Improved CSV parsing in worker to use flexible case-insensitive column matching
+  - Added robust column value extraction using lookup functions similar to legacy implementation
+  - Fixed worker to properly extract values from CSV rows with varying column names
+- **Impact/Risks**: Fixes critical functionality issues preventing Cardmarket CSV imports from working with real data. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import sample CSV files and verify data is correctly parsed and validated.
+- **Linked Task/Issue**: Cardmarket import feature fixes
+
+## 2025-09-02 15:00 — fix: Cardmarket Import Wizard functionality and idempotency
+- **Author**: AI (Qwen)
+- **Scope**: src/features/imports/views/wizard/CardmarketImportWizard.vue, src/workers/cardmarketCsv.ts, src/features/imports/ImportService.ts
+- **Type**: fix
+- **Summary**: Fix Cardmarket import functionality by correcting validation logic, data mapping, and idempotency implementation.
+- **Details**:
+  - Fixed compilation error in CardmarketImportWizard.vue by replacing undefined `fileInfo` reference with `uploadedFiles`
+  - Fixed data validation logic by ensuring correct fileType parameter is passed to validation functions
+  - Updated Cardmarket CSV parser worker to include missing fields in data interfaces
+  - Added lineNumber to all parsed data types for proper idempotency
+  - Fixed idempotency implementation in ImportService to match documented format (`cardmarket:{orderId}:{lineNumber}`)
+  - Improved externalRef generation for all import types (transactions, orders, articles)
+- **Impact/Risks**: Fixes critical functionality issues preventing Cardmarket CSV imports from working correctly. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import sample CSV files and verify data is correctly parsed and imported without duplicates.
+- **Linked Task/Issue**: Cardmarket import feature fixes
+
+## 2025-09-02 16:00 — feat: Implement Cardmarket Import Wizard
+- **Author**: AI (Qwen)
+- **Scope**: src/features/imports/views/wizard/CardmarketImportWizard.vue, src/app/router.ts, src/components/Navigation.vue
+- **Type**: feat
+- **Summary**: Implement a multi-step wizard for Cardmarket CSV imports with enhanced validation and error handling.
+- **Details**:
+  - Created Cardmarket Import Wizard with 5 steps: file upload, column mapping, preview, conflicts resolution, and summary
+  - Implemented file upload with automatic format detection
+  - Added comprehensive column mapping interface with auto-detection for different CSV formats
+  - Implemented conflict detection for duplicate imports using externalRef = cardmarket:{orderId}:{lineNo}
+  - Added detailed preview and summary screens with import statistics
+  - Enhanced error handling with comprehensive error surfaces for unknown sets, invalid prices, and malformed rows
+  - Updated router and navigation to use the new wizard
+- **Impact/Risks**: New feature with no breaking changes. Existing CSV import functionality is preserved.
+- **Verification Steps**: `npm run build` completes successfully. Navigate to Cardmarket Import in the app and verify the wizard loads correctly.
+- **Linked Task/Issue**: M2 Finish: Cardmarket Import (UI & polish)
 
 ## 2025-09-01 17:30 — feat: Implement automatic price updates and fix price data saving
 - **Author**: AI (Qwen)
@@ -25,12 +121,12 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: feat
 - **Summary**: Implement automatic price updates and ensure price data is saved when cards are imported.
 - **Details**:
-  - Created PriceUpdateService to handle price updates and checking if updates are needed
-  - Modified HomeView to automatically check for and update prices when the app starts (if more than 24 hours since last update)
-  - Updated DeckImportService to fetch and save price data when new cards are imported
-  - Updated ImportService to fetch and save price data when new cards are imported
-  - Modified price sync worker to use put instead of add to handle updates
-  - This ensures that price data is always available in the database for valuation calculations
+    - Created PriceUpdateService to handle price updates and checking if updates are needed
+    - Modified HomeView to automatically check for and update prices when the app starts (if more than 24 hours since last update)
+    - Updated DeckImportService to fetch and save price data when new cards are imported
+    - Updated ImportService to fetch and save price data when new cards are imported
+    - Modified price sync worker to use put instead of add to handle updates
+    - This ensures that price data is always available in the database for valuation calculations
 - **Impact/Risks**: These changes ensure that price data is properly saved and updated, improving the accuracy of valuation calculations.
 - **Verification Steps**: `npm run build` completes successfully.
 - **Linked Task/Issue**: Price data saving and updates
@@ -41,11 +137,11 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: fix
 - **Summary**: Modified CardsView to use price data from the database instead of making API calls every time the page is visited.
 - **Details**:
-  - Updated loadCardPrices method to fetch price data from the price_points table
-  - Implemented logic to find the most recent price point for each card
-  - Removed dependency on ScryfallProvider in CardsView
-  - This change ensures that the cards page loads pricing data from the database, not from the API
-  - API requests will only happen when adding new cards or when manually triggering price updates
+    - Updated loadCardPrices method to fetch price data from the price_points table
+    - Implemented logic to find the most recent price point for each card
+    - Removed dependency on ScryfallProvider in CardsView
+    - This change ensures that the cards page loads pricing data from the database, not from the API
+    - API requests will only happen when adding new cards or when manually triggering price updates
 - **Impact/Risks**: These changes improve app performance and reduce API usage by using cached price data from the database.
 - **Verification Steps**: `npm run build` completes successfully.
 - **Linked Task/Issue**: Cards view optimization
@@ -56,11 +152,11 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: fix
 - **Summary**: Modified ValuationEngine to use price data from the database instead of making API calls every time the app opens.
 - **Details**:
-  - Updated calculateHoldingValue method to fetch price data from the price_points table
-  - Implemented logic to find the most recent price point for each card
-  - Removed dependency on ScryfallProvider in ValuationEngine
-  - This change ensures that the dashboard loads pricing data from the database, not from the API
-  - API requests will only happen when adding new cards or when manually triggering price updates
+    - Updated calculateHoldingValue method to fetch price data from the price_points table
+    - Implemented logic to find the most recent price point for each card
+    - Removed dependency on ScryfallProvider in ValuationEngine
+    - This change ensures that the dashboard loads pricing data from the database, not from the API
+    - API requests will only happen when adding new cards or when manually triggering price updates
 - **Impact/Risks**: These changes improve app performance and reduce API usage by using cached price data from the database.
 - **Verification Steps**: `npm run build` completes successfully.
 - **Linked Task/Issue**: Valuation engine optimization
@@ -71,12 +167,12 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: feat
 - **Summary**: Implement service worker caching for Scryfall API requests to provide persistent caching across app restarts.
 - **Details**:
-  - Configured Vite PWA plugin to use injectManifest mode for custom service worker
-  - Created service worker with caching strategies for Scryfall API and images
-  - Implemented StaleWhileRevalidate strategy for Scryfall API with 24-hour expiration
-  - Implemented CacheFirst strategy for images with 30-day expiration
-  - Simplified ScryfallProvider to remove in-memory caching since service worker handles it
-  - Maintained rate limiting in ScryfallProvider
+    - Configured Vite PWA plugin to use injectManifest mode for custom service worker
+    - Created service worker with caching strategies for Scryfall API and images
+    - Implemented StaleWhileRevalidate strategy for Scryfall API with 24-hour expiration
+    - Implemented CacheFirst strategy for images with 30-day expiration
+    - Simplified ScryfallProvider to remove in-memory caching since service worker handles it
+    - Maintained rate limiting in ScryfallProvider
 - **Impact/Risks**: These changes provide persistent caching that survives app restarts and improves offline capabilities.
 - **Verification Steps**: `npm run build` completes successfully and service worker is generated.
 - **Linked Task/Issue**: Scryfall API caching
@@ -87,10 +183,10 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: feat
 - **Summary**: Implement rate limiting and in-memory caching for Scryfall API requests to improve performance and reduce redundant requests.
 - **Details**:
-  - Added rate limiting with 100ms delay between requests to respect Scryfall API limits
-  - Implemented in-memory caching with 24-hour expiration for API responses
-  - Added caching for price and image requests by Scryfall ID and set/collector number
-  - Added caching for card hydration requests
+    - Added rate limiting with 100ms delay between requests to respect Scryfall API limits
+    - Implemented in-memory caching with 24-hour expiration for API responses
+    - Added caching for price and image requests by Scryfall ID and set/collector number
+    - Added caching for card hydration requests
 - **Impact/Risks**: These changes improve performance and reduce API usage, but the cache is in-memory and will be cleared on app restart.
 - **Verification Steps**: `npm run build` completes successfully.
 - **Linked Task/Issue**: Scryfall API caching
@@ -101,11 +197,11 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: fix
 - **Summary**: Fixed database schema issues and build errors caused by missing createdAt/updatedAt fields in entities.
 - **Details**:
-  - Added missing createdAt and updatedAt fields to all database entities
-  - Fixed type errors in SettingsService, SnapshotService, DeckImportService, ImportService, and priceSync worker
-  - Fixed undefined object access in CardsView.vue
-  - Removed unused variables in HomeView.vue
-  - Updated DeckImportView.vue to include required fields for new database schema
+    - Added missing createdAt and updatedAt fields to all database entities
+    - Fixed type errors in SettingsService, SnapshotService, DeckImportService, ImportService, and priceSync worker
+    - Fixed undefined object access in CardsView.vue
+    - Removed unused variables in HomeView.vue
+    - Updated DeckImportView.vue to include required fields for new database schema
 - **Impact/Risks**: These changes fix build errors and ensure compatibility with the updated database schema.
 - **Verification Steps**: `npm run build` now completes successfully.
 - **Linked Task/Issue**: Database schema upgrade
@@ -116,13 +212,13 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: feat
 - **Summary**: Upgrade database to version 3 with enhanced indexing for historical pricing and implement Pinia for state management.
 - **Details**:
-  - Upgraded database schema to version 3 with improved indexing for historical pricing
-  - Added createdAt/updatedAt fields to all entities
-  - Enhanced price_points table with compound indexes for historical pricing queries
-  - Implemented Pinia stores for cards, holdings, transactions, decks, and settings
-  - Created a unified MTG store that combines all individual stores
-  - Updated HomeView to use the new Pinia stores
-  - Added tests for the new stores
+    - Upgraded database schema to version 3 with improved indexing for historical pricing
+    - Added createdAt/updatedAt fields to all entities
+    - Enhanced price_points table with compound indexes for historical pricing queries
+    - Implemented Pinia stores for cards, holdings, transactions, decks, and settings
+    - Created a unified MTG store that combines all individual stores
+    - Updated HomeView to use the new Pinia stores
+    - Added tests for the new stores
 - **Impact/Risks**: Database schema migration from v1 to v3; no destructive changes. Pinia implementation is backward compatible.
 - **Verification Steps**: `npm run dev` and verify that the dashboard loads correctly and displays data.
 - **Linked Task/Issue**: Database upgrade and Pinia implementation
@@ -133,14 +229,14 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: chore
 - **Summary**: Updated implementation checklist and issue files to reflect the actual completion status of various milestones based on code review.
 - **Details**:
-  - Updated Milestone 1 status to COMPLETE with all acceptance criteria met
-  - Updated Milestone 2 status to 80% COMPLETE
-  - Updated Milestone 3 status to 70% COMPLETE
-  - Updated Milestone 5 status to 90% COMPLETE
-  - Updated Milestone 6 status to 25% COMPLETE
-  - Updated Milestone 7 status with basic valuation engine implemented
-  - Checked off completed acceptance criteria in issue files
-  - Updated project plan with completion status for milestones
+    - Updated Milestone 1 status to COMPLETE with all acceptance criteria met
+    - Updated Milestone 2 status to 80% COMPLETE
+    - Updated Milestone 3 status to 70% COMPLETE
+    - Updated Milestone 5 status to 90% COMPLETE
+    - Updated Milestone 6 status to 25% COMPLETE
+    - Updated Milestone 7 status with basic valuation engine implemented
+    - Checked off completed acceptance criteria in issue files
+    - Updated project plan with completion status for milestones
 - **Impact/Risks**: These changes provide a more accurate view of the project's progress.
 - **Verification Steps**: Review the updated checklist and issue files to ensure they accurately reflect the current state of the project.
 - **Linked Task/Issue**: Plan Mode
@@ -151,13 +247,30 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Type**: chore
 - **Summary**: Created new issues for historical pricing, API caching, and 24h price caching. Updated implementation checklist and project plan to reflect these enhancements.
 - **Details**:
-  - Created issue #7 for historical pricing
-  - Created issue #8 for Scryfall API caching
-  - Created issue #9 for 24h price caching
-  - Created issue #10 for Pinia state management (future enhancement)
-  - Created issue #11 for UI component refactoring (future enhancement)
-  - Updated implementation checklist with new issues
-  - Updated project plan with enhanced Milestone 3 description
+    - Created issue #7 for historical pricing
+    - Created issue #8 for Scryfall API caching
+    - Created issue #9 for 24h price caching
+    - Created issue #10 for Pinia state management (future enhancement)
+    - Created issue #11 for UI component refactoring (future enhancement)
+    - Updated implementation checklist with new issues
+    - Updated project plan with enhanced Milestone 3 description
 - **Impact/Risks**: These changes improve the project planning and organization without affecting existing functionality.
 - **Verification Steps**: Review the new issue files and updated documentation to ensure they accurately reflect the planned improvements.
 - **Linked Task/Issue**: Plan Mode
+
+## 2025-09-02 15:00 — docs: Restructure documentation to reduce sprawl
+- **Author**: AI (Qwen)
+- **Scope**: README.md, docs/ARCHITECTURE.md, docs/IMPORTERS.md, docs/ROADMAP.md, docs/QWEN.md, .github/pull_request_template.md
+- **Type**: docs
+- **Summary**: Restructured documentation according to lean structure to reduce sprawl and improve organization.
+- **Details**:
+    - Created ARCHITECTURE.md with technical architecture, data model, and current capabilities
+    - Created IMPORTERS.md with detailed specifications for Cardmarket, ManaBox, and Moxfield importers
+    - Created ROADMAP.md with project milestones, acceptance criteria, and prioritized tasks
+    - Consolidated AI collaboration rules into QWEN.md
+    - Created standard pull request template
+    - Removed redundant documentation files (project_plan.md, project-status.md, etc.)
+    - Updated README.md with links to new documentation structure
+- **Impact/Risks**: No functional changes; documentation reorganization only. All content preserved in new structure.
+- **Verification Steps**: Review new documentation files to ensure all information migrated correctly.
+- **Linked Task/Issue**: Documentation restructuring
