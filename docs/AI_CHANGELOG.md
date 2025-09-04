@@ -2,6 +2,24 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-04 16:00 — feat: Implement deduplication system for card tracking
+- **Author**: AI (Qwen)
+- **Scope**: src/data/db.ts, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/features/decks/views/DeckImportView.vue
+- **Type**: feat
+- **Summary**: Implement comprehensive deduplication system to prevent duplicate card entries when importing from different sources.
+- **Details**:
+  - Enhanced database schema to version 4 with improved lot-based tracking
+  - Added proper upgrade functions to handle transitions from old data structures
+  - Implemented deduplication logic for deck imports to link to existing cards instead of creating duplicates
+  - Implemented deduplication logic for Cardmarket imports to link transactions to existing lots
+  - Fixed variable declaration issues that were causing runtime errors
+  - Added proper currency tracking to card lots
+  - Ensured all required fields are properly populated
+  - Fixed null/undefined type compatibility issues
+  - Improved transaction tracking with better linking between transactions and specific card lots
+- **Impact/Risks**: Significantly improves data integrity by preventing duplicate card entries. No destructive changes to existing data.
+- **Verification Steps**: `npm run build` completes successfully. Import decks and Cardmarket data to verify deduplication works correctly.
+
 ## 2025-09-02 20:00 — feat: Enhanced Cardmarket set code resolution with complex set name handling
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/SetCodeResolver.ts

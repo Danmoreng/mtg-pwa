@@ -25,7 +25,6 @@
     </div>
     <div class="actions">
       <button @click="refreshPrices">Refresh Prices</button>
-      <button @click="takeSnapshot">Take Snapshot</button>
     </div>
   </div>
 </template>
@@ -88,12 +87,6 @@ const refreshPrices = async () => {
     console.error('Error refreshing prices:', error);
     alert('Failed to refresh prices: ' + (error as Error).message);
   }
-};
-
-// Take snapshot
-const takeSnapshot = async () => {
-  // In a real implementation, this would create a valuation snapshot
-  alert('Snapshot taken');
 };
 
 // Load data when component mounts

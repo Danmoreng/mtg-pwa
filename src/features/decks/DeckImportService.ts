@@ -1,5 +1,5 @@
 // Deck import service for importing decks from text files
-import { cardRepository, holdingRepository } from '../../data/repos';
+import { cardRepository, holdingRepository, cardLotRepository } from '../../data/repos';
 import { EntityLinker } from '../linker/EntityLinker';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import db from '../../data/db';
@@ -66,6 +66,7 @@ export class DeckImportService {
             
             // If card doesn't exist in our database, create it
             if (cardId) {
+              const now = new Date();
               const existingCard = await cardRepository.getById(cardId);
               if (!existingCard) {
                 // Get full card data from Scryfall
@@ -123,39 +124,75 @@ export class DeckImportService {
                 }
               }
               
-              // Add card to collection (holdings) when importing a deck
-              // This ensures that importing a deck adds the cards to your collection
-              const existingHoldings = await holdingRepository.getByCardId(cardId);
-              const totalOwned = existingHoldings.reduce((sum, holding) => sum + holding.quantity, 0);
+              // Check if we already have this card in our collection
+              // If we do, we don't need to create a new lot unless we need more quantity
+              const existingLots = await cardLotRepository.getByCardId(cardId);
+              const totalOwned = existingLots.reduce((sum, lot) => {
+                // Only count lots that haven't been fully disposed
+                if (!lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity)) {
+                  const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
+                  return sum + remainingQuantity;
+                }
+                return sum;
+              }, 0);
               
-              // Only add to holdings if we don't already own enough of this card
+              // Only add to collection if we don't already own enough of this card
               if (totalOwned < quantity) {
                 const neededQuantity = quantity - totalOwned;
                 
-                const holding = {
-                  id: `holding-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                // Create a new lot for the additional cards we need
+                const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const lot = {
+                  id: lotId,
                   cardId: cardId,
                   quantity: neededQuantity,
-                  unitCost: 0, // Default to 0 cost
-                  source: 'deck_import',
+                  unitCost: 0, // Default to 0 cost for deck imports
                   condition: 'unknown',
                   language: 'en',
                   foil: false,
+                  finish: 'nonfoil',
+                  source: 'deck_import',
+                  currency: 'EUR',
+                  purchasedAt: now,
                   createdAt: now,
                   updatedAt: now
                 };
                 
-                await holdingRepository.add(holding);
-                console.log('Added card to holdings:', holding);
+                await cardLotRepository.add(lot);
+                console.log('Added new lot for deck import:', lot);
               }
             }
             
-            // Create deck card record
+            // Find an existing lot for this card that we can link to
+            // Prefer lots that are not yet disposed
+            let lotIdToLink: string | undefined = undefined;
+            const existingLots = await cardLotRepository.getByCardId(cardId || '');
+            if (existingLots.length > 0) {
+              // Look for a lot that has enough quantity and is not disposed
+              for (const lot of existingLots) {
+                const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
+                if (remainingQuantity >= quantity && !lot.disposedAt) {
+                  lotIdToLink = lot.id;
+                  break;
+                }
+              }
+              
+              // If we didn't find a suitable lot, use the first one
+              if (!lotIdToLink && existingLots.length > 0) {
+                lotIdToLink = existingLots[0].id;
+              }
+            }
+            
+            // Create deck card record with new schema
+            const now = new Date();
             const deckCard = {
-              deckId,
-              cardId: cardId || '',
-              quantity,
+              id: `deckcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              deckId: deckId || 'unknown-deck',
+              cardId: cardId || 'unknown-card',
+              lotId: lotIdToLink, // Link to existing lot if possible
+              quantity: typeof quantity === 'number' && quantity > 0 ? quantity : 1,
               role: 'main' as const,
+              addedAt: now,
               createdAt: now
             };
             

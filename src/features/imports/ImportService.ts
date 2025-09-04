@@ -1,5 +1,5 @@
 // Import service for handling CSV imports
-import { transactionRepository, holdingRepository, cardRepository } from '../../data/repos';
+import { transactionRepository, cardLotRepository, cardRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import { resolveSetCode } from '../pricing/SetCodeResolver';
@@ -121,25 +121,6 @@ export class ImportService {
         // Parse price as Money
         const price = Money.parse(article.price, 'EUR');
         
-        // Create holding record if card was bought
-        if (article.direction === 'purchase') {
-          const holding = {
-            id: `holding-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            cardId: cardId || '', // Will be empty if not resolved
-            quantity: parseInt(article.amount) || 1,
-            unitCost: price.getCents(),
-            source: 'cardmarket',
-            condition: '', // Not available in articles CSV
-            language: '', // Not available in articles CSV
-            foil: false, // Not available in articles CSV
-            createdAt: new Date(article.dateOfPurchase),
-            updatedAt: now
-          };
-          
-          // Save holding
-          await holdingRepository.add(holding);
-        }
-        
         // If we have a card ID, fetch and save price data
         if (cardId) {
           // Check if the card exists in our database
@@ -229,11 +210,75 @@ export class ImportService {
           }
         }
         
+        // Create card lot record if card was bought
+        if (article.direction === 'purchase') {
+          // Check if we already have a lot for this card without a purchase transaction
+          // This would be the case if we imported a deck first and then the Cardmarket purchase
+          const existingLots = await cardLotRepository.getByCardId(cardId || '');
+          let lotToLink = null;
+          
+          // Look for a lot that doesn't have a purchase transaction yet
+          for (const lot of existingLots) {
+            // Check if this lot already has a purchase transaction linked to it
+            const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
+            const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
+            
+            if (!hasPurchaseTransaction) {
+              lotToLink = lot;
+              break;
+            }
+          }
+          
+          if (lotToLink) {
+            // Update the existing lot with purchase information
+            await cardLotRepository.update(lotToLink.id, {
+              unitCost: price.getCents(),
+              source: 'cardmarket',
+              purchasedAt: new Date(article.dateOfPurchase),
+              updatedAt: now
+            });
+          } else {
+            // Create a new lot for this purchase
+            const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            const lot = {
+                  id: lotId,
+                  cardId: cardId || '', // Will be empty if not resolved
+                  quantity: parseInt(article.amount) || 1,
+                  unitCost: price.getCents(),
+                  condition: '', // Not available in articles CSV
+                  language: '', // Not available in articles CSV
+                  foil: false, // Not available in articles CSV
+                  finish: 'nonfoil', // Default to nonfoil
+                  source: 'cardmarket',
+                  currency: 'EUR', // Add currency
+                  purchasedAt: new Date(article.dateOfPurchase),
+                  createdAt: now,
+                  updatedAt: now
+                };
+            
+            // Save lot
+            await cardLotRepository.add(lot);
+          }
+        }
+        
+        // Find the lot we just created or updated
+        let lotIdForTransaction: string | undefined = undefined;
+        if (article.direction === 'purchase') {
+          const lots = await cardLotRepository.getByCardId(cardId || '');
+          // Get the most recently updated lot
+          lots.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+          if (lots.length > 0) {
+            lotIdForTransaction = lots[0].id;
+          }
+        }
+        
         // Create transaction record
         const transactionRecord = {
           id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
           cardId: cardId || undefined, // Will be undefined if not resolved
+          lotId: lotIdForTransaction, // Link to the lot if we have one
           quantity: parseInt(article.amount) || 1,
           unitPrice: price.getCents(),
           fees: 0, // Fees would be in order records

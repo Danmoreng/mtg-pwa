@@ -1,5 +1,6 @@
 import db, { 
   type Card, 
+  type CardLot,
   type Holding, 
   type Transaction, 
   type Scan, 
@@ -31,6 +32,41 @@ export const cardRepository = {
 
   async delete(id: string): Promise<void> {
     await db.cards.delete(id);
+  }
+};
+
+// CardLot repository
+export const cardLotRepository = {
+  async add(lot: CardLot): Promise<string> {
+    return await db.card_lots.add(lot);
+  },
+
+  async getById(id: string): Promise<CardLot | undefined> {
+    return await db.card_lots.get(id);
+  },
+
+  async getAll(): Promise<CardLot[]> {
+    return await db.card_lots.toArray();
+  },
+
+  async getByCardId(cardId: string): Promise<CardLot[]> {
+    return await db.card_lots.where('cardId').equals(cardId).toArray();
+  },
+
+  async getActiveLotsByCardId(cardId: string): Promise<CardLot[]> {
+    return await db.card_lots
+      .where('cardId')
+      .equals(cardId)
+      .and(lot => !lot.disposedAt)
+      .toArray();
+  },
+
+  async update(id: string, lot: Partial<CardLot>): Promise<number> {
+    return await db.card_lots.update(id, lot);
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.card_lots.delete(id);
   }
 };
 
@@ -79,8 +115,28 @@ export const transactionRepository = {
     return await db.transactions.where('cardId').equals(cardId).toArray();
   },
 
+  async getByLotId(lotId: string): Promise<Transaction[]> {
+    return await db.transactions.where('lotId').equals(lotId).toArray();
+  },
+
   async getByKind(kind: 'BUY' | 'SELL'): Promise<Transaction[]> {
     return await db.transactions.where('kind').equals(kind).toArray();
+  },
+
+  async getBuyTransactionsByCardId(cardId: string): Promise<Transaction[]> {
+    return await db.transactions
+      .where('cardId')
+      .equals(cardId)
+      .and(tx => tx.kind === 'BUY')
+      .toArray();
+  },
+
+  async getSellTransactionsByCardId(cardId: string): Promise<Transaction[]> {
+    return await db.transactions
+      .where('cardId')
+      .equals(cardId)
+      .and(tx => tx.kind === 'SELL')
+      .toArray();
   },
 
   async update(id: string, transaction: Partial<Transaction>): Promise<number> {
@@ -104,6 +160,14 @@ export const scanRepository = {
 
   async getAll(): Promise<Scan[]> {
     return await db.scans.toArray();
+  },
+
+  async getByCardId(cardId: string): Promise<Scan[]> {
+    return await db.scans.where('cardId').equals(cardId).toArray();
+  },
+
+  async getByLotId(lotId: string): Promise<Scan[]> {
+    return await db.scans.where('lotId').equals(lotId).toArray();
   },
 
   async update(id: string, scan: Partial<Scan>): Promise<number> {
@@ -141,7 +205,34 @@ export const deckRepository = {
 // DeckCard repository
 export const deckCardRepository = {
   async add(deckCard: DeckCard): Promise<void> {
+    // Validate required fields
+    if (!deckCard.id) {
+      throw new Error('DeckCard id is required');
+    }
+    if (!deckCard.deckId) {
+      throw new Error('DeckCard deckId is required');
+    }
+    if (!deckCard.cardId) {
+      throw new Error('DeckCard cardId is required');
+    }
+    if (typeof deckCard.quantity !== 'number' || deckCard.quantity <= 0) {
+      throw new Error('DeckCard quantity must be a positive number');
+    }
+    if (!deckCard.role) {
+      throw new Error('DeckCard role is required');
+    }
+    if (!deckCard.addedAt) {
+      throw new Error('DeckCard addedAt is required');
+    }
+    if (!deckCard.createdAt) {
+      throw new Error('DeckCard createdAt is required');
+    }
+    
     await db.deck_cards.add(deckCard);
+  },
+
+  async getById(id: string): Promise<DeckCard | undefined> {
+    return await db.deck_cards.get(id);
   },
 
   async getByDeckId(deckId: string): Promise<DeckCard[]> {
@@ -152,8 +243,20 @@ export const deckCardRepository = {
     return await db.deck_cards.where('cardId').equals(cardId).toArray();
   },
 
+  async getByLotId(lotId: string): Promise<DeckCard[]> {
+    return await db.deck_cards.where('lotId').equals(lotId).toArray();
+  },
+
   async deleteByDeckId(deckId: string): Promise<void> {
     await db.deck_cards.where('deckId').equals(deckId).delete();
+  },
+
+  async update(id: string, deckCard: Partial<DeckCard>): Promise<number> {
+    return await db.deck_cards.update(id, deckCard);
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.deck_cards.delete(id);
   }
 };
 

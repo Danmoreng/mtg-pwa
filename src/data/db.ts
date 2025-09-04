@@ -1,4 +1,4 @@
-import Dexie, { type EntityTable, type Table } from 'dexie';
+import Dexie, { type EntityTable } from 'dexie';
 
 // Define our data models
 export interface Card {
@@ -11,6 +11,26 @@ export interface Card {
   lang: string;
   finish: string;
   imageUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CardLot {
+  id: string;
+  cardId: string;
+  acquisitionId?: string;
+  quantity: number;
+  unitCost: number; // in cents
+  condition: string;
+  language: string;
+  foil: boolean;
+  finish: string;
+  source: string;
+  purchasedAt: Date;
+  disposedAt?: Date;
+  disposedQuantity?: number;
+  saleTransactionId?: string;
+  currency?: string; // Add currency property
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +53,7 @@ export interface Transaction {
   id: string;
   kind: 'BUY' | 'SELL';
   cardId?: string;
+  lotId?: string;
   quantity: number;
   unitPrice: number; // in cents
   fees: number; // in cents
@@ -41,6 +62,8 @@ export interface Transaction {
   source: string;
   externalRef: string;
   happenedAt: Date;
+  notes?: string;
+  relatedTransactionId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,9 +72,12 @@ export interface Scan {
   id: string;
   cardFingerprint: string;
   cardId?: string;
+  lotId?: string;
   source: string;
   scannedAt: Date;
   quantity: number;
+  boosterPackId?: string;
+  notes?: string;
   soldTransactionId?: string;
   soldAt?: Date;
   soldQuantity?: number;
@@ -71,10 +97,14 @@ export interface Deck {
 }
 
 export interface DeckCard {
+  id: string;
   deckId: string;
   cardId: string;
+  lotId?: string;
   quantity: number;
   role: 'main' | 'side' | 'maybeboard';
+  addedAt: Date;
+  removedAt?: Date;
   createdAt: Date;
 }
 
@@ -85,6 +115,7 @@ export interface PricePoint {
   currency: string;
   price: number; // in cents
   asOf: Date;
+  source?: string;
   createdAt: Date;
 }
 
@@ -117,11 +148,12 @@ export interface ScanSaleLink {
 // Create Dexie database
 class MtgTrackerDb extends Dexie {
   cards!: EntityTable<Card, 'id'>;
+  card_lots!: EntityTable<CardLot, 'id'>;
   holdings!: EntityTable<Holding, 'id'>;
   transactions!: EntityTable<Transaction, 'id'>;
   scans!: EntityTable<Scan, 'id'>;
   decks!: EntityTable<Deck, 'id'>;
-  deck_cards!: Table<DeckCard, [DeckCard['deckId'], DeckCard['cardId']]>;
+  deck_cards!: EntityTable<DeckCard, 'id'>;
   price_points!: EntityTable<PricePoint, 'id'>;
   valuations!: EntityTable<Valuation, 'id'>;
   settings!: EntityTable<Setting, 'k'>;
@@ -223,6 +255,60 @@ class MtgTrackerDb extends Dexie {
       valuations: 'id, asOf, createdAt, [asOf+createdAt]',
       settings: 'k, createdAt, updatedAt',
       scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
+    });
+    
+    // Version 4 - Enhanced schema for lot-based tracking
+    this.version(4).stores({
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
+      card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, [cardId+purchasedAt], [acquisitionId+cardId]',
+      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
+      transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
+      scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
+      decks: 'id, platform, name, importedAt, createdAt, updatedAt',
+      deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
+      price_points: 'id, cardId, provider, currency, asOf, source, createdAt, [cardId+asOf], [provider+asOf]',
+      valuations: 'id, asOf, createdAt, [asOf+createdAt]',
+      settings: 'k, createdAt, updatedAt',
+      scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
+    }).upgrade(async tx => {
+      // Add missing fields to existing deck_cards records
+      const now = new Date();
+      
+      // Update deck_cards
+      await tx.table('deck_cards').toCollection().modify(deckCard => {
+        try {
+          // Add missing fields with default values
+          if (!deckCard.id) {
+            deckCard.id = `deckcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          }
+          if (!deckCard.addedAt) {
+            deckCard.addedAt = deckCard.createdAt || now;
+          }
+          if (!deckCard.role) {
+            deckCard.role = 'main';
+          }
+          // Set cardId to a default value if it's missing or empty
+          if (!deckCard.cardId || deckCard.cardId === '') {
+            deckCard.cardId = 'unknown-card';
+          }
+          // Set deckId to a default value if it's missing
+          if (!deckCard.deckId) {
+            deckCard.deckId = 'unknown-deck';
+          }
+          // Set quantity to 1 if it's missing
+          if (typeof deckCard.quantity !== 'number') {
+            deckCard.quantity = 1;
+          }
+          // Set createdAt if it's missing
+          if (!deckCard.createdAt) {
+            deckCard.createdAt = now;
+          }
+        } catch (error) {
+          console.error('Error upgrading deck card:', error, deckCard);
+          // If we can't upgrade the record, delete it
+          return undefined;
+        }
+      });
     });
   }
 }

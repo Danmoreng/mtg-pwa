@@ -1,8 +1,9 @@
-// Scan matching service for matching ManaBox scans to Cardmarket sales
+// Scan matching service for matching ManaBox scans to Cardmarket sales with lot tracking
 import db from '../../data/db';
+import { cardLotRepository, transactionRepository, scanRepository } from '../../data/repos';
 
 export class ScanMatchingService {
-  // Match scans to sales
+  // Match scans to sales with lot tracking
   static async matchScansToSales(): Promise<void> {
     try {
       // Get all scans that haven't been matched yet
@@ -13,10 +14,7 @@ export class ScanMatchingService {
         .toArray();
       
       // Get all SELL transactions
-      const sellTransactions = await db.transactions
-        .where('kind')
-        .equals('SELL')
-        .toArray();
+      const sellTransactions = await transactionRepository.getByKind('SELL');
       
       // Match scans to sales
       for (const scan of unmatchedScans) {
@@ -54,11 +52,24 @@ export class ScanMatchingService {
           const soldQuantity = Math.min(remainingQuantity, sale.quantity);
           
           // Update scan with sale information
-          await db.scans.update(scan.id, {
+          await scanRepository.update(scan.id, {
             soldTransactionId: sale.id,
             soldAt: sale.happenedAt,
             soldQuantity: soldQuantity
           });
+          
+          // If the scan is linked to a lot, update the lot's disposal information
+          if (scan.lotId) {
+            const lot = await cardLotRepository.getById(scan.lotId);
+            if (lot) {
+              // Update the lot with disposal information
+              await cardLotRepository.update(scan.lotId, {
+                disposedAt: sale.happenedAt,
+                disposedQuantity: (lot.disposedQuantity || 0) + soldQuantity,
+                saleTransactionId: sale.id
+              });
+            }
+          }
           
           remainingQuantity -= soldQuantity;
         }
@@ -91,6 +102,29 @@ export class ScanMatchingService {
     } catch (error) {
       console.error('Error getting scan status:', error);
       return 'unknown';
+    }
+  }
+
+  // Link a scan to a specific card lot
+  static async linkScanToLot(scanId: string, lotId: string): Promise<void> {
+    try {
+      // Update the scan with the lot ID
+      await scanRepository.update(scanId, {
+        lotId: lotId
+      });
+    } catch (error) {
+      console.error(`Error linking scan ${scanId} to lot ${lotId}:`, error);
+      throw error;
+    }
+  }
+
+  // Get all scans for a specific lot
+  static async getScansForLot(lotId: string): Promise<any[]> {
+    try {
+      return await db.scans.where('lotId').equals(lotId).toArray();
+    } catch (error) {
+      console.error(`Error getting scans for lot ${lotId}:`, error);
+      throw error;
     }
   }
 }
