@@ -55,7 +55,8 @@
         <div class="card-details">
           <h2>{{ card.name }}</h2>
           <p class="card-set">{{ card.set }} #{{ card.number }}</p>
-          <p class="card-holdings">Owned: {{ getHoldingQuantity(card.id) }}</p>
+          <p class="card-lots">Owned: {{ getLotQuantity(card.id) }} lot(s)</p>
+          <p class="card-quantity">Total: {{ getCardQuantity(card.id) }} card(s)</p>
           <div v-if="cardPrices[card.id]" class="card-prices">
             <div v-if="cardPrices[card.id].scryfall" class="price scryfall-price">
               <span class="price-label">Price:</span>
@@ -78,7 +79,7 @@ import { Money } from '../../../core/Money';
 
 // Reactive state
 const cards = ref<any[]>([]);
-const holdings = ref<Record<string, number>>({});
+const lots = ref<Record<string, any[]>>({});
 const cardPrices = ref<Record<string, { scryfall?: Money; cardmarket?: Money }>>({});
 const loading = ref(true);
 const loadingPrices = ref(false);
@@ -129,8 +130,8 @@ const sortedCards = computed(() => {
         break;
       case 'owned':
         {
-          const ownedA = holdings.value[a.id] || 0;
-          const ownedB = holdings.value[b.id] || 0;
+          const ownedA = getCardQuantity(a.id);
+          const ownedB = getCardQuantity(b.id);
           comparison = ownedA - ownedB;
         }
         break;
@@ -144,9 +145,23 @@ const sortedCards = computed(() => {
   return cardsToSort;
 });
 
-// Get holding quantity for a card
-const getHoldingQuantity = (cardId: string) => {
-  return holdings.value[cardId] || 0;
+// Get lot quantity for a card
+const getLotQuantity = (cardId: string) => {
+  return lots.value[cardId] ? lots.value[cardId].length : 0;
+};
+
+// Get total card quantity for a card
+const getCardQuantity = (cardId: string) => {
+  if (!lots.value[cardId]) return 0;
+  
+  return lots.value[cardId].reduce((total, lot) => {
+    // Only count lots that haven't been fully disposed
+    if (!lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity)) {
+      const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
+      return total + remainingQuantity;
+    }
+    return total;
+  }, 0);
 };
 
 // Handle image error
@@ -214,24 +229,27 @@ const loadCardPrices = async () => {
   }
 };
 
-// Load cards and holdings
+// Load cards and lots
 const loadCards = async () => {
   try {
     // Get all cards
     const allCards = await db.cards.toArray();
     cards.value = allCards;
     
-    // Get holdings for each card
-    const allHoldings = await db.holdings.toArray();
-    const holdingTotals: Record<string, number> = {};
+    // Get lots for each card
+    const allLots = await db.card_lots.toArray();
+    const lotsByCard: Record<string, any[]> = {};
     
-    for (const holding of allHoldings) {
-      if (holding.cardId) {
-        holdingTotals[holding.cardId] = (holdingTotals[holding.cardId] || 0) + holding.quantity;
+    for (const lot of allLots) {
+      if (lot.cardId) {
+        if (!lotsByCard[lot.cardId]) {
+          lotsByCard[lot.cardId] = [];
+        }
+        lotsByCard[lot.cardId].push(lot);
       }
     }
     
-    holdings.value = holdingTotals;
+    lots.value = lotsByCard;
   } catch (error) {
     console.error('Error loading cards:', error);
   } finally {
@@ -403,7 +421,13 @@ watch(cards, () => {
   color: var(--color-text-secondary);
 }
 
-.card-holdings {
+.card-lots {
+  margin: 0 0 var(--space-xxs);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+}
+
+.card-quantity {
   margin: 0 0 var(--space-sm);
   font-weight: var(--font-weight-bold);
 }

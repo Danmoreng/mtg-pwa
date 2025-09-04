@@ -1,25 +1,44 @@
 # Roadmap (Authoritative)
 
-_Status updated: 2025-09-02_
+_Status updated: 2025-09-04_
 
 ## Now
-- Finish Cardmarket Import wizard (idempotent, error surfaces)
-- Finalize pricing snapshots and manual "Take snapshot"
-- Fix ESLint/TS configuration issues
+- Implement enhanced data model for lot-based card tracking
+- Migrate database schema to support individual card tracking
+- Update valuation engine to work with new data model
+- Remove manual snapshot functionality
 
 ## Next
-- ManaBox scans + Sold/Owned matching
-- Moxfield polish (Need list export)
-- PWA offline staging + background sync
+- Finish Cardmarket Import wizard (idempotent, error surfaces)
+- Finalize automatic daily price tracking
+- Fix ESLint/TS configuration issues
 
 ## Later
+- ManaBox scans + Sold/Owned matching with provenance tracking
+- Moxfield polish (Need list export)
+- PWA offline staging + background sync
 - Analytics deep-dive: KPIs, per-card FIFO P/L, time series chart
 - UI component refactor (tables, virtualized lists)
 - Historical pricing analysis tools
 
 ## Milestones & Acceptance
 
-### M2 Finish: Cardmarket Import (UI & polish)
+### M2: Enhanced Data Model (New Foundation)
+
+**Outcome:** Individual card tracking with lot-based acquisitions and disposals; detailed provenance tracking from purchase → scan → deck/sale.
+
+**Key Tasks:**
+- Implement CardLot entity for tracking individual card acquisitions
+- Update Transaction entity to support lot tracking
+- Enhance Scan entity for better provenance tracking
+- Update DeckCard entity to track specific lots
+- Modify ValuationEngine to work with new data model
+- Remove manual snapshot functionality
+- Implement automatic daily price tracking
+
+**Acceptance:** Each physical card can be traced through its entire lifecycle with accurate cost basis tracking. Portfolio valuation correctly accounts for individual card transactions.
+
+### M3 Finish: Cardmarket Import (UI & polish)
 
 **Outcome:** fully idempotent, pleasant import UX; holdings & valuation update deterministically.
 
@@ -35,39 +54,39 @@ _Status updated: 2025-09-02_
 - #03-import-wizard-framework.md
 - #04-cardmarket-csv-parser.md
 
-### M3 Finish: Pricing & Snapshots (ship it)
+### M4: Pricing & Automatic Tracking (ship it)
 
 **Outcome:** "Current value" and "History" are trustworthy without manual fiddling.
 
 **Key Tasks:**
 - Price sync worker: batch by set; respect 24h TTL; exponential backoff
-- Snapshot writer: one snapshot/day; manual "Take snapshot" action
+- Automatic daily price tracking (no manual "Take snapshot" action)
 - Use **price_points** as the only source for valuation (no live calls during calc)
 - Display "Last price update" + "Next eligible update" per card
 
-**Acceptance:** After pressing "Take snapshot", a new `valuations(asOf=YYYY-MM-DD)` appears and the chart updates.
+**Acceptance:** Prices are automatically updated daily; historical tracking is accurate and complete.
 
 **Linked Issues:**
 - #07-historical-pricing.md
 - #08-scryfall-api-caching.md
 - #09-24h-price-caching.md
 
-### M4: ManaBox Scans + Sold/Owned Matching
+### M5: ManaBox Scans + Sold/Owned Matching
 
-**Outcome:** Scanned rares clearly marked **Sold** or **Still owned**; traceable to sale.
+**Outcome:** Scanned rares clearly marked **Sold** or **Still owned**; traceable to sale with full provenance.
 
 **Key Tasks:**
 - ManaBox CSV worker: variant detection; `cardFingerprint` from `(name,set,collector,finish,language)`
-- Matching algorithm (greedy FIFO by sale date; allow fingerprint matching until cardId resolves)
+- Enhanced matching algorithm with lot tracking (greedy FIFO by sale date)
 - Scans view with filters; per-scan sale link; partial matches supported
 - Reconciliation job re-runs when a fingerprint becomes a `cardId`
 
-**Acceptance:** Import scans → selling the same card later marks the corresponding scans as **Sold** with sale reference.
+**Acceptance:** Import scans → selling the same card later marks the corresponding scans as **Sold** with sale reference and lot tracking.
 
 **Linked Issues:**
 - #06-manabox-scans-matching.md
 
-### M5 Wrap: Moxfield Decks (90% → Done)
+### M6 Wrap: Moxfield Decks (90% → Done)
 
 **Outcome:** Deck page clearly shows ownership coverage and missing pieces.
 
@@ -81,7 +100,7 @@ _Status updated: 2025-09-02_
 **Linked Issues:**
 - #05-valuation-engine-dashboard.md (partially)
 
-### M6: PWA Polish & Offline UX
+### M7: PWA Polish & Offline UX
 
 **Outcome:** Offline-first, resilient; imports and price sync recover gracefully.
 
@@ -96,7 +115,7 @@ _Status updated: 2025-09-02_
 **Linked Issues:**
 - #10-pinia-state-management.md (partially)
 
-### M7: Analytics Deep-Dive
+### M8: Analytics Deep-Dive
 
 **Outcome:** Clear KPIs and history, per-card P/L with FIFO.
 
