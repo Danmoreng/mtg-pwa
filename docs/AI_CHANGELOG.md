@@ -2,6 +2,32 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-05 17:45 — fix: Improve Cardmarket import logging and handle missing Cardmarket IDs
+- **Author**: AI (Qwen)
+- **Scope**: src/features/imports/ImportService.ts
+- **Type**: fix
+- **Summary**: Fix logging in Cardmarket import to show correct API endpoints and handle cases where Cardmarket IDs are not found in Scryfall.
+- **Details**:
+  - Updated structured logging to show correct `/cards/cardmarket/:id` endpoint instead of incorrect `/cards/collection`
+  - Added proper handling for 404 errors when Cardmarket IDs are not found in Scryfall database
+  - System properly falls back to set code resolution when Cardmarket ID lookups fail
+- **Impact/Risks**: Improves diagnostic information for troubleshooting Cardmarket imports. No data migrations required.
+- **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files and verify correct logging in console.
+
+## 2025-09-05 16:00 — docs: Document Cardmarket import fixes and implementation approach
+- **Author**: AI (Qwen)
+- **Scope**: docs/CARDMARKET_IMPORT_FIXES.md
+- **Type**: docs
+- **Summary**: Create comprehensive documentation for fixing Cardmarket import issues with set code resolution and product ID lookups.
+- **Details**:
+  - Document current SetCodeResolver implementation and identified issues from BUGS.md
+  - Analyze example CSV data structures from Cardmarket exports
+  - Outline solution approach based on BUGS.md recommendations
+  - Define implementation phases for enhanced set code resolution
+  - Specify test cases and logging improvements needed
+- **Impact/Risks**: Documentation only, no code changes. Provides clear roadmap for implementing fixes.
+- **Verification Steps**: Review CARDMARKET_IMPORT_FIXES.md for completeness and accuracy.
+
 ## 2025-09-04 16:00 — feat: Implement deduplication system for card tracking
 - **Author**: AI (Qwen)
 - **Scope**: src/data/db.ts, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/features/decks/views/DeckImportView.vue

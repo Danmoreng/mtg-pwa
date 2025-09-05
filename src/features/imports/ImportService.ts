@@ -96,27 +96,97 @@ export class ImportService {
       const now = new Date();
       
       for (const article of articles) {
-        // Create a card fingerprint
-        const setCode = await resolveSetCode(article.expansion);
+        let cardData = null;
+        let cardId = null;
         
-        // Check if card name contains version information
-        let cleanCardName = article.name;
-        let versionInfo = null;
-        const versionMatch = article.name.match(/^(.+?)\s*\((V\.\d+)\)$/i);
-        if (versionMatch) {
-          cleanCardName = versionMatch[1].trim();
-          versionInfo = versionMatch[2]; // e.g., "V.1"
+        // Priority 1: Try to resolve by Cardmarket product ID first
+        if (article.productId) {
+          // Handle multiple product IDs separated by " | "
+          const productIds = article.productId.split(' | ').map((id: string) => id.trim());
+          
+          if (productIds.length === 1) {
+            // Single product ID
+            cardData = await ScryfallProvider.getByCardmarketId(productIds[0]);
+            // Add structured logging
+            console.log(JSON.stringify({
+              product_ids: productIds,
+              resolved_via: 'cardmarket_id',
+              cardmarket_id: productIds[0],
+              final_uri: `/cards/cardmarket/${productIds[0]}`
+            }));
+          } else if (productIds.length > 1) {
+            // Multiple product IDs - try each one
+            for (const productId of productIds) {
+              cardData = await ScryfallProvider.getByCardmarketId(productId);
+              if (cardData) {
+                // Add structured logging
+                console.log(JSON.stringify({
+                  product_ids: productIds,
+                  resolved_via: 'cardmarket_id',
+                  cardmarket_id: productId,
+                  final_uri: `/cards/cardmarket/${productId}`
+                }));
+                break;
+              }
+            }
+          }
+          
+          cardId = cardData?.id || null;
         }
         
-        // Try to resolve to a Scryfall ID
-        const cardData = await ScryfallProvider.hydrateCard({
-          name: cleanCardName,
-          setCode: setCode || article.expansion, // Fallback to original if we can't resolve
-          collectorNumber: '',
-          version: versionInfo
-        });
-        
-        const cardId = cardData?.id || null;
+        // Priority 2: If no product ID or product ID lookup failed, try set code resolution
+        if (!cardId) {
+          const setCode = await resolveSetCode(article.expansion);
+          
+          // Check if card name contains version information
+          let cleanCardName = article.name;
+          let versionInfo = null;
+          const versionMatch = article.name.match(/^(.+?)\s*\((V\.\d+)\)$/i);
+          if (versionMatch) {
+            cleanCardName = versionMatch[1].trim();
+            versionInfo = versionMatch[2]; // e.g., "V.1"
+          }
+          
+          // Try to extract collector number from the card name
+          // Pattern: "- {number} -" e.g., "- 167 -"
+          let collectorNumber = '';
+          const collectorNumberMatch = article.name.match(/-\s*(\d+[a-zA-Z]*)\s*-/);
+          if (collectorNumberMatch) {
+            collectorNumber = collectorNumberMatch[1];
+          }
+          
+          // Add structured logging
+          console.log(JSON.stringify({
+            product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [],
+            resolved_via: 'set+cn',
+            set_code: setCode,
+            collector_number: collectorNumber,
+            final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : ''
+          }));
+          
+          // Try to resolve to a Scryfall ID
+          cardData = await ScryfallProvider.hydrateCard({
+            name: cleanCardName,
+            setCode: setCode || article.expansion, // Fallback to original if we can't resolve
+            collectorNumber: collectorNumber,
+            version: versionInfo
+          });
+          
+          cardId = cardData?.id || null;
+          
+          // Add structured logging when no resolution is possible
+          if (!cardId) {
+            console.log(JSON.stringify({
+              product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [],
+              resolved_via: 'none',
+              set_code: null,
+              collector_number: '',
+              final_uri: '',
+              name: article.name,
+              expansion: article.expansion
+            }));
+          }
+        }
         
         // Parse price as Money
         const price = Money.parse(article.price, 'EUR');
@@ -127,7 +197,7 @@ export class ImportService {
           const existingCard = await cardRepository.getById(cardId);
           if (!existingCard) {
             // Get full card data from Scryfall
-            const scryfallData = await ScryfallProvider.hydrateCard({
+            const scryfallData = cardData || await ScryfallProvider.hydrateCard({
               scryfall_id: cardId,
               name: article.name,
               setCode: article.expansion,
@@ -137,14 +207,21 @@ export class ImportService {
             // Get image URL from Scryfall
             const imageUrl = await ScryfallProvider.getImageUrlById(cardId);
             
-            const cardRecord = {
+            // Try to extract collector number from the card name for the card record
+          let collectorNumberForRecord = '';
+          const collectorNumberMatchForRecord = article.name.match(/-\s*(\d+[a-zA-Z]*)\s*-/);
+          if (collectorNumberMatchForRecord) {
+            collectorNumberForRecord = collectorNumberMatchForRecord[1];
+          }
+
+          const cardRecord = {
               id: cardId,
-              oracleId: scryfallData?.oracle_id || '',
+              oracleId: scryfallData?.oracle_id || cardData?.oracle_id || '',
               name: article.name,
-              set: scryfallData?.set_name || article.expansion,
-              setCode: setCode || article.expansion,
-              number: '', // Not available in articles CSV
-              lang: scryfallData?.lang || 'en',
+              set: scryfallData?.set_name || cardData?.set_name || article.expansion,
+              setCode: scryfallData?.set || cardData?.set || article.expansion,
+              number: scryfallData?.collector_number || cardData?.collector_number || collectorNumberForRecord || '', // Use parsed collector number if available
+              lang: scryfallData?.lang || cardData?.lang || 'en',
               finish: 'nonfoil', // Default to nonfoil
               imageUrl: imageUrl || '',
               createdAt: now,

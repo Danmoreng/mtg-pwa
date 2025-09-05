@@ -155,21 +155,26 @@ export async function resolveSetCode(cardmarketName: string): Promise<string | n
 
   // Handle "Secret Lair Drop Series:" prefix cases
   if (/^secret lair drop series:/i.test(raw)) {
-    console.log(`Set code resolved from secret lair: ${raw} -> sld`);
-    // Store alias for future use
-    await storeAlias(n, "sld");
-    return "sld";
-  }
-
-  // Special case for "Stellar Sights" - this seems to be missing from Scryfall
-  // Let's try to map it to a reasonable fallback or look for similar sets
-  if (/^stellar sights$/i.test(raw)) {
-    // Try to find similar sets or use a fallback
-    // "Stellar Sights" might be a Secret Lair or similar product
-    console.log(`Set code resolved from stellar sights fallback: ${raw} -> sld`);
-    // Store alias for future use
-    await storeAlias(n, "sld");
-    return "sld";
+    const baseName = raw.replace(/^secret lair drop series:/i, "").trim();
+    // Try with "Extras" suffix
+    if (/: extras$/i.test(baseName)) {
+      const cleanBase = norm(baseName.replace(/: extras$/i, ""));
+      const hit = idx.byName.get(cleanBase);
+      if (hit) {
+        console.log(`Set code resolved from secret lair drop series + extras: ${raw} -> ${hit.code}`);
+        // Store alias for future use
+        await storeAlias(n, hit.code);
+        return hit.code;
+      }
+    }
+    // Try without "Extras"
+    const hit = idx.byName.get(norm(baseName));
+    if (hit) {
+      console.log(`Set code resolved from secret lair drop series: ${raw} -> ${hit.code}`);
+      // Store alias for future use
+      await storeAlias(n, hit.code);
+      return hit.code;
+    }
   }
 
   // If we get here, we couldn't resolve the set
