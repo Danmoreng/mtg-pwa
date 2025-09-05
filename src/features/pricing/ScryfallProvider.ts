@@ -109,6 +109,49 @@ export class ScryfallProvider {
     }
   }
 
+  // Get card data by Cardmarket ID
+  static async getByCardmarketId(cardmarketId: string): Promise<any> {
+    try {
+      // Enforce rate limiting
+      await this.enforceRateLimit();
+      
+      // First, get the card by Cardmarket ID using the dedicated endpoint
+      const response = await fetch(`${this.BASE_URL}/cards/cardmarket/${cardmarketId}`);
+      
+      if (!response.ok) {
+        console.error(`Scryfall API error for cardmarket_id ${cardmarketId}: ${response.status} ${response.statusText}`);
+        try {
+          const errorText = await response.text();
+          console.error(`Scryfall API error details: ${errorText}`);
+        } catch (e) {
+          console.error('Could not read error response body');
+        }
+        return null;
+      }
+
+      // Return the card data
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching card by Cardmarket ID from Scryfall:', error);
+      return null;
+    }
+  }
+
+  // Get card data by multiple Cardmarket IDs
+  static async getByCardmarketIds(cardmarketIds: string[]): Promise<any[]> {
+    const cards = [];
+    
+    // Process each Cardmarket ID individually since the dedicated endpoint only accepts one ID at a time
+    for (const cardmarketId of cardmarketIds) {
+      const card = await this.getByCardmarketId(cardmarketId);
+      if (card) {
+        cards.push(card);
+      }
+    }
+    
+    return cards;
+  }
+
   // Hydrate a card with Scryfall data
   static async hydrateCard(cardData: { 
     scryfall_id?: string; 
