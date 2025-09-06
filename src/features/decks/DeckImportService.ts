@@ -41,7 +41,7 @@ export class DeckImportService {
         // Parse the line (format: "quantity cardName (setCode) collectorNumber")
         // Example: "1 Captain America, First Avenger (SLD) 1726"
         // Also handle foil indicators like "*F*"
-        const match = trimmedLine.match(/^(\d+)\s+(.+?)\s*$([^)]+)$\s*(\d+)(?:\s*\*F\*\s*)?$/i);
+        const match = trimmedLine.match(/^(\d+)\s+(.+?)\s*\(([^)]+)\)\s*(\d+)(?:\s*\*F\*\s*)?$/i);
         
         if (match) {
           const [, quantityStr, cardName, setCode, collectorNumber] = match;

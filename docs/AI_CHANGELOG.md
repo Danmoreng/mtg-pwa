@@ -2,6 +2,19 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-06 18:30 — fix: Correct deck text import regex pattern
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/DeckImportService.ts, src/test/features/deckImportRegex.test.ts
+- **Type**: fix
+- **Summary**: Fix critical regex bug in deck text import that prevented parsing of card lines with set codes in parentheses.
+- **Details**:
+  - Fixed buggy regex pattern `/^(\d+)\s+(.+?)\s*$([^)]+)$\s*(\d+)(?:\s*\*F\*\s*)?$/i` 
+  - Corrected to proper pattern `/^(\d+)\s+(.+?)\s*\(([^)]+)\)\s*(\d+)(?:\s*\*F\*\s*)?$/i`
+  - Added comprehensive tests to verify the fix works correctly
+  - The bug prevented lines like "1 Captain America, First Avenger (SLD) 1726" from being parsed
+- **Impact/Risks**: Fixes critical functionality issue in deck text imports. No breaking changes.
+- **Verification Steps**: `npm run build` completes successfully. Run tests to verify regex patterns work correctly.
+
 ## 2025-09-06 12:00 — feat: Implement batch Cardmarket ID lookup and enhanced collector number parsing
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
