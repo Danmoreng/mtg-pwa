@@ -137,11 +137,63 @@ export class ScryfallProvider {
     }
   }
 
-  // Get card data by multiple Cardmarket IDs
+  // Get card data by multiple Cardmarket IDs using batch collection endpoint
   static async getByCardmarketIds(cardmarketIds: string[]): Promise<any[]> {
+    try {
+      // If no IDs provided, return empty array
+      if (!cardmarketIds || cardmarketIds.length === 0) {
+        return [];
+      }
+      
+      // If only one ID, use the dedicated endpoint for simplicity
+      if (cardmarketIds.length === 1) {
+        const card = await this.getByCardmarketId(cardmarketIds[0]);
+        return card ? [card] : [];
+      }
+      
+      // Enforce rate limiting
+      await this.enforceRateLimit();
+      
+      // Use batch collection endpoint for multiple IDs
+      const response = await fetch(`${this.BASE_URL}/cards/collection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          identifiers: cardmarketIds.map(id => ({ cardmarket_id: id }))
+        })
+      });
+      
+      if (!response.ok) {
+        console.error(`Scryfall API error for batch cardmarket_ids: ${response.status} ${response.statusText}`);
+        try {
+          const errorText = await response.text();
+          console.error(`Scryfall API error details: ${errorText}`);
+        } catch (e) {
+          console.error('Could not read error response body');
+        }
+        // Fall back to individual lookups
+        return await this.getByCardmarketIdsIndividually(cardmarketIds);
+      }
+      
+      // Parse the response
+      const data = await response.json();
+      
+      // Return the cards that were found
+      return data.data || [];
+    } catch (error) {
+      console.error('Error fetching cards by Cardmarket IDs from Scryfall:', error);
+      // Fall back to individual lookups
+      return await this.getByCardmarketIdsIndividually(cardmarketIds);
+    }
+  }
+  
+  // Fallback method for individual Cardmarket ID lookups
+  private static async getByCardmarketIdsIndividually(cardmarketIds: string[]): Promise<any[]> {
     const cards = [];
     
-    // Process each Cardmarket ID individually since the dedicated endpoint only accepts one ID at a time
+    // Process each Cardmarket ID individually
     for (const cardmarketId of cardmarketIds) {
       const card = await this.getByCardmarketId(cardmarketId);
       if (card) {

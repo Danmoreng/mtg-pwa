@@ -104,6 +104,7 @@ export class ImportService {
           // Handle multiple product IDs separated by " | "
           const productIds = article.productId.split(' | ').map((id: string) => id.trim());
           
+          // Use batch lookup for multiple IDs, or single lookup for one ID
           if (productIds.length === 1) {
             // Single product ID
             cardData = await ScryfallProvider.getByCardmarketId(productIds[0]);
@@ -115,24 +116,47 @@ export class ImportService {
               final_uri: `/cards/cardmarket/${productIds[0]}`
             }));
           } else if (productIds.length > 1) {
-            // Multiple product IDs - try each one
-            for (const productId of productIds) {
-              cardData = await ScryfallProvider.getByCardmarketId(productId);
-              if (cardData) {
-                // Add structured logging
-                console.log(JSON.stringify({
-                  product_ids: productIds,
-                  resolved_via: 'cardmarket_id',
-                  cardmarket_id: productId,
-                  final_uri: `/cards/cardmarket/${productId}`
-                }));
-                break;
-              }
+            // Multiple product IDs - use batch lookup
+            const cards = await ScryfallProvider.getByCardmarketIds(productIds);
+            if (cards && cards.length > 0) {
+              // Use the first card found
+              cardData = cards[0];
+              // Add structured logging
+              console.log(JSON.stringify({
+                product_ids: productIds,
+                resolved_via: 'cardmarket_id',
+                cardmarket_id: productIds[0], // Log the first ID as reference
+                final_uri: `/cards/collection`
+              }));
             }
           }
           
           cardId = cardData?.id || null;
         }
+        
+        // Enhanced collector number parsing function
+        const extractCollectorNumber = (name: string): string => {
+          // Enhanced regex to handle various collector number formats:
+          // - Standard: "- 167 -"
+          // - With letters: "- 167a -"
+          // - Roman numerals: "- IV -"
+          // - With special characters: "- 167★ -"
+          const patterns = [
+            /-\s*(\d+[a-zA-Z★]*)\s*-/i,  // Standard with optional letters/special chars
+            /-\s*([IVXLCDM]+)\s*-/i,     // Roman numerals
+            /\s+(\d+[a-zA-Z★]*)\s*$/i,   // At end of name with space
+            /\((\d+[a-zA-Z★]*)\)/i       // In parentheses
+          ];
+          
+          for (const pattern of patterns) {
+            const match = name.match(pattern);
+            if (match) {
+              return match[1];
+            }
+          }
+          
+          return '';
+        };
         
         // Priority 2: If no product ID or product ID lookup failed, try set code resolution
         if (!cardId) {
@@ -147,13 +171,8 @@ export class ImportService {
             versionInfo = versionMatch[2]; // e.g., "V.1"
           }
           
-          // Try to extract collector number from the card name
-          // Pattern: "- {number} -" e.g., "- 167 -"
-          let collectorNumber = '';
-          const collectorNumberMatch = article.name.match(/-\s*(\d+[a-zA-Z]*)\s*-/);
-          if (collectorNumberMatch) {
-            collectorNumber = collectorNumberMatch[1];
-          }
+          // Try to extract collector number from the card name using enhanced parsing
+          let collectorNumber = extractCollectorNumber(article.name);
           
           // Add structured logging
           console.log(JSON.stringify({
@@ -207,12 +226,8 @@ export class ImportService {
             // Get image URL from Scryfall
             const imageUrl = await ScryfallProvider.getImageUrlById(cardId);
             
-            // Try to extract collector number from the card name for the card record
-          let collectorNumberForRecord = '';
-          const collectorNumberMatchForRecord = article.name.match(/-\s*(\d+[a-zA-Z]*)\s*-/);
-          if (collectorNumberMatchForRecord) {
-            collectorNumberForRecord = collectorNumberMatchForRecord[1];
-          }
+            // Try to extract collector number from the card name for the card record using enhanced parsing
+            let collectorNumberForRecord = extractCollectorNumber(article.name);
 
           const cardRecord = {
               id: cardId,

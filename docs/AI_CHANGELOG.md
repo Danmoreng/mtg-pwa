@@ -2,6 +2,20 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-06 12:00 — feat: Implement batch Cardmarket ID lookup and enhanced collector number parsing
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
+- **Type**: feat
+- **Summary**: Implement batch Cardmarket ID lookup using Scryfall's collection endpoint and enhance collector number parsing with support for various formats.
+- **Details**:
+  - Added `getByCardmarketIds` method to ScryfallProvider that uses `/cards/collection` endpoint for batch lookups
+  - Updated ImportService to use batch lookup for multiple Cardmarket IDs instead of sequential requests
+  - Implemented enhanced collector number parsing with support for Roman numerals, special characters, and various formats
+  - Added fallback to individual lookups if batch request fails
+  - Improved regex patterns for more robust collector number extraction
+- **Impact/Risks**: Performance improvement for imports with multiple Cardmarket IDs. No breaking changes.
+- **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files with multiple Product IDs and verify batch lookup is used.
+
 ## 2025-09-05 17:45 — fix: Improve Cardmarket import logging and handle missing Cardmarket IDs
 - **Author**: AI (Qwen)
 - **Scope**: src/features/imports/ImportService.ts
@@ -318,3 +332,80 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Impact/Risks**: These changes improve the project planning and organization without affecting existing functionality.
 - **Verification Steps**: Review the new issue files and updated documentation to ensure they accurately reflect the planned improvements.
 - **Linked Task/Issue**: Plan Mode
+
+## 2025-09-04 17:00 — fix: Resolve TypeScript compilation errors
+- **Author**: AI (Qwen)
+- **Scope**: Multiple files across the codebase
+- **Type**: fix
+- **Summary**: Fix numerous TypeScript compilation errors to ensure successful build.
+- **Details**:
+  - Fixed variable declaration order issues
+  - Resolved type compatibility problems
+  - Corrected null/undefined type handling
+  - Fixed test file mocking issues
+  - Removed unused imports and variables
+- **Impact/Risks**: Enables successful build and deployment. No functional changes.
+- **Verification Steps**: `npm run build` completes successfully without errors.
+- **Linked Task/Issue**: TypeScript compilation fixes
+
+## 2025-09-04 16:00 — fix: Resolve database schema upgrade issues
+- **Author**: AI (Qwen)
+- **Scope**: src/data/db.ts
+- **Type**: fix
+- **Summary**: Fix database schema upgrade issues and ensure smooth transition from old data model.
+- **Details**:
+  - Added proper upgrade functions for version 4 schema changes
+  - Fixed primary key transition from composite key to single key in deck_cards table
+  - Added missing fields to existing records during upgrade
+  - Ensured data integrity during schema migration
+- **Impact/Risks**: Fixes critical database upgrade issues that could prevent application startup. No data loss.
+- **Verification Steps**: `npm run build` completes successfully. Application starts without database errors.
+- **Linked Task/Issue**: Database schema upgrade fixes
+
+## 2025-09-04 15:00 — feat: Implement deduplication system for card tracking
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/features/decks/views/DeckImportView.vue, src/data/db.ts, src/data/repos.ts
+- **Type**: feat
+- **Summary**: Implement comprehensive deduplication system to prevent duplicate card entries when importing from different sources.
+- **Details**:
+  - Enhanced data model with lot-based tracking to individually track physical cards
+  - Implemented deduplication logic for deck imports to link to existing cards instead of creating duplicates
+  - Implemented deduplication logic for Cardmarket imports to link transactions to existing lots
+  - Fixed variable declaration issues causing runtime errors
+  - Added proper currency tracking to card lots
+  - Ensured all required fields are properly populated
+  - Improved transaction tracking with better lot linking
+  - Fixed numerous TypeScript compilation errors
+  - Resolved variable scoping issues
+  - Corrected type compatibility problems
+- **Impact/Risks**: Significantly improves data integrity by preventing duplicate card entries. Maintains accurate cost basis and valuation tracking. No destructive changes to existing data.
+- **Verification Steps**: `npm run build` completes successfully. Import decks and Cardmarket transactions and verify cards are properly linked rather than duplicated.
+- **Linked Task/Issue**: Card deduplication implementation
+
+## 2025-09-06 12:00 — Summary: Batch Cardmarket ID Lookup and Enhanced Collector Number Parsing
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
+- **Type**: docs
+- **Summary**: Documentation of improvements to Cardmarket import functionality.
+- **Details**:
+  - **Batch Cardmarket ID Lookup**: Implemented batch lookup using Scryfall's `/cards/collection` endpoint for improved performance
+    - Added `getByCardmarketIds` method to `ScryfallProvider` for batch lookups
+    - Updated `ImportService` to use batch lookup for multiple Cardmarket IDs
+    - Implemented fallback to individual lookups if batch request fails
+    - Maintained backward compatibility for single ID lookups
+    - Improved performance for imports with multiple Product IDs
+    - Reduced API calls and network overhead
+    - Better error handling with fallback mechanisms
+  - **Enhanced Collector Number Parsing**: Created more robust parsing to handle multiple formats
+    - Standard numbers: "- 167 -"
+    - Numbers with letters: "- 167a -"
+    - Roman numerals: "- IV -"
+    - Special characters: "- 167★ -"
+    - Numbers at the end of names: "Lightning Bolt 167"
+    - Numbers in parentheses: "Lightning Bolt (167)"
+    - Replaced both instances of the old regex in `ImportService`
+    - Better handling of various collector number formats
+    - More accurate data extraction from Cardmarket descriptions
+    - Improved import success rates for cards with complex naming
+- **Impact/Risks**: Documentation only. No code changes.
+- **Verification Steps**: Review this summary entry for completeness and accuracy.
