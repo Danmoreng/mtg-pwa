@@ -16,20 +16,7 @@
         </p>
       </div>
       
-      <div class="deck-stats">
-        <div class="stat-card">
-          <h3>Total Cards</h3>
-          <p class="stat-value">{{ totalCards }}</p>
-        </div>
-        <div class="stat-card">
-          <h3>Owned Cards</h3>
-          <p class="stat-value">{{ ownedCards }}</p>
-        </div>
-        <div class="stat-card">
-          <h3>Coverage</h3>
-          <p class="stat-value">{{ coveragePercentage }}%</p>
-        </div>
-      </div>
+      <!-- Deck stats removed as they're no longer needed with the new card component -->
       
       <div class="cards-section">
         <h2>Cards in Deck</h2>
@@ -37,30 +24,12 @@
           <p>No cards found in this deck.</p>
         </div>
         <div v-else class="cards-grid">
-          <div 
-            v-for="deckCard in deckCards" 
-            :key="`${deckCard.deckId}-${deckCard.cardId}`"
+          <CardComponent
+            v-for="deckCard in deckCards"
+            :key="deckCard.id"
+            :card="getCardDetails(deckCard.cardId)"
             class="card-grid-item"
-          >
-            <div class="card-image-container">
-              <img 
-                :src="getCardImage(deckCard.cardId)" 
-                :alt="getCardName(deckCard.cardId)"
-                class="card-image"
-                @error="handleImageError"
-              />
-            </div>
-            <div class="card-info">
-              <h3 class="card-name">{{ getCardName(deckCard.cardId) }}</h3>
-              <p class="card-set">{{ getCardSet(deckCard.cardId) }} #{{ getCardNumber(deckCard.cardId) }}</p>
-              <p class="card-quantity">Quantity: {{ deckCard.quantity }}</p>
-              <div class="ownership-status">
-                <span :class="getOwnershipStatus(deckCard.cardId, deckCard.quantity)">
-                  {{ getOwnershipText(deckCard.cardId, deckCard.quantity) }}
-                </span>
-              </div>
-            </div>
-          </div>
+          />
         </div>
       </div>
     </div>
@@ -78,6 +47,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import db from '../../../data/db';
+import CardComponent from '../../../components/CardComponent.vue';
 
 // Route
 const route = useRoute();
@@ -88,82 +58,23 @@ const deckCards = ref<any[]>([]);
 const cards = ref<Record<string, any>>({});
 const loading = ref(true);
 
-// Computed stats
-const totalCards = ref(0);
-const ownedCards = ref(0);
-const coveragePercentage = ref(0);
-
-// Holdings map
-const holdingsMap = ref<Record<string, Record<string, any>>>({});
-
 // Format date
 const formatDate = (date: Date) => {
   return new Date(date).toLocaleDateString();
 };
 
-// Get card name
-const getCardName = (cardId: string) => {
-  return cards.value[cardId]?.name || 'Unknown Card';
-};
-
-// Get card set
-const getCardSet = (cardId: string) => {
-  return cards.value[cardId]?.setCode || '';
-};
-
-// Get card number
-const getCardNumber = (cardId: string) => {
-  return cards.value[cardId]?.number || '';
-};
-
-// Get card image
-const getCardImage = (cardId: string) => {
-  const card = cards.value[cardId];
-  if (!card) return 'https://placehold.co/200x280?text=Card+Image';
-  
-  // Return the actual image URL from the card data, or a placeholder if not available
-  return card.imageUrl || 'https://placehold.co/200x280?text=Card+Image';
-};
-
-// Handle image error
-const handleImageError = (event: any) => {
-  event.target.src = 'https://placehold.co/200x280?text=Card+Image';
-};
-
-// Get ownership status
-const getOwnershipStatus = (cardId: string, neededQuantity: number) => {
-  const card = cards.value[cardId];
-  if (!card) return 'unknown';
-  
-  // Get holdings for this card
-  const holdings = Object.values(holdingsMap.value[cardId] || {});
-  const totalOwned = holdings.reduce((sum, holding) => sum + holding.quantity, 0);
-  
-  if (totalOwned >= neededQuantity) {
-    return 'owned';
-  } else if (totalOwned > 0) {
-    return 'partial';
-  } else {
-    return 'missing';
-  }
-};
-
-// Get ownership text
-const getOwnershipText = (cardId: string, neededQuantity: number) => {
-  const card = cards.value[cardId];
-  if (!card) return 'Unknown';
-  
-  // Get holdings for this card
-  const holdings = Object.values(holdingsMap.value[cardId] || {});
-  const totalOwned = holdings.reduce((sum, holding) => sum + holding.quantity, 0);
-  
-  if (totalOwned >= neededQuantity) {
-    return `Owned (${totalOwned})`;
-  } else if (totalOwned > 0) {
-    return `Partial (${totalOwned}/${neededQuantity})`;
-  } else {
-    return `Missing (0/${neededQuantity})`;
-  }
+// Get card details
+const getCardDetails = (cardId: string) => {
+  return cards.value[cardId] || {
+    id: cardId,
+    name: 'Unknown Card',
+    set: 'Unknown Set',
+    setCode: '???',
+    number: '???',
+    lang: 'en',
+    finish: 'nonfoil',
+    imageUrl: 'https://placehold.co/200x280?text=Card+Image'
+  };
 };
 
 // Load deck data
@@ -182,43 +93,12 @@ const loadDeck = async () => {
     const cardsInDeck = await db.deck_cards.where('deckId').equals(deckId).toArray();
     deckCards.value = cardsInDeck;
     
-    // Calculate stats correctly by summing quantities
-    totalCards.value = cardsInDeck.reduce((sum, card) => sum + card.quantity, 0);
-    
     // Get card details
     const cardIds = cardsInDeck.map(card => card.cardId).filter(id => id);
     if (cardIds.length > 0) {
       const cardDetails = await db.cards.where('id').anyOf(cardIds).toArray();
       cards.value = Object.fromEntries(cardDetails.map(card => [card.id, card]));
     }
-    
-    // Get holdings for all cards
-    if (cardIds.length > 0) {
-      const allHoldings = await db.holdings.where('cardId').anyOf(cardIds).toArray();
-      const holdingsByCard: Record<string, Record<string, any>> = {};
-      
-      for (const holding of allHoldings) {
-        if (holding.cardId) {
-          if (!holdingsByCard[holding.cardId]) {
-            holdingsByCard[holding.cardId] = {};
-          }
-          holdingsByCard[holding.cardId][holding.id] = holding;
-        }
-      }
-      
-      holdingsMap.value = holdingsByCard;
-    }
-    
-    // Calculate ownership stats
-    let totalOwned = 0;
-    for (const deckCard of cardsInDeck) {
-      const holdings = Object.values(holdingsMap.value[deckCard.cardId] || {});
-      const ownedQuantity = holdings.reduce((sum, holding) => sum + holding.quantity, 0);
-      totalOwned += Math.min(deckCard.quantity, ownedQuantity);
-    }
-    
-    ownedCards.value = totalOwned;
-    coveragePercentage.value = totalCards.value > 0 ? Math.round((totalOwned / totalCards.value) * 100) : 100;
   } catch (error) {
     console.error('Error loading deck:', error);
   } finally {
