@@ -35,54 +35,24 @@
     </div>
     
     <div v-else class="cards-grid">
-      <div 
+      <CardComponent
         v-for="card in sortedCards" 
         :key="card.id" 
+        :card="card"
         class="card-item"
-      >
-        <div class="card-image-container">
-          <img 
-            v-if="card.imageUrl" 
-            :src="card.imageUrl" 
-            :alt="card.name"
-            class="card-image"
-            @error="handleImageError"
-          />
-          <div v-else class="image-placeholder">
-            <span>No Image</span>
-          </div>
-        </div>
-        <div class="card-details">
-          <h2>{{ card.name }}</h2>
-          <p class="card-set">{{ card.set }} #{{ card.number }}</p>
-          <p class="card-lots">Owned: {{ getLotQuantity(card.id) }} lot(s)</p>
-          <p class="card-quantity">Total: {{ getCardQuantity(card.id) }} card(s)</p>
-          <div v-if="cardPrices[card.id]" class="card-prices">
-            <div v-if="cardPrices[card.id].scryfall" class="price scryfall-price">
-              <span class="price-label">Price:</span>
-              <span class="price-value">{{ cardPrices[card.id]?.scryfall?.format('de-DE') || 'N/A' }}</span>
-            </div>
-          </div>
-          <div v-else-if="loadingPrices" class="price-loading">
-            Loading prices...
-          </div>
-        </div>
-      </div>
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import db from '../../../data/db';
-import { Money } from '../../../core/Money';
+import CardComponent from '../../../components/CardComponent.vue';
 
 // Reactive state
 const cards = ref<any[]>([]);
-const lots = ref<Record<string, any[]>>({});
-const cardPrices = ref<Record<string, { scryfall?: Money; cardmarket?: Money }>>({});
 const loading = ref(true);
-const loadingPrices = ref(false);
 const searchQuery = ref('');
 const sortBy = ref('name'); // Default sort by name
 const sortDirection = ref('asc'); // Default ascending
@@ -116,11 +86,8 @@ const sortedCards = computed(() => {
         comparison = a.set.localeCompare(b.set);
         break;
       case 'price':
-        {
-          const priceA = cardPrices.value[a.id]?.scryfall?.getCents() ?? 0;
-          const priceB = cardPrices.value[b.id]?.scryfall?.getCents() ?? 0;
-          comparison = priceA - priceB;
-        }
+        // Price will be loaded within each CardComponent
+        comparison = 0;
         break;
       case 'releasedAt':
         // Assuming we have a releasedAt field on the card
@@ -129,11 +96,8 @@ const sortedCards = computed(() => {
         comparison = dateA - dateB;
         break;
       case 'owned':
-        {
-          const ownedA = getCardQuantity(a.id);
-          const ownedB = getCardQuantity(b.id);
-          comparison = ownedA - ownedB;
-        }
+        // Ownership quantity will be loaded within each CardComponent
+        comparison = 0;
         break;
       default:
         comparison = a.name.localeCompare(b.name);
@@ -145,111 +109,12 @@ const sortedCards = computed(() => {
   return cardsToSort;
 });
 
-// Get lot quantity for a card
-const getLotQuantity = (cardId: string) => {
-  return lots.value[cardId] ? lots.value[cardId].length : 0;
-};
-
-// Get total card quantity for a card
-const getCardQuantity = (cardId: string) => {
-  if (!lots.value[cardId]) return 0;
-  
-  return lots.value[cardId].reduce((total, lot) => {
-    // Only count lots that haven't been fully disposed
-    if (!lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity)) {
-      const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
-      return total + remainingQuantity;
-    }
-    return total;
-  }, 0);
-};
-
-// Handle image error
-const handleImageError = (event: any) => {
-  event.target.src = 'https://placehold.co/200x280?text=Card+Image';
-};
-
-// Load prices for cards from the database
-const loadCardPrices = async () => {
-  if (cards.value.length === 0) return;
-  
-  loadingPrices.value = true;
-  
-  try {
-    // Create an array of promises for price fetching from database
-    const pricePromises = cards.value.map(async (card) => {
-      try {
-        // Fetch price points from database
-        const pricePoints = await db.price_points.where('cardId').equals(card.id).toArray();
-        
-        // Find the most recent price point
-        if (pricePoints.length > 0) {
-          // Sort by date descending to get the most recent price
-          pricePoints.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
-          const latestPricePoint = pricePoints[0];
-          
-          const price = new Money(latestPricePoint.price, latestPricePoint.currency);
-          
-          return {
-            cardId: card.id,
-            prices: {
-              scryfall: price,
-              // We won't show Cardmarket prices separately since Scryfall already includes them
-            }
-          };
-        }
-        
-        return {
-          cardId: card.id,
-          prices: {}
-        };
-      } catch (error) {
-        console.error(`Error loading prices for card ${card.id}:`, error);
-        return {
-          cardId: card.id,
-          prices: {}
-        };
-      }
-    });
-    
-    // Wait for all price promises to resolve
-    const priceResults = await Promise.all(pricePromises);
-    
-    // Update the cardPrices object
-    const newCardPrices: Record<string, { scryfall?: Money; cardmarket?: Money }> = {};
-    for (const result of priceResults) {
-      newCardPrices[result.cardId] = result.prices;
-    }
-    
-    cardPrices.value = newCardPrices;
-  } catch (error) {
-    console.error('Error loading card prices:', error);
-  } finally {
-    loadingPrices.value = false;
-  }
-};
-
-// Load cards and lots
+// Load cards
 const loadCards = async () => {
   try {
     // Get all cards
     const allCards = await db.cards.toArray();
     cards.value = allCards;
-    
-    // Get lots for each card
-    const allLots = await db.card_lots.toArray();
-    const lotsByCard: Record<string, any[]> = {};
-    
-    for (const lot of allLots) {
-      if (lot.cardId) {
-        if (!lotsByCard[lot.cardId]) {
-          lotsByCard[lot.cardId] = [];
-        }
-        lotsByCard[lot.cardId].push(lot);
-      }
-    }
-    
-    lots.value = lotsByCard;
   } catch (error) {
     console.error('Error loading cards:', error);
   } finally {
@@ -257,20 +122,9 @@ const loadCards = async () => {
   }
 };
 
-// Load cards and prices when component mounts
+// Load cards when component mounts
 onMounted(() => {
-  loadCards().then(() => {
-    if (cards.value.length > 0) {
-      loadCardPrices();
-    }
-  });
-});
-
-// Reload prices when cards change
-watch(cards, () => {
-  if (cards.value.length > 0 && !loadingPrices.value) {
-    loadCardPrices();
-  }
+  loadCards();
 });
 </script>
 

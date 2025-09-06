@@ -15,6 +15,21 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Impact/Risks**: Fixes critical functionality issue in deck text imports. No breaking changes.
 - **Verification Steps**: `npm run build` completes successfully. Run tests to verify regex patterns work correctly.
 
+## 2025-09-06 19:00 — feat: Implement unified card component with modal dialog
+- **Author**: AI (Qwen)
+- **Scope**: src/components/CardComponent.vue, src/features/decks/views/DeckDetailView.vue, src/features/cards/views/CardsView.vue, src/components/index.ts
+- **Type**: feat
+- **Summary**: Create unified card component for consistent display across deck and cards views with modal dialog for detailed information.
+- **Details**:
+  - Created CardComponent.vue with card image, set name, collector number, and current price display
+  - Implemented modal dialog showing detailed card information including buy/sell prices, value over time, and owned quantities
+  - Updated DeckDetailView to use unified card component instead of individual card display logic
+  - Updated CardsView to use unified card component instead of individual card display logic
+  - Simplified both views by removing duplicated logic for card display and price loading
+  - Component loads card details on demand when modal is opened for better performance
+- **Impact/Risks**: Improves consistency and user experience across card displays. No breaking changes.
+- **Verification Steps**: `npm run build` completes successfully. Verify card display works in both deck and cards views. Test modal dialog functionality.
+
 ## 2025-09-06 12:00 — feat: Implement batch Cardmarket ID lookup and enhanced collector number parsing
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
