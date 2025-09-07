@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <h1>MTG Collection Value Tracker</h1>
+    <h1>MTG Collection Tracker</h1>
     
     <!-- Price Update Information -->
     <div class="price-update-info card mb-4">
