@@ -70,7 +70,7 @@ import { ref, onMounted } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { useHoldingsStore } from '../../stores/holdings';
 import { useTransactionsStore } from '../../stores/transactions';
-import { ValuationEngine } from '../analytics/ValuationEngine.ts';
+import { ValuationEngine } from '../analytics/ValuationEngine';
 import { Money } from '../../core/Money';
 import { usePriceUpdates } from '../../composables/usePriceUpdates';
 
