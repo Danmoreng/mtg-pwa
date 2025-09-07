@@ -397,3 +397,356 @@ If you want, I can also generate the exact PR as a patch (new files + diffs) so 
 [1]: https://github.com/unovue/reka-ui?utm_source=chatgpt.com "GitHub - unovue/reka-ui: An open-source UI component library for ..."
 [2]: https://reka-ui.com/docs/guides/migration?utm_source=chatgpt.com "Migration - Radix Vue to Reka UI"
 [3]: https://reka-ui.com/docs/overview/installation?utm_source=chatgpt.com "Installation | Reka UI"
+
+
+# Second half, ChatGPT review after first implementation
+
+Here’s a thorough repo review of the Bootstrap + Reka UI integration, what’s working, what’s breaking (e.g., your fixed navbar), and a concrete migration plan with exact code changes.
+
+# What’s already in good shape
+
+* You switched the global entry to Sass: `src/main.ts` now imports `./styles/main.scss`. ✔️&#x20;
+* You created a curated Bootstrap partials file and a runtime theme bridge (`bootstrap-theme.css`). ✔️ &#x20;
+* Your navigation now uses Bootstrap classes (`navbar navbar-expand-md … fixed-top …`). ✔️&#x20;
+
+# Key issues & how to fix them
+
+## 1) Why the navbar isn’t “fixed”
+
+**Root cause:** the `.fixed-top` helper class doesn’t exist in your compiled CSS because the Bootstrap **helpers** partial isn’t imported. (You currently import `reboot`, `type`, `containers`, `grid`, `utilities`, and some components, but **not** `helpers`.)&#x20;
+
+### Fix
+
+Add helpers to your Sass partials:
+
+```diff
+// src/styles/bootstrap/_partials.scss
+
+ // Base & utilities
+ @import "bootstrap/scss/reboot";
+ @import "bootstrap/scss/type";
+ @import "bootstrap/scss/containers";
+ @import "bootstrap/scss/grid";
+ @import "bootstrap/scss/utilities";
++@import "bootstrap/scss/helpers";       // ← gives you .fixed-top, .sticky-top, etc.
+
+ // Components you actually want
+ @import "bootstrap/scss/buttons";
+ @import "bootstrap/scss/forms";
+ @import "bootstrap/scss/dropdown";
+ @import "bootstrap/scss/nav";
+ @import "bootstrap/scss/navbar";
+ @import "bootstrap/scss/modal";
+ @import "bootstrap/scss/alert";
+
+ // Generate utility classes
+ @import "bootstrap/scss/utilities/api";
+```
+
+Also add top padding so content isn’t hidden under the fixed bar. You currently work around with a `.pt-5` on a wrapper; set it globally instead:
+
+```scss
+/* src/styles/main.scss – after your imports */
+:root { --app-navbar-h: 56px; } /* tweak as needed */
+body { padding-top: calc(var(--app-navbar-h) + 0.5rem); }
+```
+
+(Your current `App.vue` version shows an inner wrapper with `pt-5`; make this global and remove the duplicate inner `#app` id, see next section.)&#x20;
+
+## 2) Duplicate `#app` and layout responsibilities
+
+In `App.vue` there’s a version with an inner `div id="app"` and manual padding/centering that conflicts with Bootstrap’s container utilities. Remove the **duplicate** `id="app"` and let Bootstrap handle spacing/layout. &#x20;
+
+### Fix (suggested `App.vue` shell)
+
+```vue
+<!-- src/App.vue -->
+<script setup lang="ts">
+import Navigation from './components/Navigation.vue'
+</script>
+
+<template>
+  <Navigation />
+  <main class="container-lg py-4">
+    <router-view />
+  </main>
+</template>
+
+<style scoped></style>
+```
+
+Also drop the old global centering/padding in `src/style.css` that fights the new layout (it still sets `#app` width/padding).&#x20;
+
+## 3) Navbar toggler relies on Bootstrap JS (which you didn’t enable)
+
+Your nav uses `data-bs-toggle="collapse"` and `data-bs-target="#navbarNav"`. That requires Bootstrap’s JS bundle (and Popper) to be loaded globally—or you need to control the collapse in Vue/Reka. Right now there’s no Bootstrap JS initialization, so the toggler won’t work on mobile.&#x20;
+
+### Option A — Keep it “headless” (no Bootstrap JS)
+
+Control the collapsed state with Vue and just add/remove the `show` class:
+
+```vue
+<!-- src/components/Navigation.vue -->
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
+const isOpen = ref(false)
+const isDecksRoute = computed(() => ['decks','deck-detail','deck-import'].includes(String(route.name)))
+</script>
+
+<template>
+  <nav class="navbar navbar-expand-md navbar-light bg-body fixed-top border-bottom">
+    <div class="container-fluid">
+      <router-link to="/" class="navbar-brand">MTG Tracker</router-link>
+
+      <button class="navbar-toggler" type="button" @click="isOpen = !isOpen" aria-controls="navbarNav"
+              :aria-expanded="isOpen" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div id="navbarNav" class="collapse navbar-collapse" :class="{ show: isOpen }">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <router-link to="/" class="nav-link" :class="{ active: route.name === 'home' }">Dashboard</router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/decks" class="nav-link" :class="{ active: isDecksRoute }">Decks</router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/cards" class="nav-link" :class="{ active: route.name === 'cards' }">Cards</router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/import/cardmarket" class="nav-link" :class="{ active: route.name === 'cardmarket-import' }">
+              Cardmarket Import
+            </router-link>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</template>
+```
+
+### Option B — Enable Bootstrap JS
+
+Install `@popperjs/core` and import Bootstrap’s JS once (e.g., in `main.ts`). This is heavier than A and you already use Reka UI, so I suggest sticking to Option A. (Your guide earlier mentioned Popper as optional).&#x20;
+
+## 4) `_variables.scss` contains **CSS variables**, not Sass variables
+
+Your `src/styles/bootstrap/_variables.scss` currently declares a `:root { … }` block of CSS variables. That’s fine for theming—but it **doesn’t** configure Bootstrap’s Sass options (which must use `$something` variables before importing Bootstrap). Move the `:root` block into `bootstrap-theme.css` (that’s the file already meant for runtime CSS vars), and keep `_variables.scss` minimal or set true Sass options there if needed. &#x20;
+
+> TL;DR keep **runtime** color mapping in `bootstrap-theme.css`; keep `_variables.scss` for **compile-time** options (typography, radii, enabling features), or leave it mostly empty.
+
+## 5) Lots of custom component CSS still overrides Bootstrap’s look
+
+Many components and views still use bespoke classes and token-based styles (`.lots-list`, `.transaction-item`, `.card-details-section`, `.text-input`, etc.). These will always “feel” off-theme until mapped to Bootstrap **components** and **utilities**.  &#x20;
+
+### What to migrate next (priority order)
+
+1. **Cards**
+   `CardComponent.vue` uses custom `.card-component`, `.card-image`, `.card-info` etc. Replace with Bootstrap’s `.card`, `.card-img-top`, `.card-body`, `.card-title`, `.card-text`.&#x20;
+   **Example skeleton:**
+
+   ```vue
+   <div class="card h-100" @click="openModal">
+     <img :src="card.imageUrl || fallback" :alt="card.name" class="card-img-top" @error="handleImageError" />
+     <div class="card-body">
+       <h5 class="card-title">{{ card.name }}</h5>
+       <p class="card-text text-body-secondary">{{ card.set }} #{{ card.collectorNumber }}</p>
+       <!-- ownership chips → use .badge bg-success / bg-danger / etc. -->
+     </div>
+   </div>
+   ```
+
+2. **Forms** (imports, deck builder, search)
+   Replace custom inputs/labels with `.form-label`, `.form-control`, `.form-text`, `.input-group`, and use grid for layout. Your `DeckImportView.vue` currently uses a custom `.text-input`.&#x20;
+   **Example:**
+
+   ```vue
+   <div class="mb-3">
+     <label for="deck-name" class="form-label">Deck Name</label>
+     <input id="deck-name" v-model="deckName" type="text" class="form-control" placeholder="Enter a name" />
+     <div class="form-text">This helps you find your deck later.</div>
+   </div>
+   ```
+
+3. **Lists, summaries & “chips”**
+   Replace `.lots-list` and `.transaction-item` with `.list-group` / `.list-group-item` and badges (`.badge bg-success|danger|warning`). Use `row`/`col` utilities for the grid-like sections.&#x20;
+
+4. **Detail sections**
+   `.card-details-section`, `.metadata-item`, etc. → use `.row g-3` + `.col` and `.table` where appropriate. Border lines can be done with `.border-bottom` and spacing utilities.&#x20;
+
+5. **Buttons**
+   Remove token-styled `button` rules in `src/style.css` and standardize on `.btn`, `.btn-primary|secondary|outline-*`. (Those global `button` rules override Bootstrap’s look.)&#x20;
+
+6. **Typography & spacing**
+   Replace custom font-size/spacing tokens in components with Bootstrap utilities (`.fs-6`, `.fw-semibold`, `.text-body-secondary`, `mb-3`, `py-2`, etc.). This drastically reduces custom CSS and unifies the look.
+
+## 6) Demo component looks good—keep it as reference
+
+`BootstrapRekaDemo.vue` correctly composes Reka primitives with Bootstrap classes for dropdowns and modals; use it as a pattern while migrating other interactive bits.&#x20;
+
+---
+
+# Concrete patch list (copy/paste to your agent)
+
+1. **Enable helpers** (fixes `.fixed-top`):
+
+```diff
+// src/styles/bootstrap/_partials.scss
+- @import "bootstrap/scss/utilities";
++ @import "bootstrap/scss/utilities";
++ @import "bootstrap/scss/helpers";
+```
+
+
+
+2. **Global body padding for fixed nav**:
+
+```diff
+/* src/styles/main.scss */
+ @import "../style.css";
+ @import "./bootstrap-theme.css";
+ @import "./bootstrap/_partials.scss";
+
++:root { --app-navbar-h: 56px; }
++body { padding-top: calc(var(--app-navbar-h) + 0.5rem); }
+```
+
+3. **Clean `App.vue` shell** (remove inner `#app`, rely on Bootstrap container):
+
+```diff
+-<template>
+-  <div>
+-    <Navigation />
+-    <div id="app" class="pt-5">
+-      <div class="container-lg">
+-        <router-view />
+-      </div>
+-    </div>
+-  </div>
+-</template>
++<template>
++  <Navigation />
++  <main class="container-lg py-4">
++    <router-view />
++  </main>
++</template>
+```
+
+
+
+4. **Navbar toggler without Bootstrap JS**:
+
+* Replace `data-bs-toggle` approach with the Vue-controlled version shown above.&#x20;
+
+5. **Normalize theming files**:
+
+* Move any `:root { --color-... }` blocks from `_variables.scss` into `bootstrap-theme.css`. Keep `_variables.scss` for Sass-only options.&#x20;
+
+6. **Purge custom global `button`/`#app` rules** from `src/style.css` that clash with Bootstrap. Keep tokens import; defer layout/spacing to Bootstrap utilities. &#x20;
+
+7. **Component-by-component migration (examples)**:
+
+* `CardComponent.vue` → Bootstrap `.card` structure.&#x20;
+* `DeckImportView.vue`, `CsvImportView.vue` → `.form-label`, `.form-control`, grid.&#x20;
+* Replace list sections (`.lots-list`, `.transactions-list`) with `.list-group`.&#x20;
+
+---
+
+# Quick audit checklist (run & verify)
+
+* [ ] Navbar stays fixed and spans full width (helpers imported)
+* [ ] Body has top padding; content no longer hidden under nav
+* [ ] Mobile nav toggles open/closed without Bootstrap JS
+* [ ] No duplicate `#app` and no global center/padding fighting Bootstrap
+* [ ] Buttons look Bootstrap-y everywhere (no global `button` overrides)
+* [ ] Forms use `.form-control` & `.form-label` consistently
+* [ ] Cards/lists/tables replaced with Bootstrap components/utilities
+* [ ] Theme colors flow through `bootstrap-theme.css` and look consistent in light/dark
+* [ ] Build still OK (`npm run build && npm run preview`)&#x20;
+
+If you want, I can generate a patch (git diff) that performs items 1–6 automatically and a search-and-replace plan for the components.&#x20;
+
+
+Short answer: your approach is right. Keep **Bootstrap for styling (classes/Sass)** and use **Reka-UI for the behavior & accessibility**. Don’t bring in Bootstrap’s JS unless you have a very specific reason. Here’s the decision rule I recommend:
+
+## What to use where
+
+**Use plain Bootstrap classes only** for:
+
+* Layout & spacing: `.container`, `.row`, `.col-*`, `gap-*`, `p*/m*`.
+* Typography & colors: `.fw-*`, `.text-*`, `.bg-*`.
+* Presentational components: `.card`, `.badge`, `.alert`, `.table`, `.list-group`, `.btn`, `.form-control`, `.form-label`.
+
+**Use Reka-UI + Bootstrap classes** for anything interactive (behavior, focus, ARIA):
+
+* **Dialog/modals** → `Dialog*` + Bootstrap’s modal markup/classes.
+* **Menus / dropdowns** → `DropdownMenu*` + `.dropdown-menu`, `.dropdown-item`.
+* **Popover/tooltip/hovercard** → `Popover*` / `Tooltip*` styled with Bootstrap variables.
+* **Accordion/Collapsible, Tabs, Select, Switch, Toast** → Reka primitives styled with Bootstrap.
+* **Navbar collapse** → manage open/close with Vue state or Reka `Collapsible*`; **don’t** use `data-bs-*` (that expects Bootstrap JS).
+
+**Avoid mixing Bootstrap JS** with Reka-UI: it duplicates behavior, breaks focus management, and hurts bundle size.
+
+---
+
+## Why this is the “clean” combo
+
+* **Accessibility & keyboard support**: Reka gives you correct roles, focus trapping, typeahead, etc., out of the box.
+* **Styling consistency**: Bootstrap Sass + your token bridge keeps color/spacing/typography unified via classes and CSS variables.
+* **No double state**: Vue + Reka control state; you’re not fighting Bootstrap’s data attributes and DOM mutation.
+
+---
+
+## Practical patterns (quick recipes)
+
+**1) Navbar (collapse without Bootstrap JS)**
+
+* Keep `.navbar`, `.navbar-expand-*`, `.fixed-top`.
+* Toggle a `show` class on the collapse container with Vue/Ref **or** use Reka `CollapsibleRoot/Trigger/Content`.
+* Ensure `helpers` partial is imported so `.fixed-top` exists.
+* Add `body { padding-top: 56px; }` (or compute via CSS var) to keep content from hiding under the bar.
+
+**2) Dialog**
+
+* `DialogRoot` / `DialogTrigger` / `DialogContent` for behavior.
+* Inside, use Bootstrap’s modal structure: `.modal`, `.modal-dialog`, `.modal-content`, `.modal-header`, `.modal-body`, `.modal-footer`.
+* Style overlay with `.modal-backdrop` class (or a tiny custom class that matches Bootstrap’s look).
+
+**3) Dropdown menu**
+
+* `DropdownMenuRoot/Trigger/Content/Item` for behavior.
+* Add `.dropdown-menu show` to the content, `.dropdown-item` to items; use Bootstrap utilities for paddings/width.
+
+**4) Forms**
+
+* Use `.form-label`, `.form-control`, `.form-check`, `.input-group` classes everywhere.
+* Reka components (e.g., `Select`, `Checkbox`, `Switch`) get those classes for consistent appearance; keep behavior from Reka.
+
+---
+
+## Do / Don’t checklist for a consistent codebase
+
+**Do**
+
+* Import Bootstrap’s **helpers** partial so classes like `.fixed-top` and `.sticky-top` exist.
+* Keep **all interactivity** on Reka (or plain Vue) and **remove** `data-bs-toggle/target` attributes.
+* Map your tokens → Bootstrap CSS vars at runtime (your `bootstrap-theme.css`).
+* Replace custom global `button`/`input` styles with Bootstrap’s utility/classes.
+* Convert custom components to Bootstrap structures (e.g., cards/lists/tables) to reduce bespoke CSS.
+
+**Don’t**
+
+* Don’t import Bootstrap JS bundle unless strictly needed (e.g., Carousel you decide not to rebuild with Reka).
+* Don’t place Bootstrap variable overrides inside scoped component styles—keep them global.
+* Don’t keep duplicate layout wrappers (`#app` sizing, custom paddings) that fight `.container` and spacing utilities.
+
+---
+
+## TL;DR
+
+* **Yes**: it’s correct to use Bootstrap classes plainly for visuals.
+* **Best practice**: pair those classes with **Reka-UI** primitives for anything interactive.
+* **Avoid** Bootstrap JS when using Reka—stick to one behavior system to keep accessibility solid and the app consistent.

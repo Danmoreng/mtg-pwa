@@ -1,21 +1,21 @@
 <template>
-  <div class="card-component card-item" @click="openModal">
-    <div class="card-image-container">
+  <div class="card h-100 card-item" @click="openModal">
+    <div class="card-image-container position-relative overflow-hidden rounded" style="padding-bottom: 140%;">
       <img
           :src="card.imageUrl || 'https://placehold.co/200x280?text=Card+Image'"
           :alt="card.name"
-          class="card-image"
+          class="card-img-top position-absolute top-0 start-0 w-100 h-100 object-fit-cover"
           @error="handleImageError"
       />
     </div>
-    <div class="card-info">
-      <h3 class="card-name">{{ card.name }}</h3>
-      <p class="card-set">{{ card.set }} #{{ card.number }}</p>
-      <div v-if="displayPrice" class="card-price">
-        <span class="price-label">Current:</span>
-        <span class="price-value">{{ displayPrice.format('de-DE') }}</span>
+    <div class="card-body">
+      <h3 class="card-title fs-6 fw-medium mb-1">{{ card.name }}</h3>
+      <p class="card-text small text-muted mb-2">{{ card.set }} #{{ card.number }}</p>
+      <div v-if="displayPrice" class="d-flex justify-content-between small">
+        <span class="text-muted">Current:</span>
+        <span class="text-success fw-medium">{{ displayPrice.format('de-DE') }}</span>
       </div>
-      <div v-else-if="loadingPrice || cardsStore.loadingPrices" class="price-loading">
+      <div v-else-if="loadingPrice || cardsStore.loadingPrices" class="small text-muted fst-italic">
         Loading...
       </div>
     </div>
@@ -35,52 +35,52 @@
             </div>
 
             <div class="modal-body">
-              <div class="card-details-section">
-                <div class="card-image-large">
+              <div class="card-details-section d-flex flex-wrap gap-4 mb-4">
+                <div class="card-image-large flex-shrink-0" style="flex: 0 0 300px;">
                   <img
                       :src="card.imageUrl || 'https://placehold.co/300x420?text=Card+Image'"
                       :alt="card.name"
                       @error="handleImageError"
-                      class="img-fluid"
+                      class="img-fluid rounded"
                   />
                 </div>
 
-                <div class="card-metadata">
-                  <div class="metadata-item">
-                    <span class="label">Set:</span>
-                    <span class="value">{{ card.set }} ({{ card.setCode }})</span>
+                <div class="card-metadata flex-grow-1 min-w-250">
+                  <div class="metadata-item d-flex justify-content-between py-2 border-bottom border-light">
+                    <span class="text-muted fw-medium">Set:</span>
+                    <span class="fw-medium">{{ card.set }} ({{ card.setCode }})</span>
                   </div>
-                  <div class="metadata-item">
-                    <span class="label">Collector Number:</span>
-                    <span class="value">#{{ card.number }}</span>
+                  <div class="metadata-item d-flex justify-content-between py-2 border-bottom border-light">
+                    <span class="text-muted fw-medium">Collector Number:</span>
+                    <span class="fw-medium">#{{ card.number }}</span>
                   </div>
-                  <div class="metadata-item">
-                    <span class="label">Language:</span>
-                    <span class="value">{{ card.lang }}</span>
+                  <div class="metadata-item d-flex justify-content-between py-2 border-bottom border-light">
+                    <span class="text-muted fw-medium">Language:</span>
+                    <span class="fw-medium">{{ card.lang }}</span>
                   </div>
-                  <div class="metadata-item">
-                    <span class="label">Finish:</span>
-                    <span class="value">{{ card.finish }}</span>
+                  <div class="metadata-item d-flex justify-content-between py-2">
+                    <span class="text-muted fw-medium">Finish:</span>
+                    <span class="fw-medium">{{ card.finish }}</span>
                   </div>
                 </div>
               </div>
 
-              <div class="price-section">
-                <h3>Current Price</h3>
-                <div v-if="currentPrice" class="current-price h2 text-success">
+              <div class="price-section mb-4">
+                <h3 class="fs-5 mb-2">Current Price</h3>
+                <div v-if="currentPrice" class="current-price h2 text-success fw-bold">
                   {{ currentPrice.format('de-DE') }}
                 </div>
-                <div v-else-if="loadingPrice" class="price-loading">
+                <div v-else-if="loadingPrice" class="price-loading small text-muted fst-italic">
                   Loading price...
                 </div>
-                <div v-else class="price-unavailable text-muted">
+                <div v-else class="price-unavailable small text-muted fst-italic">
                   Price unavailable
                 </div>
               </div>
 
-              <div v-if="lots && lots.length > 0" class="ownership-section">
-                <h3>Your Collection</h3>
-                <div class="lots-summary d-flex gap-4 p-3 bg-light rounded">
+              <div v-if="lots && lots.length > 0" class="ownership-section mb-4">
+                <h3 class="fs-5 mb-2">Your Collection</h3>
+                <div class="lots-summary d-flex gap-4 p-3 bg-light rounded mb-3">
                   <div class="summary-item">
                     <span class="label small text-muted">Total Lots:</span>
                     <span class="value h5">{{ lots.length }}</span>
@@ -120,7 +120,7 @@
               </div>
 
               <div v-if="transactions && transactions.length > 0" class="transactions-section">
-                <h3>Transaction History</h3>
+                <h3 class="fs-5 mb-2">Transaction History</h3>
                 <div class="transactions-list">
                   <div
                       v-for="transaction in transactions"
@@ -269,14 +269,8 @@ const loadCurrentPrice = async () => {
 </script>
 
 <style scoped>
-.card-component {
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.card-component:hover {
-  transform: translateY(-2px);
-}
+/* We're using Bootstrap classes now, so most of these custom styles are no longer needed */
+/* Keeping only the essential custom styles that aren't covered by Bootstrap */
 
 .card-image-container {
   position: relative;
@@ -295,38 +289,6 @@ const loadCurrentPrice = async () => {
   height: 100%;
   object-fit: cover;
   border-radius: var(--radius-md);
-}
-
-.card-info {
-  padding: var(--space-sm);
-}
-
-.card-name {
-  margin: 0 0 var(--space-xs);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.3;
-}
-
-.card-set {
-  margin: 0 0 var(--space-xs);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.card-price {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--font-size-xs);
-}
-
-.price-label {
-  color: var(--color-text-secondary);
-}
-
-.price-value {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-success);
 }
 
 .price-loading {

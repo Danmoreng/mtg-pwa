@@ -15,7 +15,6 @@
             <option value="name">Name</option>
             <option value="set">Set</option>
             <option value="price">Price</option>
-            <option value="releasedAt">Release Date</option>
             <option value="owned">Owned Quantity</option>
           </select>
           <button @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'" class="btn btn-outline-primary">
@@ -94,12 +93,6 @@ const sortedCards = computed(() => {
           const priceB = cardsStore.getCardPrice(b.id)?.getCents() ?? 0;
           comparison = priceA - priceB;
         }
-        break;
-      case 'releasedAt':
-        // Assuming we have a releasedAt field on the card
-        const dateA = a.releasedAt ? new Date(a.releasedAt).getTime() : 0;
-        const dateB = b.releasedAt ? new Date(b.releasedAt).getTime() : 0;
-        comparison = dateA - dateB;
         break;
       case 'owned':
         // We can implement owned quantity sorting if needed

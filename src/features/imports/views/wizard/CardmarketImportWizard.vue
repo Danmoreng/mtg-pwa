@@ -23,8 +23,8 @@
         <p>Please select all Cardmarket CSV export files to import. You can select multiple files at once.</p>
         
         <div class="file-upload-section">
-          <div class="file-upload">
-            <label for="csv-files" class="file-label">
+          <div class="mb-3">
+            <label for="csv-files" class="form-label">
               Choose CSV Files
             </label>
             <input 
@@ -33,7 +33,7 @@
               accept=".csv"
               multiple
               @change="handleFileUpload"
-              class="file-input"
+              class="form-control"
             />
           </div>
           
@@ -783,26 +783,6 @@ const getFileType = (fileName: string): string => {
 
 .file-upload {
   margin-bottom: var(--space-md);
-}
-
-.file-label {
-  display: block;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  text-align: center;
-  transition: background-color 0.2s;
-  max-width: 200px;
-}
-
-.file-label:hover {
-  background: var(--color-primary-dark);
-}
-
-.file-input {
-  display: none;
 }
 
 .file-info {

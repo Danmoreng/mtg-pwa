@@ -6,8 +6,8 @@
       <h2>Cardmarket Data</h2>
       <p>Import your Cardmarket transaction data to track your purchases and sales.</p>
       
-      <div class="file-upload">
-        <label for="transactions-csv" class="file-label">
+      <div class="mb-3">
+        <label for="transactions-csv" class="form-label">
           Upload Transactions CSV
         </label>
         <input 
@@ -15,12 +15,12 @@
           type="file" 
           accept=".csv" 
           @change="handleTransactionsFileUpload"
-          class="file-input"
+          class="form-control"
         />
       </div>
       
-      <div class="file-upload">
-        <label for="orders-csv" class="file-label">
+      <div class="mb-3">
+        <label for="orders-csv" class="form-label">
           Upload Orders CSV
         </label>
         <input 
@@ -28,12 +28,12 @@
           type="file" 
           accept=".csv" 
           @change="handleOrdersFileUpload"
-          class="file-input"
+          class="form-control"
         />
       </div>
       
-      <div class="file-upload">
-        <label for="articles-csv" class="file-label">
+      <div class="mb-3">
+        <label for="articles-csv" class="form-label">
           Upload Articles CSV
         </label>
         <input 
@@ -41,7 +41,7 @@
           type="file" 
           accept=".csv" 
           @change="handleArticlesFileUpload"
-          class="file-input"
+          class="form-control"
         />
       </div>
     </div>
@@ -50,8 +50,8 @@
       <h2>ManaBox Scans</h2>
       <p>Import your ManaBox scan data to track your physical collection.</p>
       
-      <div class="file-upload">
-        <label for="manabox-csv" class="file-label">
+      <div class="mb-3">
+        <label for="manabox-csv" class="form-label">
           Upload ManaBox CSV
         </label>
         <input 
@@ -59,7 +59,7 @@
           type="file" 
           accept=".csv" 
           @change="handleManaBoxFileUpload"
-          class="file-input"
+          class="form-control"
         />
       </div>
     </div>
@@ -403,25 +403,6 @@ const handleManaBoxFileUpload = async (event: Event) => {
 
 .file-upload {
   margin-bottom: var(--space-md);
-}
-
-.file-label {
-  display: block;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  text-align: center;
-  transition: background-color 0.2s;
-}
-
-.file-label:hover {
-  background: var(--color-primary-dark);
-}
-
-.file-input {
-  display: none;
 }
 
 .status-message {
