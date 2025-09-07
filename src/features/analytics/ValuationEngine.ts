@@ -1,11 +1,12 @@
 import { Money } from '../../core/Money';
 import { cardLotRepository, transactionRepository } from '../../data/repos';
 import { pricePointRepository } from '../../data/repos';
+import type { CardLot } from '../../data/db';
 
 // Valuation engine for calculating portfolio value and P/L
 export class ValuationEngine {
   // Calculate the current value of a card lot
-  static async calculateLotValue(lot: any): Promise<Money> {
+  static async calculateLotValue(lot: CardLot): Promise<Money> {
     // Get the latest price for the card from the database
     if (lot.cardId) {
       const pricePoints = await pricePointRepository.getByCardId(lot.cardId);
@@ -28,9 +29,9 @@ export class ValuationEngine {
   }
 
   // Calculate the cost basis of a card lot
-  static async calculateLotCostBasis(lot: any): Promise<Money> {
+  static async calculateLotCostBasis(lot: CardLot): Promise<Money> {
     // The cost basis is simply the unit cost multiplied by quantity
-    const unitCost = new Money(lot.unitCost, 'EUR');
+    const unitCost = new Money(lot.unitCost, lot.currency || 'EUR');
     return unitCost.multiply(lot.quantity);
   }
 
@@ -57,7 +58,7 @@ export class ValuationEngine {
           costs = lotCost.multiply(transaction.quantity);
         }
       } else if (transaction.cardId) {
-        // Fallback to card-based FIFO calculation if no lot is linked
+        // Fallback to lot-based FIFO calculation if no lot is linked
         costs = await this.calculateFIFOCostForCard(transaction.cardId, transaction.quantity);
       }
       
@@ -72,23 +73,28 @@ export class ValuationEngine {
     return totalRealizedPnL;
   }
 
-  // Calculate FIFO cost for a given card and quantity
+  // Calculate FIFO cost for a given card and quantity using lot-based tracking
   static async calculateFIFOCostForCard(cardId: string, quantity: number): Promise<Money> {
-    // Get all BUY transactions for this card
-    const buyTransactions = await transactionRepository.getBuyTransactionsByCardId(cardId);
+    // Get all active lots for this card, sorted by purchase date (FIFO)
+    const lots = await cardLotRepository.getByCardId(cardId);
     
-    // Sort by date (FIFO)
-    buyTransactions.sort((a, b) => a.happenedAt.getTime() - b.happenedAt.getTime());
+    // Filter and sort lots by purchase date (FIFO)
+    const activeLots = lots
+      .filter(lot => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity))
+      .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime());
     
     // Calculate cost basis based on quantity
     let remainingQuantity = quantity;
     let totalCost = new Money(0, 'EUR');
     
-    for (const transaction of buyTransactions) {
+    for (const lot of activeLots) {
       if (remainingQuantity <= 0) break;
       
-      const quantityToUse = Math.min(remainingQuantity, transaction.quantity);
-      const unitCost = new Money(transaction.unitPrice, transaction.currency);
+      // Calculate how many items from this lot are still available
+      const availableQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
+      const quantityToUse = Math.min(remainingQuantity, availableQuantity);
+      
+      const unitCost = new Money(lot.unitCost, lot.currency || 'EUR');
       const cost = unitCost.multiply(quantityToUse);
       
       totalCost = totalCost.add(cost);
@@ -100,11 +106,11 @@ export class ValuationEngine {
 
   // Calculate current portfolio value
   static async calculatePortfolioValue(): Promise<Money> {
-    // Get all active card lots (not disposed)
-    const activeLots = await cardLotRepository.getAll();
+    // Get all card lots
+    const lots = await cardLotRepository.getAll();
     let totalValue = new Money(0, 'EUR');
     
-    for (const lot of activeLots) {
+    for (const lot of lots) {
       // Only count lots that haven't been fully disposed
       if (!lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity)) {
         const lotValue = await this.calculateLotValue(lot);
@@ -137,5 +143,27 @@ export class ValuationEngine {
     const portfolioValue = await this.calculatePortfolioValue();
     const costBasis = await this.calculateTotalCostBasis();
     return portfolioValue.subtract(costBasis);
+  }
+
+  // Get all active lots (lots that still have cards that haven't been sold)
+  static async getActiveLots(): Promise<CardLot[]> {
+    const lots = await cardLotRepository.getAll();
+    return lots.filter(lot => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity));
+  }
+
+  // Get the total quantity of a card that is still owned (not disposed)
+  static async getOwnedQuantity(cardId: string): Promise<number> {
+    const lots = await cardLotRepository.getByCardId(cardId);
+    let totalOwned = 0;
+    
+    for (const lot of lots) {
+      if (!lot.disposedAt) {
+        totalOwned += lot.quantity;
+      } else if (lot.disposedQuantity && lot.disposedQuantity < lot.quantity) {
+        totalOwned += lot.quantity - lot.disposedQuantity;
+      }
+    }
+    
+    return totalOwned;
   }
 }

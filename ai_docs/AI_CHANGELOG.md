@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-07 15:00 — feat: Enhance lot-based valuation engine and import services
+- **Author**: AI (Qwen)
+- **Scope**: src/features/analytics/ValuationEngine.ts, src/features/scans/ScanMatchingService.ts, src/features/imports/ImportService.ts
+- **Type**: feat
+- **Summary**: Implement enhanced lot-based tracking in valuation engine, scan matching, and import services to properly handle card disposal and improve data consistency.
+- **Details**:
+  - Updated ValuationEngine to properly handle lot disposal tracking with improved calculations for partially disposed lots
+  - Enhanced ScanMatchingService with better lot-based matching algorithm that tracks sale assignments to prevent over-allocation
+  - Improved ImportService with better lot-based import handling and new helper methods for lot management
+  - Added proper typing for database entities to improve code quality and prevent runtime errors
+  - Implemented more robust filtering of active vs. disposed lots in all services
+  - Added helper methods for getting lot information for scans and sales
+- **Impact/Risks**: Improves data consistency and accuracy of valuation calculations. No breaking changes to existing data.
+- **Verification Steps**: `npm run build` completes successfully. Import Cardmarket data and verify lots are properly tracked. Check that valuations are calculated correctly based on active lots.
+
 ## 2025-09-06 18:30 — fix: Correct deck text import regex pattern
 - **Author**: AI (Qwen)
 - **Scope**: src/features/decks/DeckImportService.ts, src/test/features/deckImportRegex.test.ts
