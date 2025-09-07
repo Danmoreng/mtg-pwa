@@ -1,6 +1,29 @@
 <template>
   <div class="home">
     <h1>MTG Collection Value Tracker</h1>
+    
+    <!-- Price Update Information -->
+    <div class="price-update-info card mb-4">
+      <div class="card-body">
+        <h2 class="card-title">Price Updates</h2>
+        <div class="price-update-details">
+          <div class="update-info">
+            <span class="label">Last Update:</span>
+            <span class="value">{{ formatDate(lastUpdate) }}</span>
+          </div>
+          <div class="update-info">
+            <span class="label">Next Update:</span>
+            <span class="value">{{ formatDate(nextUpdate) }}</span>
+          </div>
+        </div>
+        <div class="update-actions">
+          <button @click="refreshPrices" class="btn btn-primary" :disabled="isUpdating">
+            {{ isUpdating ? 'Updating...' : 'Refresh Prices Now' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <div class="dashboard-stats row g-4">
       <div class="col-lg-3 col-md-6">
         <div class="card h-100 border">
@@ -39,9 +62,6 @@
         </div>
       </div>
     </div>
-    <div class="actions">
-      <button @click="refreshPrices" class="btn btn-primary">Refresh Prices</button>
-    </div>
   </div>
 </template>
 
@@ -52,12 +72,15 @@ import { useHoldingsStore } from '../../stores/holdings';
 import { useTransactionsStore } from '../../stores/transactions';
 import { ValuationEngine } from '../analytics/ValuationEngine.ts';
 import { Money } from '../../core/Money';
-import { PriceUpdateService } from '../pricing/PriceUpdateService';
+import { usePriceUpdates } from '../../composables/usePriceUpdates';
 
 // Get the stores
 const cardsStore = useCardsStore();
 const holdingsStore = useHoldingsStore();
 const transactionsStore = useTransactionsStore();
+
+// Get price update composable
+const { formatDate, checkAndScheduleUpdate, forceUpdatePrices, lastUpdate, nextUpdate, isUpdating } = usePriceUpdates();
 
 // Reactive state
 const portfolioValue = ref('€0.00');
@@ -95,7 +118,7 @@ const loadData = async () => {
 // Refresh prices
 const refreshPrices = async () => {
   try {
-    await PriceUpdateService.syncPrices();
+    await forceUpdatePrices();
     // Reload data to reflect updated prices
     await loadData();
     alert('Prices refreshed successfully');
@@ -107,15 +130,8 @@ const refreshPrices = async () => {
 
 // Load data when component mounts
 onMounted(async () => {
-  // Check if we need to update prices
-  const needsUpdate = await PriceUpdateService.needsPriceUpdate();
-  if (needsUpdate) {
-    try {
-      await PriceUpdateService.syncPrices();
-    } catch (error) {
-      console.error('Error updating prices on app start:', error);
-    }
-  }
+  // Check if we need to update prices automatically
+  await checkAndScheduleUpdate();
   
   // Load the dashboard data
   await loadData();
@@ -125,6 +141,43 @@ onMounted(async () => {
 <style scoped>
 .home {
   padding: var(--space-lg);
+}
+
+.price-update-info {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.price-update-info .card-title {
+  margin-top: 0;
+  margin-bottom: var(--space-md);
+}
+
+.price-update-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.update-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.update-info .label {
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-xs);
+}
+
+.update-info .value {
+  font-size: var(--font-size-lg);
+}
+
+.update-actions {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .dashboard-stats {
@@ -145,13 +198,6 @@ onMounted(async () => {
   color: var(--color-error);
 }
 
-.actions {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-md);
-  margin-top: var(--space-xl);
-}
-
 .import-section {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
@@ -167,5 +213,17 @@ onMounted(async () => {
   display: flex;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .price-update-details {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .update-actions {
+    justify-content: center;
+  }
 }
 </style>
