@@ -23,143 +23,154 @@
   <!-- Modal Dialog using Reka UI -->
   <DialogRoot v-model:open="showModal">
     <DialogPortal>
-      <DialogOverlay class="modal-backdrop fade show"/>
-      <DialogContent class="modal d-block" @pointer-down-outside="closeModal" @escape-key-down="closeModal">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+      <DialogOverlay class="modal-backdrop fade show" @click="closeModal" />
+      <DialogContent
+          class="modal d-block compact-modal"
+          @pointer-down-outside="closeModal"
+          @escape-key-down="closeModal"
+      >
+        <div class="modal-dialog modal-dialog-centered modal-lg">
           <div class="modal-content">
-            <div class="modal-header">
-              <DialogTitle class="modal-title h2">{{ card.name }}</DialogTitle>
+            <div class="modal-header py-2">
+              <DialogTitle class="modal-title h5 mb-0">{{ card.name }}</DialogTitle>
               <DialogClose as-child>
-                <button class="btn-close" @click="closeModal"></button>
+                <button type="button" class="btn-close" aria-label="Close"></button>
               </DialogClose>
             </div>
 
-            <div class="modal-body">
-              <div class="card-details-section d-flex flex-wrap gap-4 mb-4">
-                <div class="card-image-large flex-shrink-0" style="flex: 0 0 300px;">
+            <div class="modal-body py-3">
+              <div class="row g-3 align-items-start">
+                <!-- Left: compact image + metadata -->
+                <div class="col-lg-5">
                   <img
-                      :src="card.imageUrl || 'https://placehold.co/300x420?text=Card+Image'"
+                      :src="card.imageUrl || 'https://placehold.co/200x280?text=Card+Image'"
                       :alt="card.name"
                       @error="handleImageError"
-                      class="img-fluid rounded"
+                      class="w-100 h-100 rounded-4"
                   />
+
+                  <dl class="row row-cols-2 g-2 small mt-3 mb-0 meta-grid">
+                    <dt class="col text-muted">Set</dt>
+                    <dd class="col text-end fw-semibold">{{ card.set }} ({{ card.setCode }})</dd>
+
+                    <dt class="col text-muted">Number</dt>
+                    <dd class="col text-end fw-semibold">#{{ card.number }}</dd>
+
+                    <dt class="col text-muted">Language</dt>
+                    <dd class="col text-end fw-semibold">{{ card.lang }}</dd>
+
+                    <dt class="col text-muted">Finish</dt>
+                    <dd class="col text-end fw-semibold">{{ card.finish }}</dd>
+                  </dl>
                 </div>
 
-                <div class="card-metadata flex-grow-1 min-w-250">
-                  <div class="metadata-item d-flex justify-content-between py-2 border-bottom border-light">
-                    <span class="text-muted fw-medium">Set:</span>
-                    <span class="fw-medium">{{ card.set }} ({{ card.setCode }})</span>
+                <!-- Right: price + concise ownership/tx history -->
+                <div class="col-lg-7">
+                  <!-- Price -->
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h6 mb-0">Current Price</h3>
+                    <span v-if="currentPrice" class="h5 mb-0 text-success fw-bold">
+                    {{ currentPrice.format('de-DE') }}
+                  </span>
+                    <span v-else-if="loadingPrice" class="small text-muted fst-italic">Loading…</span>
+                    <span v-else class="small text-muted fst-italic">Price unavailable</span>
                   </div>
-                  <div class="metadata-item d-flex justify-content-between py-2 border-bottom border-light">
-                    <span class="text-muted fw-medium">Collector Number:</span>
-                    <span class="fw-medium">#{{ card.number }}</span>
-                  </div>
-                  <div class="metadata-item d-flex justify-content-between py-2 border-bottom border-light">
-                    <span class="text-muted fw-medium">Language:</span>
-                    <span class="fw-medium">{{ card.lang }}</span>
-                  </div>
-                  <div class="metadata-item d-flex justify-content-between py-2">
-                    <span class="text-muted fw-medium">Finish:</span>
-                    <span class="fw-medium">{{ card.finish }}</span>
-                  </div>
-                </div>
-              </div>
 
-              <div class="price-section mb-4">
-                <h3 class="fs-5 mb-2">Current Price</h3>
-                <div v-if="currentPrice" class="current-price h2 text-success fw-bold">
-                  {{ currentPrice.format('de-DE') }}
-                </div>
-                <div v-else-if="loadingPrice" class="price-loading small text-muted fst-italic">
-                  Loading price...
-                </div>
-                <div v-else class="price-unavailable small text-muted fst-italic">
-                  Price unavailable
-                </div>
-              </div>
+                  <!-- Ownership (summary first, expandable details) -->
+                  <div v-if="lots && lots.length" class="mb-3">
+                    <h3 class="h6 mb-2">Your Collection</h3>
+                    <div class="d-flex gap-3 small">
+                      <div><span class="text-muted">Lots:</span> <strong>{{ lots.length }}</strong></div>
+                      <div><span class="text-muted">Cards:</span> <strong>{{ totalOwnedQuantity }}</strong></div>
+                    </div>
 
-              <div v-if="lots && lots.length > 0" class="ownership-section mb-4">
-                <h3 class="fs-5 mb-2">Your Collection</h3>
-                <div class="lots-summary d-flex gap-4 p-3 bg-light rounded mb-3">
-                  <div class="summary-item">
-                    <span class="label small text-muted">Total Lots:</span>
-                    <span class="value h5">{{ lots.length }}</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="label small text-muted">Total Cards:</span>
-                    <span class="value h5">{{ totalOwnedQuantity }}</span>
-                  </div>
-                </div>
+                    <button
+                        v-if="lots.length > 2"
+                        class="btn btn-link btn-sm p-0 mt-1"
+                        @click="showLots = !showLots"
+                    >
+                      {{ showLots ? 'Hide details' : 'Show details' }}
+                    </button>
 
-                <div class="lots-list">
-                  <div
-                      v-for="lot in lots"
-                      :key="lot.id"
-                      class="lot-item border rounded p-3 mb-2"
-                  >
-                    <div class="lot-details row">
-                      <div class="lot-quantity col-md-3">
-                        <span class="label small text-muted">Quantity:</span>
-                        <span class="value fw-medium">{{ lot.quantity }}</span>
-                      </div>
-                      <div class="lot-cost col-md-3">
-                        <span class="label small text-muted">Unit Cost:</span>
-                        <span class="value fw-medium">{{ formatMoney(lot.unitCost, lot.currency || 'EUR') }}</span>
-                      </div>
-                      <div class="lot-date col-md-3">
-                        <span class="label small text-muted">Purchased:</span>
-                        <span class="value fw-medium">{{ formatDate(lot.purchasedAt) }}</span>
-                      </div>
-                      <div v-if="lot.disposedQuantity" class="lot-disposed col-md-3">
-                        <span class="label small text-muted">Disposed:</span>
-                        <span class="value fw-medium">{{ lot.disposedQuantity }}</span>
+                    <div
+                        v-show="showLots"
+                        class="mt-2 border rounded-3 p-2 small"
+                        style="max-height: 30vh; overflow: auto;"
+                    >
+                      <div
+                          v-for="lot in lots"
+                          :key="lot.id"
+                          class="border rounded p-2 mb-2"
+                      >
+                        <div class="row g-2 align-items-center">
+                          <div class="col-6 col-md-3">
+                            <span class="text-muted">Qty:</span> <span class="fw-medium">{{ lot.quantity }}</span>
+                          </div>
+                          <div class="col-6 col-md-3">
+                            <span class="text-muted">Unit Cost:</span>
+                            <span class="fw-medium">{{ formatMoney(lot.unitCost, lot.currency || 'EUR') }}</span>
+                          </div>
+                          <div class="col-6 col-md-3">
+                            <span class="text-muted">Purchased:</span>
+                            <span class="fw-medium">{{ formatDate(lot.purchasedAt) }}</span>
+                          </div>
+                          <div v-if="lot.disposedQuantity" class="col-6 col-md-3">
+                            <span class="text-muted">Disposed:</span>
+                            <span class="fw-medium">{{ lot.disposedQuantity }}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div v-if="transactions && transactions.length > 0" class="transactions-section">
-                <h3 class="fs-5 mb-2">Transaction History</h3>
-                <div class="transactions-list">
-                  <div
-                      v-for="transaction in transactions"
-                      :key="transaction.id"
-                      class="transaction-item border rounded p-3 mb-2"
-                      :class="transaction.kind.toLowerCase()"
-                  >
-                    <div class="transaction-details row">
-                      <div class="transaction-type col-md-3 fw-bold">{{ transaction.kind }}</div>
-                      <div class="transaction-date col-md-3 text-muted">{{ formatDate(transaction.happenedAt) }}</div>
-                      <div class="transaction-quantity col-md-3 fw-medium">Qty: {{ transaction.quantity }}</div>
-                      <div class="transaction-price col-md-3 fw-medium">
-                        {{ formatMoney(transaction.unitPrice, transaction.currency) }}
+                  <!-- Transactions (show latest at-a-glance, expand for all) -->
+                  <div v-if="transactions && transactions.length">
+                    <h3 class="h6 mb-2">Transaction History</h3>
+                    <div class="mt-2 small" style="max-height: 30vh; overflow: auto;">
+                      <div
+                          v-for="t in transactionsSorted"
+                          :key="t.id"
+                          class="tx-item d-flex align-items-center gap-2 p-2 mb-2 rounded border"
+                          :class="{
+      buy: /buy/i.test(t.kind),
+      sell: /sell/i.test(t.kind)
+    }"
+                      >
+    <span
+        class="badge me-1"
+        :class="/buy/i.test(t.kind) ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis'"
+    >
+      {{ t.kind }}
+    </span>
+
+                        <div class="flex-grow-1">
+                          <div class="fw-medium">{{ formatDate(t.happenedAt) }}</div>
+                          <div class="text-muted">Qty: {{ t.quantity }}</div>
+                        </div>
+
+                        <div class="fw-semibold">{{ formatMoney(t.unitPrice, t.currency) }}</div>
                       </div>
                     </div>
+
                   </div>
-                </div>
-              </div>
+
+                </div> <!-- /right -->
+              </div> <!-- /row -->
             </div>
           </div>
         </div>
       </DialogContent>
     </DialogPortal>
   </DialogRoot>
+
 </template>
 
 <script setup lang="ts">
-import {ref, computed} from 'vue';
+import {computed, ref} from 'vue';
 import db from '../data/db';
 import {Money} from '../core/Money';
-import { useCardsStore } from '../stores/cards';
-import { 
-  DialogRoot,
-  DialogPortal,
-  DialogOverlay,
-  DialogContent,
-  DialogTitle,
-  DialogClose
-} from 'reka-ui';
+import {useCardsStore} from '../stores';
+import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 
 // Enable attribute inheritance
 defineOptions({
@@ -180,6 +191,15 @@ const currentPrice = ref<Money | null>(null);
 const loadingPrice = ref(false);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
+
+const showLots = ref(false);
+
+const transactionsSorted = computed(() => {
+  if (!transactions.value) return [];
+  return [...transactions.value].sort(
+      (a: any, b: any) => new Date(b.happenedAt).getTime() - new Date(a.happenedAt).getTime()
+  );
+});
 
 // Computed
 const displayPrice = computed(() => {
@@ -232,15 +252,13 @@ const formatMoney = (cents: number, currency: string) => {
 const loadCardDetails = async () => {
   try {
     // Load current price
-    loadCurrentPrice();
+    await loadCurrentPrice();
 
     // Load lots for this card
-    const cardLots = await db.card_lots.where('cardId').equals(props.card.id).toArray();
-    lots.value = cardLots;
+    lots.value = await db.card_lots.where('cardId').equals(props.card.id).toArray();
 
     // Load transactions for this card
-    const cardTransactions = await db.transactions.where('cardId').equals(props.card.id).toArray();
-    transactions.value = cardTransactions;
+    transactions.value = await db.transactions.where('cardId').equals(props.card.id).toArray();
   } catch (error) {
     console.error('Error loading card details:', error);
   }
@@ -269,201 +287,4 @@ const loadCurrentPrice = async () => {
 </script>
 
 <style scoped>
-/* We're using Bootstrap classes now, so most of these custom styles are no longer needed */
-/* Keeping only the essential custom styles that aren't covered by Bootstrap */
-
-.card-image-container {
-  position: relative;
-  width: 100%;
-  padding-bottom: 140%; /* Aspect ratio for card images (roughly 2.5:3.5) */
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-}
-
-.card-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-}
-
-.price-loading {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
-/* Card Details Section */
-.card-details-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-xl);
-}
-
-.card-image-large {
-  flex: 0 0 300px;
-}
-
-.card-metadata {
-  flex: 1;
-  min-width: 250px;
-}
-
-.metadata-item {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.metadata-item:last-child {
-  border-bottom: none;
-}
-
-.label {
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-}
-
-.value {
-  font-weight: var(--font-weight-medium);
-}
-
-.price-section {
-  margin-bottom: var(--space-xl);
-}
-
-.price-section h3 {
-  margin: 0 0 var(--space-sm);
-  font-size: var(--font-size-lg);
-}
-
-.current-price {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-success);
-}
-
-.price-unavailable {
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
-.ownership-section {
-  margin-bottom: var(--space-xl);
-}
-
-.ownership-section h3 {
-  margin: 0 0 var(--space-sm);
-  font-size: var(--font-size-lg);
-}
-
-.lots-summary {
-  display: flex;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-md);
-  padding: var(--space-md);
-  background: var(--color-background);
-  border-radius: var(--radius-md);
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.summary-item .label {
-  font-size: var(--font-size-sm);
-}
-
-.summary-item .value {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-}
-
-.lots-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.lot-item {
-  padding: var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.lot-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-sm);
-}
-
-.lot-quantity,
-.lot-cost,
-.lot-date,
-.lot-disposed {
-  display: flex;
-  flex-direction: column;
-}
-
-.transactions-section h3 {
-  margin: 0 0 var(--space-sm);
-  font-size: var(--font-size-lg);
-}
-
-.transactions-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.transaction-item {
-  padding: var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.transaction-item.buy {
-  border-left: 4px solid var(--color-success);
-}
-
-.transaction-item.sell {
-  border-left: 4px solid var(--color-error);
-}
-
-.transaction-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: var(--space-sm);
-}
-
-.transaction-type {
-  font-weight: var(--font-weight-bold);
-}
-
-.transaction-date {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.transaction-quantity,
-.transaction-price {
-  font-weight: var(--font-weight-medium);
-}
-
-@media (max-width: 768px) {
-  .card-details-section {
-    flex-direction: column;
-  }
-
-  .card-image-large {
-    flex: 0 0 auto;
-  }
-}
 </style>
