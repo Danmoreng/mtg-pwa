@@ -2,6 +2,18 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-07 19:00 — fix: Fix navbar fixed positioning and content spacing
+- **Author**: AI (Qwen)
+- **Scope**: src/components/Navigation.vue, src/App.vue
+- **Type**: fix
+- **Summary**: Fixed navbar not staying fixed at top and content spacing issues.
+- **Details**:
+    - Added CSS rule to ensure .fixed-top class takes precedence over .navbar's position: relative
+    - Fixed content spacing by removing py-4 class and explicitly setting padding to account for fixed navbar
+- **Impact/Risks**: Low - CSS-only changes that fix existing layout issues
+- **Verification Steps**: Scroll page to verify navbar stays fixed; check that content is not hidden under navbar
+- **Linked Task/Issue**: Navbar positioning issue
+
 ## 2025-09-07 18:00 — docs: Update documentation to reflect recent improvements and fix paths
 - **Author**: AI (Qwen)
 - **Scope**: README.md, ai_docs/ARCHITECTURE.md, ai_docs/ROADMAP.md
@@ -121,6 +133,34 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Impact/Risks**: Improves consistency and user experience across card displays. No breaking changes.
 - **Verification Steps**: `npm run build` completes successfully. Verify card display works in both deck and cards views. Test modal dialog functionality.
 
+## 2025-09-06 12:00 — Summary: Batch Cardmarket ID Lookup and Enhanced Collector Number Parsing
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
+- **Type**: docs
+- **Summary**: Documentation of improvements to Cardmarket import functionality.
+- **Details**:
+    - **Batch Cardmarket ID Lookup**: Implemented batch lookup using Scryfall's `/cards/collection` endpoint for improved performance
+        - Added `getByCardmarketIds` method to `ScryfallProvider` for batch lookups
+        - Updated `ImportService` to use batch lookup for multiple Cardmarket IDs
+        - Implemented fallback to individual lookups if batch request fails
+        - Maintained backward compatibility for single ID lookups
+        - Improved performance for imports with multiple Product IDs
+        - Reduced API calls and network overhead
+        - Better error handling with fallback mechanisms
+    - **Enhanced Collector Number Parsing**: Created more robust parsing to handle multiple formats
+        - Standard numbers: "- 167 -"
+        - Numbers with letters: "- 167a -"
+        - Roman numerals: "- IV -"
+        - Special characters: "- 167★ -"
+        - Numbers at the end of names: "Lightning Bolt 167"
+        - Numbers in parentheses: "Lightning Bolt (167)"
+        - Replaced both instances of the old regex in `ImportService`
+        - Better handling of various collector number formats
+        - More accurate data extraction from Cardmarket descriptions
+        - Improved import success rates for cards with complex naming
+- **Impact/Risks**: Documentation only. No code changes.
+- **Verification Steps**: Review this summary entry for completeness and accuracy.
+
 ## 2025-09-06 12:00 — feat: Implement batch Cardmarket ID lookup and enhanced collector number parsing
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
@@ -161,23 +201,69 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 - **Impact/Risks**: Documentation only, no code changes. Provides clear roadmap for implementing fixes.
 - **Verification Steps**: Review CARDMARKET_IMPORT_FIXES.md for completeness and accuracy.
 
+## 2025-09-04 17:00 — fix: Resolve TypeScript compilation errors
+- **Author**: AI (Qwen)
+- **Scope**: Multiple files across the codebase
+- **Type**: fix
+- **Summary**: Fix numerous TypeScript compilation errors to ensure successful build.
+- **Details**:
+    - Fixed variable declaration order issues
+    - Resolved type compatibility problems
+    - Corrected null/undefined type handling
+    - Fixed test file mocking issues
+    - Removed unused imports and variables
+- **Impact/Risks**: Enables successful build and deployment. No functional changes.
+- **Verification Steps**: `npm run build` completes successfully without errors.
+
 ## 2025-09-04 16:00 — feat: Implement deduplication system for card tracking
 - **Author**: AI (Qwen)
 - **Scope**: src/data/db.ts, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/features/decks/views/DeckImportView.vue
 - **Type**: feat
 - **Summary**: Implement comprehensive deduplication system to prevent duplicate card entries when importing from different sources.
 - **Details**:
-  - Enhanced database schema to version 4 with improved lot-based tracking
-  - Added proper upgrade functions to handle transitions from old data structures
-  - Implemented deduplication logic for deck imports to link to existing cards instead of creating duplicates
-  - Implemented deduplication logic for Cardmarket imports to link transactions to existing lots
-  - Fixed variable declaration issues that were causing runtime errors
-  - Added proper currency tracking to card lots
-  - Ensured all required fields are properly populated
-  - Fixed null/undefined type compatibility issues
-  - Improved transaction tracking with better linking between transactions and specific card lots
+    - Enhanced database schema to version 4 with improved lot-based tracking
+    - Added proper upgrade functions to handle transitions from old data structures
+    - Implemented deduplication logic for deck imports to link to existing cards instead of creating duplicates
+    - Implemented deduplication logic for Cardmarket imports to link transactions to existing lots
+    - Fixed variable declaration issues that were causing runtime errors
+    - Added proper currency tracking to card lots
+    - Ensured all required fields are properly populated
+    - Fixed null/undefined type compatibility issues
+    - Improved transaction tracking with better linking between transactions and specific card lots
 - **Impact/Risks**: Significantly improves data integrity by preventing duplicate card entries. No destructive changes to existing data.
 - **Verification Steps**: `npm run build` completes successfully. Import decks and Cardmarket data to verify deduplication works correctly.
+
+## 2025-09-04 16:00 — fix: Resolve database schema upgrade issues
+- **Author**: AI (Qwen)
+- **Scope**: src/data/db.ts
+- **Type**: fix
+- **Summary**: Fix database schema upgrade issues and ensure smooth transition from old data model.
+- **Details**:
+    - Added proper upgrade functions for version 4 schema changes
+    - Fixed primary key transition from composite key to single key in deck_cards table
+    - Added missing fields to existing records during upgrade
+    - Ensured data integrity during schema migration
+- **Impact/Risks**: Fixes critical database upgrade issues that could prevent application startup. No data loss.
+- **Verification Steps**: `npm run build` completes successfully. Application starts without database errors.
+
+## 2025-09-04 15:00 — feat: Implement deduplication system for card tracking
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/features/decks/views/DeckImportView.vue, src/data/db.ts, src/data/repos.ts
+- **Type**: feat
+- **Summary**: Implement comprehensive deduplication system to prevent duplicate card entries when importing from different sources.
+- **Details**:
+    - Enhanced data model with lot-based tracking to individually track physical cards
+    - Implemented deduplication logic for deck imports to link to existing cards instead of creating duplicates
+    - Implemented deduplication logic for Cardmarket imports to link transactions to existing lots
+    - Fixed variable declaration issues causing runtime errors
+    - Added proper currency tracking to card lots
+    - Ensured all required fields are properly populated
+    - Improved transaction tracking with better lot linking
+    - Fixed numerous TypeScript compilation errors
+    - Resolved variable scoping issues
+    - Corrected type compatibility problems
+- **Impact/Risks**: Significantly improves data integrity by preventing duplicate card entries. Maintains accurate cost basis and valuation tracking. No destructive changes to existing data.
+- **Verification Steps**: `npm run build` completes successfully. Import decks and Cardmarket transactions and verify cards are properly linked rather than duplicated.
 
 ## 2025-09-02 20:00 — feat: Enhanced Cardmarket set code resolution with complex set name handling
 - **Author**: AI (Qwen)
@@ -193,7 +279,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Enhanced error recovery with more comprehensive cache refresh logic
 - **Impact/Risks**: Further improves Cardmarket import success rate for complex and nested set names. No data migrations required.
 - **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files with complex set names and verify proper set code resolution.
-- **Linked Task/Issue**: Cardmarket import set code resolution improvements
 
 ## 2025-09-02 19:00 — feat: Enhanced Cardmarket Scryfall API integration
 - **Author**: AI (Qwen)
@@ -209,7 +294,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Enhanced caching mechanism with better error recovery
 - **Impact/Risks**: Significantly improves Cardmarket import success rate for complex sets and versioned cards. No data migrations required.
 - **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files and verify Scryfall API calls use correct set codes and handle versioned cards.
-- **Linked Task/Issue**: Cardmarket import Scryfall API fixes
 
 ## 2025-09-02 18:00 — feat: Cardmarket Scryfall set code resolution
 - **Author**: AI (Qwen)
@@ -225,7 +309,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Added fallback mechanisms for handling unknown/new sets by refreshing cache
 - **Impact/Risks**: Improves Cardmarket import reliability by correctly resolving Scryfall set codes. No data migrations required.
 - **Verification Steps**: `npm run build` completes successfully. Import Cardmarket CSV files and verify Scryfall API calls use correct set codes.
-- **Linked Task/Issue**: Cardmarket import Scryfall API fixes
 
 ## 2025-09-02 17:00 — fix: Cardmarket CSV field name alignment and validation fixes
 - **Author**: AI (Qwen)
@@ -242,7 +325,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Ensured consistent field naming between worker parsing and UI display
 - **Impact/Risks**: Fixes critical functionality issues preventing Cardmarket orders and articles CSV imports from working. No data migrations required.
 - **Verification Steps**: `npm run build` completes successfully. Import sample CSV files and verify all data types (transactions, orders, articles) are correctly parsed and validated.
-- **Linked Task/Issue**: Cardmarket import feature fixes
 
 ## 2025-09-02 16:00 — fix: Cardmarket CSV parsing and validation improvements
 - **Author**: AI (Qwen)
@@ -257,7 +339,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Fixed worker to properly extract values from CSV rows with varying column names
 - **Impact/Risks**: Fixes critical functionality issues preventing Cardmarket CSV imports from working with real data. No data migrations required.
 - **Verification Steps**: `npm run build` completes successfully. Import sample CSV files and verify data is correctly parsed and validated.
-- **Linked Task/Issue**: Cardmarket import feature fixes
 
 ## 2025-09-02 15:00 — fix: Cardmarket Import Wizard functionality and idempotency
 - **Author**: AI (Qwen)
@@ -273,7 +354,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Improved externalRef generation for all import types (transactions, orders, articles)
 - **Impact/Risks**: Fixes critical functionality issues preventing Cardmarket CSV imports from working correctly. No data migrations required.
 - **Verification Steps**: `npm run build` completes successfully. Import sample CSV files and verify data is correctly parsed and imported without duplicates.
-- **Linked Task/Issue**: Cardmarket import feature fixes
 
 ## 2025-09-02 16:00 — feat: Implement Cardmarket Import Wizard
 - **Author**: AI (Qwen)
@@ -290,7 +370,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Updated router and navigation to use the new wizard
 - **Impact/Risks**: New feature with no breaking changes. Existing CSV import functionality is preserved.
 - **Verification Steps**: `npm run build` completes successfully. Navigate to Cardmarket Import in the app and verify the wizard loads correctly.
-- **Linked Task/Issue**: M2 Finish: Cardmarket Import (UI & polish)
 
 ## 2025-09-02 15:00 — docs: Restructure documentation to reduce sprawl
 - **Author**: AI (Qwen)
@@ -307,7 +386,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Updated README.md with links to new documentation structure
 - **Impact/Risks**: No functional changes; documentation reorganization only. All content preserved in new structure.
 - **Verification Steps**: Review new documentation files to ensure all information migrated correctly.
-- **Linked Task/Issue**: Documentation restructuring
 
 ## 2025-09-01 17:30 — feat: Implement automatic price updates and fix price data saving
 - **Author**: AI (Qwen)
@@ -323,7 +401,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - This ensures that price data is always available in the database for valuation calculations
 - **Impact/Risks**: These changes ensure that price data is properly saved and updated, improving the accuracy of valuation calculations.
 - **Verification Steps**: `npm run build` completes successfully.
-- **Linked Task/Issue**: Price data saving and updates
 
 ## 2025-09-01 17:00 — fix: Use database price data in CardsView instead of API calls
 - **Author**: AI (Qwen)
@@ -338,7 +415,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - API requests will only happen when adding new cards or when manually triggering price updates
 - **Impact/Risks**: These changes improve app performance and reduce API usage by using cached price data from the database.
 - **Verification Steps**: `npm run build` completes successfully.
-- **Linked Task/Issue**: Cards view optimization
 
 ## 2025-09-01 16:30 — fix: Use database price data for valuation instead of API calls
 - **Author**: AI (Qwen)
@@ -353,7 +429,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - API requests will only happen when adding new cards or when manually triggering price updates
 - **Impact/Risks**: These changes improve app performance and reduce API usage by using cached price data from the database.
 - **Verification Steps**: `npm run build` completes successfully.
-- **Linked Task/Issue**: Valuation engine optimization
 
 ## 2025-09-01 16:00 — feat: Implement service worker caching for Scryfall API
 - **Author**: AI (Qwen)
@@ -369,7 +444,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Maintained rate limiting in ScryfallProvider
 - **Impact/Risks**: These changes provide persistent caching that survives app restarts and improves offline capabilities.
 - **Verification Steps**: `npm run build` completes successfully and service worker is generated.
-- **Linked Task/Issue**: Scryfall API caching
 
 ## 2025-09-01 15:30 — feat: Implement rate limiting and caching for Scryfall API
 - **Author**: AI (Qwen)
@@ -383,7 +457,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Added caching for card hydration requests
 - **Impact/Risks**: These changes improve performance and reduce API usage, but the cache is in-memory and will be cleared on app restart.
 - **Verification Steps**: `npm run build` completes successfully.
-- **Linked Task/Issue**: Scryfall API caching
 
 ## 2025-09-01 15:00 — fix: Fix database schema issues and build errors
 - **Author**: AI (Qwen)
@@ -398,7 +471,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Updated DeckImportView.vue to include required fields for new database schema
 - **Impact/Risks**: These changes fix build errors and ensure compatibility with the updated database schema.
 - **Verification Steps**: `npm run build` now completes successfully.
-- **Linked Task/Issue**: Database schema upgrade
 
 ## 2025-09-01 14:30 — feat: Upgrade database structure and implement Pinia state management
 - **Author**: AI (Qwen)
@@ -415,7 +487,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Added tests for the new stores
 - **Impact/Risks**: Database schema migration from v1 to v3; no destructive changes. Pinia implementation is backward compatible.
 - **Verification Steps**: `npm run dev` and verify that the dashboard loads correctly and displays data.
-- **Linked Task/Issue**: Database upgrade and Pinia implementation
 
 ## 2025-09-01 12:00 — docs: Update implementation status based on code review
 - **Author**: AI (Qwen)
@@ -433,7 +504,6 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Updated project plan with completion status for milestones
 - **Impact/Risks**: These changes provide a more accurate view of the project's progress.
 - **Verification Steps**: Review the updated checklist and issue files to ensure they accurately reflect the current state of the project.
-- **Linked Task/Issue**: Plan Mode
 
 ## 2025-09-01 11:30 — docs: Create issues and update documentation for planned improvements
 - **Author**: AI (Qwen)
@@ -450,81 +520,4 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Updated project plan with enhanced Milestone 3 description
 - **Impact/Risks**: These changes improve the project planning and organization without affecting existing functionality.
 - **Verification Steps**: Review the new issue files and updated documentation to ensure they accurately reflect the planned improvements.
-- **Linked Task/Issue**: Plan Mode
 
-## 2025-09-04 17:00 — fix: Resolve TypeScript compilation errors
-- **Author**: AI (Qwen)
-- **Scope**: Multiple files across the codebase
-- **Type**: fix
-- **Summary**: Fix numerous TypeScript compilation errors to ensure successful build.
-- **Details**:
-  - Fixed variable declaration order issues
-  - Resolved type compatibility problems
-  - Corrected null/undefined type handling
-  - Fixed test file mocking issues
-  - Removed unused imports and variables
-- **Impact/Risks**: Enables successful build and deployment. No functional changes.
-- **Verification Steps**: `npm run build` completes successfully without errors.
-- **Linked Task/Issue**: TypeScript compilation fixes
-
-## 2025-09-04 16:00 — fix: Resolve database schema upgrade issues
-- **Author**: AI (Qwen)
-- **Scope**: src/data/db.ts
-- **Type**: fix
-- **Summary**: Fix database schema upgrade issues and ensure smooth transition from old data model.
-- **Details**:
-  - Added proper upgrade functions for version 4 schema changes
-  - Fixed primary key transition from composite key to single key in deck_cards table
-  - Added missing fields to existing records during upgrade
-  - Ensured data integrity during schema migration
-- **Impact/Risks**: Fixes critical database upgrade issues that could prevent application startup. No data loss.
-- **Verification Steps**: `npm run build` completes successfully. Application starts without database errors.
-- **Linked Task/Issue**: Database schema upgrade fixes
-
-## 2025-09-04 15:00 — feat: Implement deduplication system for card tracking
-- **Author**: AI (Qwen)
-- **Scope**: src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/features/decks/views/DeckImportView.vue, src/data/db.ts, src/data/repos.ts
-- **Type**: feat
-- **Summary**: Implement comprehensive deduplication system to prevent duplicate card entries when importing from different sources.
-- **Details**:
-  - Enhanced data model with lot-based tracking to individually track physical cards
-  - Implemented deduplication logic for deck imports to link to existing cards instead of creating duplicates
-  - Implemented deduplication logic for Cardmarket imports to link transactions to existing lots
-  - Fixed variable declaration issues causing runtime errors
-  - Added proper currency tracking to card lots
-  - Ensured all required fields are properly populated
-  - Improved transaction tracking with better lot linking
-  - Fixed numerous TypeScript compilation errors
-  - Resolved variable scoping issues
-  - Corrected type compatibility problems
-- **Impact/Risks**: Significantly improves data integrity by preventing duplicate card entries. Maintains accurate cost basis and valuation tracking. No destructive changes to existing data.
-- **Verification Steps**: `npm run build` completes successfully. Import decks and Cardmarket transactions and verify cards are properly linked rather than duplicated.
-- **Linked Task/Issue**: Card deduplication implementation
-
-## 2025-09-06 12:00 — Summary: Batch Cardmarket ID Lookup and Enhanced Collector Number Parsing
-- **Author**: AI (Qwen)
-- **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/imports/ImportService.ts
-- **Type**: docs
-- **Summary**: Documentation of improvements to Cardmarket import functionality.
-- **Details**:
-  - **Batch Cardmarket ID Lookup**: Implemented batch lookup using Scryfall's `/cards/collection` endpoint for improved performance
-    - Added `getByCardmarketIds` method to `ScryfallProvider` for batch lookups
-    - Updated `ImportService` to use batch lookup for multiple Cardmarket IDs
-    - Implemented fallback to individual lookups if batch request fails
-    - Maintained backward compatibility for single ID lookups
-    - Improved performance for imports with multiple Product IDs
-    - Reduced API calls and network overhead
-    - Better error handling with fallback mechanisms
-  - **Enhanced Collector Number Parsing**: Created more robust parsing to handle multiple formats
-    - Standard numbers: "- 167 -"
-    - Numbers with letters: "- 167a -"
-    - Roman numerals: "- IV -"
-    - Special characters: "- 167★ -"
-    - Numbers at the end of names: "Lightning Bolt 167"
-    - Numbers in parentheses: "Lightning Bolt (167)"
-    - Replaced both instances of the old regex in `ImportService`
-    - Better handling of various collector number formats
-    - More accurate data extraction from Cardmarket descriptions
-    - Improved import success rates for cards with complex naming
-- **Impact/Risks**: Documentation only. No code changes.
-- **Verification Steps**: Review this summary entry for completeness and accuracy.

@@ -57,4 +57,8 @@ const isOpen = ref(false);
 </script>
 
 <style scoped>
+/* Fix for navbar fixed positioning being overridden by .navbar's position: relative */
+.navbar.fixed-top {
+  position: fixed !important;
+}
 </style>
