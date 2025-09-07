@@ -3,6 +3,7 @@ import './styles/main.scss'
 import App from './App.vue'
 import router from './app/router'
 import { createPinia } from 'pinia'
+import { AutomaticPriceUpdateService } from './features/pricing/AutomaticPriceUpdateService'
 
 const app = createApp(App)
 
@@ -10,4 +11,18 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
 
-app.use(router).mount('#app')
+// Initialize automatic price updates
+async function initApp() {
+  try {
+    // Check if we need to update prices on app start
+    await AutomaticPriceUpdateService.schedulePriceUpdate();
+  } catch (error) {
+    console.error('Error initializing automatic price updates:', error);
+  }
+  
+  // Mount the app
+  app.use(router).mount('#app');
+}
+
+// Initialize the app
+initApp();
