@@ -1,5 +1,5 @@
 <template>
-  <div class="card-component" @click="openModal">
+  <div class="card-component card-item" @click="openModal">
     <div class="card-image-container">
       <img
           :src="card.imageUrl || 'https://placehold.co/200x280?text=Card+Image'"
@@ -15,7 +15,7 @@
         <span class="price-label">Current:</span>
         <span class="price-value">{{ displayPrice.format('de-DE') }}</span>
       </div>
-      <div v-else-if="loadingPrice" class="price-loading">
+      <div v-else-if="loadingPrice || cardsStore.loadingPrices" class="price-loading">
         Loading...
       </div>
     </div>
@@ -141,6 +141,7 @@
 import {ref, computed, onMounted} from 'vue';
 import db from '../data/db';
 import {Money} from '../core/Money';
+import { useCardsStore } from '../stores/cards';
 
 // Enable attribute inheritance
 defineOptions({
@@ -150,8 +151,10 @@ defineOptions({
 // Props
 const props = defineProps<{
   card: any;
-  price?: any; // Optional price prop
 }>();
+
+// Use the cards store
+const cardsStore = useCardsStore();
 
 // Reactive state
 const showModal = ref(false);
@@ -162,11 +165,12 @@ const transactions = ref<any[]>([]);
 
 // Computed
 const displayPrice = computed(() => {
-  // If price prop is provided, use it
-  if (props.price) {
-    return props.price;
+  // First try to get price from the store
+  const storePrice = cardsStore.getCardPrice(props.card.id);
+  if (storePrice) {
+    return storePrice;
   }
-  // Otherwise, use the price loaded in the modal
+  // Fallback to the price loaded in the modal
   return currentPrice.value;
 });
 

@@ -25,8 +25,8 @@
       </div>
     </div>
     
-    <div v-if="loading" class="loading">
-      Loading cards...
+    <div v-if="cardsStore.loading || cardsStore.loadingPrices" class="loading">
+      Loading cards and prices...
     </div>
     
     <div v-else-if="sortedCards.length === 0" class="empty-state">
@@ -39,8 +39,6 @@
         v-for="card in sortedCards" 
         :key="card.id" 
         :card="card"
-        :price="cardPrices[card.id]"
-        class="card-item"
       />
     </div>
   </div>
@@ -48,27 +46,26 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import db from '../../../data/db';
 import CardComponent from '../../../components/CardComponent.vue';
-import { Money } from '../../../core/Money';
+import { useCardsStore } from '../../../stores/cards';
+
+// Use the cards store
+const cardsStore = useCardsStore();
 
 // Reactive state
-const cards = ref<any[]>([]);
-const loading = ref(true);
 const searchQuery = ref('');
 const sortBy = ref('name'); // Default sort by name
 const sortDirection = ref('asc'); // Default ascending
-const cardPrices = ref<Record<string, Money>>({});
-const loadingPrices = ref(false);
 
 // Filter cards based on search query
 const filteredCards = computed(() => {
+  const allCards = cardsStore.getAllCards;
   if (!searchQuery.value) {
-    return cards.value;
+    return allCards;
   }
   
   const query = searchQuery.value.toLowerCase();
-  return cards.value.filter(card => 
+  return allCards.filter(card => 
     card.name.toLowerCase().includes(query) ||
     card.set.toLowerCase().includes(query) ||
     card.number.includes(query)
@@ -91,8 +88,8 @@ const sortedCards = computed(() => {
         break;
       case 'price':
         {
-          const priceA = cardPrices.value[a.id]?.getCents() ?? 0;
-          const priceB = cardPrices.value[b.id]?.getCents() ?? 0;
+          const priceA = cardsStore.getCardPrice(a.id)?.getCents() ?? 0;
+          const priceB = cardsStore.getCardPrice(b.id)?.getCents() ?? 0;
           comparison = priceA - priceB;
         }
         break;
@@ -116,85 +113,9 @@ const sortedCards = computed(() => {
   return cardsToSort;
 });
 
-// Load prices for cards from the database
-const loadCardPrices = async () => {
-  if (cards.value.length === 0) return;
-  
-  loadingPrices.value = true;
-  
-  try {
-    // Create an array of promises for price fetching from database
-    const pricePromises = cards.value.map(async (card) => {
-      try {
-        // Fetch price points from database
-        const pricePoints = await db.price_points.where('cardId').equals(card.id).toArray();
-        
-        // Find the most recent price point
-        if (pricePoints.length > 0) {
-          // Sort by date descending to get the most recent price
-          pricePoints.sort((a: any, b: any) => b.asOf.getTime() - a.asOf.getTime());
-          const latestPricePoint = pricePoints[0];
-          
-          const price = new Money(latestPricePoint.price, latestPricePoint.currency);
-          
-          return {
-            cardId: card.id,
-            price: price
-          };
-        }
-        
-        return {
-          cardId: card.id,
-          price: null
-        };
-      } catch (error) {
-        console.error(`Error loading prices for card ${card.id}:`, error);
-        return {
-          cardId: card.id,
-          price: null
-        };
-      }
-    });
-    
-    // Wait for all price promises to resolve
-    const priceResults = await Promise.all(pricePromises);
-    
-    // Update the cardPrices object
-    const newCardPrices: Record<string, Money> = {};
-    for (const result of priceResults) {
-      if (result.price) {
-        newCardPrices[result.cardId] = result.price;
-      }
-    }
-    
-    cardPrices.value = newCardPrices;
-  } catch (error) {
-    console.error('Error loading card prices:', error);
-  } finally {
-    loadingPrices.value = false;
-  }
-};
-
-// Load cards
-const loadCards = async () => {
-  try {
-    // Get all cards
-    const allCards = await db.cards.toArray();
-    cards.value = allCards;
-  } catch (error) {
-    console.error('Error loading cards:', error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Load cards when component mounts
+// Load cards and prices when component mounts
 onMounted(() => {
-  loadCards().then(() => {
-    if (cards.value.length > 0) {
-      loadCardPrices();
-    }
-  });
+  cardsStore.loadCardsAndPrices();
 });
 </script>
 
