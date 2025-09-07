@@ -3,31 +3,39 @@
     <h1>MTG Collection Value Tracker</h1>
     <div class="dashboard-stats row g-4">
       <div class="col-lg-3 col-md-6">
-        <div class="stat-card h-100">
-          <h2>Portfolio Value</h2>
-          <p class="stat-value">{{ portfolioValue }}</p>
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Portfolio Value</h2>
+            <p class="stat-value">{{ portfolioValue }}</p>
+          </div>
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="stat-card h-100">
-          <h2>Total Cost</h2>
-          <p class="stat-value">{{ totalCost }}</p>
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Total Cost</h2>
+            <p class="stat-value">{{ totalCost }}</p>
+          </div>
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="stat-card h-100">
-          <h2>Unrealized P/L</h2>
-          <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">
-            {{ unrealizedPL }}
-          </p>
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Unrealized P/L</h2>
+            <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">
+              {{ unrealizedPL }}
+            </p>
+          </div>
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="stat-card h-100">
-          <h2>Realized P/L</h2>
-          <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">
-            {{ realizedPL }}
-          </p>
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Realized P/L</h2>
+            <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">
+              {{ realizedPL }}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -121,20 +129,6 @@ onMounted(async () => {
 
 .dashboard-stats {
   margin: var(--space-xl) 0;
-}
-
-.stat-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-md);
-  text-align: center;
-}
-
-.stat-card h2 {
-  margin: 0 0 var(--space-sm);
-  font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
 }
 
 .stat-value {
