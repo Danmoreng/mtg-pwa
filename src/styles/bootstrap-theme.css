@@ -1,0 +1,24 @@
+/* src/styles/bootstrap-theme.css */
+
+:root {
+  /* Brand & state colors */
+  --bs-primary: var(--color-primary);
+  --bs-secondary: var(--color-secondary);
+  --bs-success: var(--color-success);
+  --bs-warning: var(--color-warning);
+  --bs-danger: var(--color-error);
+
+  /* Base surfaces & text */
+  --bs-body-bg: var(--color-background);
+  --bs-body-color: var(--color-text);
+
+  /* Borders & shadows (optional) */
+  --bs-border-color: var(--color-border);
+}
+
+/* Optional: dark theme hook
+html[data-bs-theme='dark'] {
+  --bs-body-bg: #0b1220;
+  --bs-body-color: #e5e7eb;
+  --bs-primary: #60a5fa;
+} */

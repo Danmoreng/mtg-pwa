@@ -4,23 +4,15 @@ import Navigation from './components/Navigation.vue';
 </script>
 
 <template>
-  <div id="app">
+  <div>
     <Navigation />
-    <main>
-      <router-view />
-    </main>
+    <div id="app" class="pt-5">
+      <div class="container-lg">
+        <router-view />
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0;
-  text-align: center;
-}
-
-main {
-  padding: var(--space-lg);
-}
 </style>

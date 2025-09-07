@@ -20,128 +20,146 @@
       </div>
     </div>
   </div>
-  <!-- Modal Dialog -->
-  <div v-if="showModal" class="modal-overlay" @click="closeModal">
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h2>{{ card.name }}</h2>
-        <button class="close-button" @click="closeModal">×</button>
-      </div>
+  <!-- Modal Dialog using Reka UI -->
+  <DialogRoot v-model:open="showModal">
+    <DialogPortal>
+      <DialogOverlay class="modal-backdrop fade show"/>
+      <DialogContent class="modal d-block" @pointer-down-outside="closeModal" @escape-key-down="closeModal">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <DialogTitle class="modal-title h2">{{ card.name }}</DialogTitle>
+              <DialogClose as-child>
+                <button class="btn-close" @click="closeModal"></button>
+              </DialogClose>
+            </div>
 
-      <div class="modal-body">
-        <div class="card-details-section">
-          <div class="card-image-large">
-            <img
-                :src="card.imageUrl || 'https://placehold.co/300x420?text=Card+Image'"
-                :alt="card.name"
-                @error="handleImageError"
-            />
-          </div>
-
-          <div class="card-metadata">
-            <div class="metadata-item">
-              <span class="label">Set:</span>
-              <span class="value">{{ card.set }} ({{ card.setCode }})</span>
-            </div>
-            <div class="metadata-item">
-              <span class="label">Collector Number:</span>
-              <span class="value">#{{ card.number }}</span>
-            </div>
-            <div class="metadata-item">
-              <span class="label">Language:</span>
-              <span class="value">{{ card.lang }}</span>
-            </div>
-            <div class="metadata-item">
-              <span class="label">Finish:</span>
-              <span class="value">{{ card.finish }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="price-section">
-          <h3>Current Price</h3>
-          <div v-if="currentPrice" class="current-price">
-            {{ currentPrice.format('de-DE') }}
-          </div>
-          <div v-else-if="loadingPrice" class="price-loading">
-            Loading price...
-          </div>
-          <div v-else class="price-unavailable">
-            Price unavailable
-          </div>
-        </div>
-
-        <div v-if="lots && lots.length > 0" class="ownership-section">
-          <h3>Your Collection</h3>
-          <div class="lots-summary">
-            <div class="summary-item">
-              <span class="label">Total Lots:</span>
-              <span class="value">{{ lots.length }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Total Cards:</span>
-              <span class="value">{{ totalOwnedQuantity }}</span>
-            </div>
-          </div>
-
-          <div class="lots-list">
-            <div
-                v-for="lot in lots"
-                :key="lot.id"
-                class="lot-item"
-            >
-              <div class="lot-details">
-                <div class="lot-quantity">
-                  <span class="label">Quantity:</span>
-                  <span class="value">{{ lot.quantity }}</span>
+            <div class="modal-body">
+              <div class="card-details-section">
+                <div class="card-image-large">
+                  <img
+                      :src="card.imageUrl || 'https://placehold.co/300x420?text=Card+Image'"
+                      :alt="card.name"
+                      @error="handleImageError"
+                      class="img-fluid"
+                  />
                 </div>
-                <div class="lot-cost">
-                  <span class="label">Unit Cost:</span>
-                  <span class="value">{{ formatMoney(lot.unitCost, lot.currency || 'EUR') }}</span>
+
+                <div class="card-metadata">
+                  <div class="metadata-item">
+                    <span class="label">Set:</span>
+                    <span class="value">{{ card.set }} ({{ card.setCode }})</span>
+                  </div>
+                  <div class="metadata-item">
+                    <span class="label">Collector Number:</span>
+                    <span class="value">#{{ card.number }}</span>
+                  </div>
+                  <div class="metadata-item">
+                    <span class="label">Language:</span>
+                    <span class="value">{{ card.lang }}</span>
+                  </div>
+                  <div class="metadata-item">
+                    <span class="label">Finish:</span>
+                    <span class="value">{{ card.finish }}</span>
+                  </div>
                 </div>
-                <div class="lot-date">
-                  <span class="label">Purchased:</span>
-                  <span class="value">{{ formatDate(lot.purchasedAt) }}</span>
+              </div>
+
+              <div class="price-section">
+                <h3>Current Price</h3>
+                <div v-if="currentPrice" class="current-price h2 text-success">
+                  {{ currentPrice.format('de-DE') }}
                 </div>
-                <div v-if="lot.disposedQuantity" class="lot-disposed">
-                  <span class="label">Disposed:</span>
-                  <span class="value">{{ lot.disposedQuantity }}</span>
+                <div v-else-if="loadingPrice" class="price-loading">
+                  Loading price...
+                </div>
+                <div v-else class="price-unavailable text-muted">
+                  Price unavailable
+                </div>
+              </div>
+
+              <div v-if="lots && lots.length > 0" class="ownership-section">
+                <h3>Your Collection</h3>
+                <div class="lots-summary d-flex gap-4 p-3 bg-light rounded">
+                  <div class="summary-item">
+                    <span class="label small text-muted">Total Lots:</span>
+                    <span class="value h5">{{ lots.length }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label small text-muted">Total Cards:</span>
+                    <span class="value h5">{{ totalOwnedQuantity }}</span>
+                  </div>
+                </div>
+
+                <div class="lots-list">
+                  <div
+                      v-for="lot in lots"
+                      :key="lot.id"
+                      class="lot-item border rounded p-3 mb-2"
+                  >
+                    <div class="lot-details row">
+                      <div class="lot-quantity col-md-3">
+                        <span class="label small text-muted">Quantity:</span>
+                        <span class="value fw-medium">{{ lot.quantity }}</span>
+                      </div>
+                      <div class="lot-cost col-md-3">
+                        <span class="label small text-muted">Unit Cost:</span>
+                        <span class="value fw-medium">{{ formatMoney(lot.unitCost, lot.currency || 'EUR') }}</span>
+                      </div>
+                      <div class="lot-date col-md-3">
+                        <span class="label small text-muted">Purchased:</span>
+                        <span class="value fw-medium">{{ formatDate(lot.purchasedAt) }}</span>
+                      </div>
+                      <div v-if="lot.disposedQuantity" class="lot-disposed col-md-3">
+                        <span class="label small text-muted">Disposed:</span>
+                        <span class="value fw-medium">{{ lot.disposedQuantity }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="transactions && transactions.length > 0" class="transactions-section">
+                <h3>Transaction History</h3>
+                <div class="transactions-list">
+                  <div
+                      v-for="transaction in transactions"
+                      :key="transaction.id"
+                      class="transaction-item border rounded p-3 mb-2"
+                      :class="transaction.kind.toLowerCase()"
+                  >
+                    <div class="transaction-details row">
+                      <div class="transaction-type col-md-3 fw-bold">{{ transaction.kind }}</div>
+                      <div class="transaction-date col-md-3 text-muted">{{ formatDate(transaction.happenedAt) }}</div>
+                      <div class="transaction-quantity col-md-3 fw-medium">Qty: {{ transaction.quantity }}</div>
+                      <div class="transaction-price col-md-3 fw-medium">
+                        {{ formatMoney(transaction.unitPrice, transaction.currency) }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div v-if="transactions && transactions.length > 0" class="transactions-section">
-          <h3>Transaction History</h3>
-          <div class="transactions-list">
-            <div
-                v-for="transaction in transactions"
-                :key="transaction.id"
-                class="transaction-item"
-                :class="transaction.kind.toLowerCase()"
-            >
-              <div class="transaction-details">
-                <div class="transaction-type">{{ transaction.kind }}</div>
-                <div class="transaction-date">{{ formatDate(transaction.happenedAt) }}</div>
-                <div class="transaction-quantity">Qty: {{ transaction.quantity }}</div>
-                <div class="transaction-price">
-                  {{ formatMoney(transaction.unitPrice, transaction.currency) }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted} from 'vue';
+import {ref, computed} from 'vue';
 import db from '../data/db';
 import {Money} from '../core/Money';
 import { useCardsStore } from '../stores/cards';
+import { 
+  DialogRoot,
+  DialogPortal,
+  DialogOverlay,
+  DialogContent,
+  DialogTitle,
+  DialogClose
+} from 'reka-ui';
 
 // Enable attribute inheritance
 defineOptions({
@@ -248,22 +266,6 @@ const loadCurrentPrice = async () => {
     loadingPrice.value = false;
   }
 };
-
-// Close modal when pressing Escape key
-onMounted(() => {
-  const handleEscape = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      closeModal();
-    }
-  };
-
-  document.addEventListener('keydown', handleEscape);
-
-  // Clean up event listener
-  return () => {
-    document.removeEventListener('keydown', handleEscape);
-  };
-});
 </script>
 
 <style scoped>
@@ -333,69 +335,7 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: var(--space-md);
-}
-
-.modal-content {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  max-width: 800px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-xl);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-lg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: var(--font-size-xl);
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: var(--font-size-2xl);
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-}
-
-.close-button:hover {
-  background: var(--color-background);
-  color: var(--color-text);
-}
-
-.modal-body {
-  padding: var(--space-lg);
-}
-
+/* Card Details Section */
 .card-details-section {
   display: flex;
   flex-wrap: wrap;
@@ -405,11 +345,6 @@ onMounted(() => {
 
 .card-image-large {
   flex: 0 0 300px;
-}
-
-.card-image-large img {
-  width: 100%;
-  border-radius: var(--radius-md);
 }
 
 .card-metadata {
@@ -567,14 +502,6 @@ onMounted(() => {
 
   .card-image-large {
     flex: 0 0 auto;
-  }
-
-  .modal-content {
-    margin: var(--space-sm);
-  }
-
-  .modal-body {
-    padding: var(--space-md);
   }
 }
 </style>

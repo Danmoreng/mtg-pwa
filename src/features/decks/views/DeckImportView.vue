@@ -6,35 +6,35 @@
       <h2>Moxfield Deck Import</h2>
       <p>Copy and paste your decklist from Moxfield to track which cards you own and which you're missing.</p>
       
-      <div class="input-group">
-        <label for="deck-name">Deck Name</label>
+      <div class="mb-3">
+        <label for="deck-name" class="form-label">Deck Name</label>
         <input 
           id="deck-name" 
           v-model="deckName" 
           type="text" 
           placeholder="Enter a name for your deck"
-          class="text-input"
+          class="form-control"
         />
       </div>
       
-      <div class="input-group">
-        <label for="decklist">Decklist</label>
+      <div class="mb-3">
+        <label for="decklist" class="form-label">Decklist</label>
         <textarea 
           id="decklist" 
           v-model="decklist" 
           placeholder="Paste your decklist here (e.g., 4 Lightning Bolt&#10;2 Counterspell)"
           rows="10"
-          class="textarea-input"
+          class="form-control"
         ></textarea>
       </div>
       
-      <button @click="importDeck" :disabled="isImporting" class="import-button">
+      <button @click="importDeck" :disabled="isImporting" class="btn btn-primary mb-4">
         {{ isImporting ? 'Importing...' : 'Import Deck' }}
       </button>
       
-      <div v-if="importProgress !== null" class="progress-container">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: importProgress + '%' }"></div>
+      <div v-if="importProgress !== null" class="progress-container mb-4">
+        <div class="progress">
+          <div class="progress-bar" :style="{ width: importProgress + '%' }"></div>
         </div>
         <div class="progress-text">{{ importProgress }}%</div>
       </div>
@@ -298,84 +298,6 @@ const importDeck = async () => {
   margin-top: 0;
 }
 
-.input-group {
-  margin-bottom: var(--space-md);
-}
-
-.input-group label {
-  display: block;
-  margin-bottom: var(--space-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.text-input,
-.textarea-input {
-  width: 100%;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  font-family: inherit;
-}
-
-.text-input:focus,
-.textarea-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-.textarea-input {
-  resize: vertical;
-  min-height: 150px;
-}
-
-.import-button {
-  padding: var(--space-sm) var(--space-lg);
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-bottom: var(--space-lg);
-}
-
-.import-button:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-}
-
-.import-button:disabled {
-  background: var(--color-disabled);
-  cursor: not-allowed;
-}
-
-.progress-container {
-  margin-bottom: var(--space-lg);
-}
-
-.progress-bar {
-  width: 100%;
-  height: 20px;
-  background-color: var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  margin-bottom: var(--space-xs);
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: var(--color-primary);
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
 .instructions {
   background: var(--color-info-bg);
   border-radius: var(--radius-md);
@@ -406,5 +328,15 @@ const importDeck = async () => {
 .status-message.error {
   background: var(--color-error-bg);
   color: var(--color-error);
+}
+
+.progress-container {
+  margin-bottom: var(--space-lg);
+}
+
+.progress-text {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 </style>
