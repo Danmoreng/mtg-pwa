@@ -1,83 +1,90 @@
-# ROADMAP.md
+# Roadmap — MTG Collection Value Tracker
+_Last updated: 2025‑09‑07_
 
-## TL;DR Status
-- **M2: Enhanced Data Model** — ✅ Complete  
-- **M3: Cardmarket Import (UI & polish)** — ⏳ ~85–90%  
-- **M4: Pricing & Automatic Tracking** — ⏳ In progress  
-- **M6: Moxfield Decks** — ⏳ ~90%  
-
----
-
-## Now
-- SW navigation fallback for SPA routes  
-- Backup includes lots and provenance  
-- Compute deck coverage from lots  
-- Idempotency consistency across Cardmarket ingests  
-- Regex fix in deck text import  
-- Branding polish: PWA icons, title/favicon  
-- ESLint config: flat config only  
-- `.ts` SFC imports cleanup  
-- Docs refresh (align with lots + wizard)  
-
-## Next
-- **M4 complete**  
-  - Batch price sync by set; 24h TTL; exponential backoff  
-  - Show last/next price update (card + dashboard)  
-  - Valuation uses only `price_points`  
-- **Tests**  
-  - Idempotency  
-  - SetCodeResolver edge cases  
-  - FIFO math with partial disposals  
-- **Performance**  
-  - Virtualized card grids/tables  
-  - Chunked CSV processing with progress  
-
-## Later
-- **M5: ManaBox scans + Sold/Owned matching**  
-- **M7: Offline UX** (background sync + import retry)  
-- **M8: Analytics deep-dive** (KPIs, P/L charts)  
-- UI refactor with tokens and reusable components  
+## Principles
+- **Lots are source of truth** for ownership, cost basis, P/L.
+- **Prices are cached & persisted**; UI never blocks on live API.
+- **PWA first:** the app should work offline (incl. deep links).
+- **Idempotent imports:** re‑importing must be safe (no dupes).
 
 ---
 
-## Milestones & Acceptance
+## NOW (stability & correctness)
 
-### M2 — Enhanced Data Model (✅)
-**Outcome:** Lot-based inventory + provenance  
-**Acceptance:** Traceable purchase → scan → deck/sale; valuation constrained to lots  
+### P0 — Offline SPA navigation
+**Why:** Deep links 404 offline without a navigation fallback.  
+**Changes:** Add `NavigationRoute` to `src/sw.ts`.  
+**Accept:** Refresh `/decks/...` and `/cards` while offline → renders app shell.  
+**Refs:** `src/sw.ts`, `docs/dev-dist/sw.js`.
 
-### M3 — Cardmarket Import (⏳ ~85–90%)
-**Outcome:** Idempotent, pleasant import UX  
-**Tasks:** Wizard complete; unify idempotency keys; tests  
-**Acceptance:** Re-import = zero changes  
+### P0 — PWA icons & branding
+**Why:** Manifest points to non‑existent icons; index title still default.  
+**Changes:** Place icons in `public/icons` and reference in `vite.config.ts`; update `<title>` and favicon in `index.html`.  
+**Accept:** Lighthouse PWA check passes; app has correct name/icon.  
+**Refs:** `vite.config.ts`, `index.html`.
 
-### M4 — Pricing & Automatic Tracking (⏳)
-**Outcome:** Trustworthy current value + history  
-**Tasks:** Worker scheduling; UI surfacing; valuation from `price_points`  
-**Acceptance:** Daily automatic updates, accurate history  
+### P0 — Backup/restore completeness
+**Why:** `card_lots` & `scan_sale_links` missing in backup → data loss risk.  
+**Changes:** Include both tables in export/import.  
+**Accept:** Export → wipe DB → import → portfolio value & holdings identical.  
+**Refs:** `src/features/backup/BackupService.ts`.
 
-### M5 — ManaBox Scans + Matching
-**Outcome:** Sold vs owned clear via provenance  
+### P0 — Unrealized cost basis honors partial disposals
+**Why:** Unrealized basis overcounts if a lot is partially sold.  
+**Changes:** Use `remaining = quantity - disposedQuantity` in `calculateLotCostBasis` and aggregate accordingly.  
+**Accept:** Unit tests show matching basis to remaining units; dashboard totals align.  
+**Refs:** `src/features/analytics/ValuationEngine.ts`.
 
-### M6 — Moxfield Decks (⏳ ~90%)
-**Outcome:** Coverage from lots; export need list  
-**Acceptance:** Handles private decks + missing images  
+### P1 — Remove or implement Release Date sort
+**Why:** UI offers `releasedAt` sort but schema lacks it.  
+**Option A:** Hide option.  
+**Option B:** Persist Scryfall `released_at` on card creation & sort by it.  
+**Accept:** Sort menu only shows working choices OR date sort works.  
+**Refs:** `src/features/cards/views/CardsView.vue`, `src/features/pricing/ScryfallProvider.ts`, `src/data/db.ts`.
 
-### M7 — PWA & Offline UX
-**Outcome:** Offline-first, resilient sync/import  
+### P1 — ESLint config unification
+**Why:** Dual configs cause drift.  
+**Changes:** Keep `eslint.config.js` (flat), remove `.eslintrc.json`, port rules.  
+**Accept:** `npm run lint` passes; CI uses a single config.  
+**Refs:** `eslint.config.js`, `.eslintrc.json`.
 
-### M8 — Analytics Deep-Dive
-**Outcome:** KPIs + charts + reconciled FIFO math  
+### P1 — Minor TS import cleanup
+**Why:** Avoid `.ts` SFC imports unless explicitly configured.  
+**Changes:** Drop the `.ts` extension or enable in `tsconfig.app.json`.  
+**Accept:** Build and typecheck pass.  
+**Refs:** `src/features/dashboard/HomeView.vue`.
 
 ---
 
-## Quality Track
-- Strict TypeScript + ESLint hygiene  
-- Vitest unit tests + Playwright happy path  
-- Structured logs for imports; row-level counters  
+## NEXT (importer reliability & UX)
+
+### P1 — Cardmarket “IDs first”, consistent idempotency
+**Why:** Robust linking and safe re‑imports.  
+**Changes:** Prefer Scryfall `/cards/collection` by Cardmarket IDs; unify `externalRef` formats (`cardmarket:{type}:{id}:{line}`); fall back to set+collector only.  
+**Accept:** Re‑import same CSVs → 0 new rows; logs show batch lookups.  
+**Refs:** `src/features/pricing/ScryfallProvider.ts`, `src/features/imports/ImportService.ts`, `src/workers/cardmarketCsv.ts`.
+
+### P2 — Deck coverage based on **lots**
+**Why:** Coverage should reflect **remaining** owned units per card.  
+**Changes:** Compute deck coverage from `card_lots` (remaining qty).  
+**Accept:** Coverage percentages match what lots imply.  
+**Refs:** `src/features/decks/views/DeckDetailView.vue`, `src/data/repos`.
+
+### P2 — Virtualize card grids
+**Why:** Performance at scale.  
+**Changes:** Introduce virtualization for Cards/Deck cards.  
+**Accept:** Smooth scroll with large collections.
+
+### P2 — Re‑enable and extend unit tests
+**Why:** Guard rails for pricing/import.  
+**Changes:** Un‑comment and align tests for regex, batch provider, valuation; add idempotency tests.  
+**Accept:** `npm test` runs green locally & in CI.
 
 ---
 
-## Migration Notes
-- On restore, derive holdings from lots if legacy views need them  
-- All exports include `card_lots` & `scan_sale_links`  
+## LATER (nice‑to‑have)
+
+- **Background job scheduler** for price sync/import progress with persisted status.
+- **Periodic valuation snapshots** + charts.
+- **Background Sync** registration to refresh prices when network returns.  
+

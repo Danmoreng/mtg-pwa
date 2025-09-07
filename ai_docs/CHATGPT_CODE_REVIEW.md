@@ -1,201 +1,176 @@
-Below is a focused, actionable review of your MTG Collection Value Tracker repo. I’ll start with what’s working well, then call out specific risks/bugs, followed by architectural improvements and concrete, PR‑sized fixes (with code). All observations are based on the files you shared.&#x20;
+Below is a thorough, source‑based review of your repo and a **step‑by‑step implementation playbook** tailored for your AI agent to execute alongside you.
 
 ---
 
-## What’s good?
+## High‑impact review (what to keep / what to change)
 
-* **Clear, living docs & roadmap.** You ship an “authoritative” architecture, importer specs, and a prioritized roadmap that line up with the code. This makes it easy to reason about scope and next steps.&#x20;
-  (See `ai_docs/ARCHITECTURE.md`, `ai_docs/IMPORTERS.md`, `ai_docs/ROADMAP.md`.)
+### What’s working well
 
-* **Local‑first PWA with sane caching.** You use `vite-plugin-pwa` (injectManifest) and a custom service worker that caches Scryfall API and images. That’s the right direction for an offline‑capable app shell.&#x20;
-  (See `vite.config.ts`, `src/sw.ts`.)
+* **Lot‑based inventory + valuation:** You’ve introduced `card_lots` and shifted valuation to query **historical price points** from `price_points`. This is the right foundation for FIFO and accurate P/L. &#x20;
+* **Price caching & persistence:** Price snapshots are persisted via `PriceUpdateService` and background worker; the dashboard reads from DB rather than the API—good for performance and rate limits. &#x20;
+* **Unified card component:** Centralizing card display and surfacing price via the store simplifies the views.&#x20;
+* **Service Worker caching for Scryfall + images:** `workbox` is wired for API/image caching, which is a solid start for a PWA.&#x20;
 
-* **Typed, versioned IndexedDB via Dexie.** Well‑structured tables, indices, and multi‑version upgrades; you’ve thought about historical pricing, valuations, and lot tracking (v4). The migration code sets defaults and attempts to keep data consistent.&#x20;
-  (See `src/data/db.ts` versions 1–4; tests in `src/data/db.test.ts`.)
+### Problems & recommended fixes (prioritized)
 
-* **Pinia + stores + repositories.** Repos are typed and keep DB access in one place, leaving components thinner. Stores (cards, holdings, etc.) are in place and used on the dashboard.&#x20;
-  (See `src/data/repos.ts`, `src/stores/*`, `src/features/dashboard/HomeView.vue`.)
+1. **SPA navigation doesn’t work offline (no navigation fallback).**
+   Your `src/sw.ts` precaches and caches APIs/images but does **not** register a Workbox `NavigationRoute`. Dev SW shows navigation support; the custom SW doesn’t. Add a navigation fallback so deep links work offline. &#x20;
 
-* **Workers for heavy work.** CSV parsing and price sync run in web workers to avoid blocking the UI, which is exactly what you want for large Cardmarket exports.&#x20;
-  (See `src/workers/cardmarketCsv.ts`, `src/workers/priceSync.ts`.)
+2. **PWA icons are mis‑referenced.**
+   The PWA manifest icons point to `src/assets/logo.png`, but there is no `src/assets/` folder with icons; ship real icons under `public/icons` and reference them correctly in `vite.config.ts`.&#x20;
 
-* **Money utility + tests.** Money is stored as integer cents with a small helper that has unit tests. This avoids float pitfalls and keeps formatting centralized.&#x20;
-  (See `src/core/Money.ts`, `src/core/Money.test.ts`.)
+3. **Backups can lose lot data.**
+   `BackupService` exports/imports many tables but **omits** `card_lots` and `scan_sale_links`, which are core to your new inventory model—this risks data loss on restore. Include them.&#x20;
 
-* **Importer design acknowledges real-world mess.** The docs and code clearly grapple with Cardmarket ↔ Scryfall mapping; you’ve planned to prefer `cardmarket_id` and only fall back to heuristics. That’s the correct priority.&#x20;
-  (See `ai_docs/BUGS.md`, `ai_docs/CARDMARKET_IMPORT_FIXES.md`, `src/features/imports/ImportService.ts`.)
+4. **Unrealized cost basis overcounts on partially disposed lots.**
+   `calculateLotCostBasis` multiplies **unit cost × full lot quantity**; unrealized basis should use **remaining** quantity (qty − disposedQty), consistent with your FIFO logic and how you value lots. &#x20;
 
----
+5. **Release‑date sorting option doesn’t match the schema.**
+   `CardsView.vue` offers “Release Date” sorting and reads `card.releasedAt`, but your `Card` schema has no such field—so the sort is effectively a no‑op. Either remove the option for now or persist `released_at` from Scryfall into the card record. &#x20;
 
-## What’s bad / risky (specific, fixable)
+6. **Import idempotency + “IDs first” lookup need consolidation.**
+   You’ve started “product‑ID first” + batch lookup direction in docs/tests, but code paths remain inconsistent. Unify all Cardmarket ingests to generate consistent `externalRef`s and prefer Scryfall **/cards/collection** by Cardmarket ID(s); only fall back to set+number; never pass set **names**. (You already wrote this guidance in `ai_docs`.) &#x20;
 
-1. **PWA icons reference files that don’t exist in the repo.**
-   Your manifest points to `src/assets/logo.png` (192 & 512), but there’s no `src/assets/` folder. This will break install badges and icons. Put icons in `public/` (or add the missing files).&#x20;
-   (See `vite.config.ts` → `VitePWA({ manifest.icons ... })`.)
+7. **Minor TS import quirk.**
+   `HomeView.vue` imports `ValuationEngine.ts` with an explicit `.ts` extension—unnecessary under Vite and can trip lint/type configs. Remove the extension or make sure `tsconfig.app.json` explicitly allows it.&#x20;
 
-2. **No navigation fallback route in the SW (offline deep link can 404).**
-   You precache but don’t register a SPA navigation route in `src/sw.ts`. In dev, the generated SW uses `NavigationRoute`, but your production SW doesn’t. Add a navigation fallback to `index.html`.&#x20;
-   (Compare `dev-dist/sw.js` vs `src/sw.ts`.)
+8. **Two ESLint configurations.**
+   You have both `eslint.config.js` (flat) and `.eslintrc.json` (legacy). Keep **one** (recommend flat) to avoid drift.&#x20;
 
-3. **Backup doesn’t include new “lot” tables.**
-   `BackupService` exports/imports many tables but **omits** `card_lots` and `scan_sale_links`, which are now central to your data model. Users will think they backed up everything… and haven’t.&#x20;
-   (See `src/features/backup/BackupService.ts`.)
+9. **Index title/branding.**
+   `index.html` still says “Vite + Vue + TS.” Brand it as your app and align the favicon with your shipped PWA icons.&#x20;
 
-4. **Regex bug in `DeckImportService` (deck text parser).**
-   The regex has stray anchors/characters:
-   `... \s*$([^)]+)$\s* ...` — that `$(` is invalid and will never match lines like `1 Captain America, First Avenger (SLD) 1726`. Your other view uses the correct form.&#x20;
-   (See `src/features/decks/DeckImportService.ts` vs `src/features/decks/views/DeckImportView.vue`.)
+10. **Tests are present but commented out.**
+    A number of unit tests (regex, pricing batch, valuation) are commented. Re‑enable and align them with the current services to prevent regressions. &#x20;
 
-5. **Coverage logic mixes “holdings” vs “lots”.**
-   Deck coverage in `DeckDetailView.vue` reads `holdings` to compute owned/coverage, but your ingestion increasingly records ownership via `card_lots`. That will underreport ownership unless holdings are also written. Either compute from lots, or keep holdings in sync.&#x20;
-   (See `src/features/decks/views/DeckDetailView.vue` and `src/data/db.ts`.)
-
-6. **`.ts` extension in SFC import likely breaks typecheck.**
-   In `HomeView.vue`: `import { ValuationEngine } from '../analytics/ValuationEngine.ts';`. With `vue-tsc` strict settings, importing with “.ts” often fails unless `allowImportingTsExtensions` is on in the app tsconfig (it isn’t). Prefer extensionless import.&#x20;
-   (See `src/features/dashboard/HomeView.vue`, `tsconfig.app.json`.)
-
-7. **Two ESLint configurations (flat + legacy).**
-   You’ve got `eslint.config.js` (flat) **and** `.eslintrc.json`. This can cause rule drift and dev confusion. Pick one (prefer flat config) and delete the other.&#x20;
-
-8. **Idempotency keys for imports are inconsistent.**
-   `importCardmarketTransactions` uses `externalRef = cardmarket:{reference}:{lineNumber}` (transactions CSV may not even have `lineNumber`). Orders use `cardmarket:order:{orderId}:{lineNumber}` (again, orders CSV usually isn’t line‑oriented). Articles logic uses a different scheme in docs. Tighten these to your documented `"cardmarket:{orderId}:{lineNo}"` per importer.&#x20;
-   (See `src/features/imports/ImportService.ts`, `ai_docs/IMPORTERS.md`.)
-
-9. **Unrealized cost basis is overstated for partially disposed lots.**
-   `ValuationEngine.calculateLotCostBasis` multiplies unit cost by **full** lot quantity; in the total you filter fully disposed lots, but partially disposed lots still use full quantity. Use “remaining” quantity, same as you do for valuation.&#x20;
-   (See `src/features/analytics/ValuationEngine.ts`.)
-
-10. **Key choice in deck card list can be non‑unique.**
-    `:key="`\${deckCard.deckId}-\${deckCard.cardId}`"` will collide if a deck has the same card twice in different lots/roles. Use `deckCard.id`.&#x20;
-    (See `src/features/decks/views/DeckDetailView.vue`.)
-
-11. **`ImageCacheService` likely redundant with SW caching.**
-    You maintain an IndexedDB image cache and also a Workbox `CacheFirst` images cache. Unless you have a firm use case (e.g., base64 exporting), drop one to reduce complexity. It also isn’t referenced elsewhere.&#x20;
-    (See `src/core/ImageCacheService.ts`, `src/sw.ts`.)
-
-12. **UI polish / branding gaps.**
-    `index.html` title is still “Vite + Vue + TS”, and the favicon references `vite.svg`. Small, but hurts perceived quality.&#x20;
-    (See `index.html`.)
-
-13. **`CardsView` sorts by a field that doesn’t exist.**
-    There’s a “releasedAt” sort path in the component, but `Card` has no such field; the code branches handle `undefined`, but the choice adds complexity without effect. Consider removing or populating it.&#x20;
-    (See `src/features/cards/views/CardsView.vue`, `src/data/db.ts`.)
+> **Already fixed:** The deck‑import regex in `DeckImportService.ts` is correct now; leave as is, keep the unit test that asserts it.&#x20;
 
 ---
 
-## Where the architecture could be improved
+## Implementation playbook for your AI agent
 
-**Unify ownership into one source of truth (lots).**
-Right now “holdings” and “lots” coexist. Your v4 schema (and valuation engine) are clearly lot‑centric; the UI and older logic still assume holdings. Pick *lots* as canonical, update Deck coverage & Cards pages to query lots, and write shims/migrations so holdings are either derived or removed entirely. This removes double‑entry drift.&#x20;
+> The tasks below are small, reviewable PRs with exact file edits and acceptance checks. Use Conventional Commits (e.g., `fix:`, `feat:`, `chore:`). Update `docs/AI_CHANGELOG.md` after each PR.
 
-**Introduce a domain/application layer (use cases) with atomic writes.**
-Your services write across multiple tables (e.g., importing articles touches `cards`, `card_lots`, `transactions`, `price_points`). Wrap these in Dexie transactions so each import row is applied atomically and idempotently; move these “use cases” to a `application/` layer that depends on repos only. Components would call `ImportCardmarketArticlesUseCase.run()`.&#x20;
+### PR 1 — **feat(pwa): add offline navigation fallback**
 
-**Typed validation at edges (e.g., zod) and structured logs.**
-Your importers will benefit from schema‑validated parsing (CSV→DTO→domain). Use Zod (or similar) to validate rows and produce typed, normalized objects. Enhance logs to one structured “resolution report” per row (you’ve begun this), then show a summarized UI for unknown sets/failed lookups.&#x20;
-(See the structured log example already in `ImportService.importCardmarketArticles` and the guidance in `ai_docs/BUGS.md`.)
+**Files**
 
-**Background jobs orchestration.**
-You already have workers; add a tiny job scheduler that:
+* `src/sw.ts` (edit)
 
-* queues price updates and long imports,
-* persists job status in `settings` (or a `jobs` table),
-* surfaces progress/toasts.
-  This makes periodic price sync and “resume on reload” trivial.&#x20;
-
-**SW routing & offline staging.**
-Docs promise “offline import staging” and “background sync”; you’ve got caching, but no navigation fallback or background sync wiring yet. Add a `NavigationRoute` fallback, then a (future) periodic sync registration for price updates.&#x20;
-
----
-
-## Concrete fixes you can ship as small PRs
-
-### 1) Fix the deck text regex (critical parsing bug)
-
-**File:** `src/features/decks/DeckImportService.ts`
-**Replace** the broken regex with the one you already use in `DeckImportView.vue`:
+**Patch (minimal, safe)**
 
 ```ts
-// BEFORE (buggy)
-const match = trimmedLine.match(/^(\d+)\s+(.+?)\s*$([^)]+)$\s*(\d+)(?:\s*\*F\*\s*)?$/i);
-
-// AFTER (works; consistent with DeckImportView)
-const match = trimmedLine.match(/^(\d+)\s+(.+?)\s*\(([^)]+)\)\s*(\d+)(?:\s*\*F\*\s*)?$/i);
-```
-
-This allows lines like `1 Captain America, First Avenger (SLD) 1726` to parse.&#x20;
-
----
-
-### 2) Make SPA navigation work offline
-
-**File:** `src/sw.ts`
-Add a navigation fallback so route refreshes work offline (similar to your dev SW):
-
-```ts
+// src/sw.ts
+/// <reference lib="webworker" />
+import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { createHandlerBoundToURL } from 'workbox-precaching';
+// ... existing imports
 
-// after precacheAndRoute(self.__WB_MANIFEST)
+declare let self: ServiceWorkerGlobalScope;
+
+precacheAndRoute(self.__WB_MANIFEST);
+
+// Add this block right after precacheAndRoute:
 registerRoute(
   new NavigationRoute(
-    createHandlerBoundToURL('/index.html'), // precached by __WB_MANIFEST
-    { allowlist: [/^\/(?!dev-sw)/] }
+    createHandlerBoundToURL('index.html')
   )
 );
+
+// keep your existing API/image routes below
 ```
 
-Without this, deep links 404 when offline.&#x20;
+**Why:** Mirrors your dev SW behavior; enables offline deep links.
+**Verify:** Build, then offline‑refresh `/decks` or `/cards`—app shell loads. &#x20;
 
 ---
 
-### 3) Ship real icons & fix the manifest
+### PR 2 — **fix(pwa): correct icons + branding**
 
-**File:** `vite.config.ts`
-Place icons in `/public/icons/` and reference them with absolute paths:
+**Files**
+
+* `vite.config.ts` (manifest icons)
+* `index.html` (title + favicon)
+* Add files: `public/icons/icon-192.png`, `public/icons/icon-512.png` (real images)
+
+**Patch (manifest)**
 
 ```ts
+// vite.config.ts
 VitePWA({
   // ...
   manifest: {
-    // ...
+    name: 'MTG Collection Value Tracker',
+    short_name: 'MTG Tracker',
+    start_url: '/mtg-pwa/',
+    scope: '/mtg-pwa/',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#0ea5e9',
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+      { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }
     ]
   }
-})
+});
 ```
 
-Also update `index.html` title & favicon for branding.&#x20;
+**Patch (index)**
+
+```html
+<!-- index.html -->
+<title>MTG Collection Value Tracker</title>
+<link rel="icon" href="icons/icon-192.png" />
+```
+
+**Verify:** Lighthouse → “Installable” with correct icons; title shows in the tab. &#x20;
 
 ---
 
-### 4) Include lots in backup & restore
+### PR 3 — **fix(backup): include lots & scan sale links**
 
-**File:** `src/features/backup/BackupService.ts`
-Add `card_lots` and `scan_sale_links` to export/import:
+**File**
+
+* `src/features/backup/BackupService.ts`
+
+**Patch**
 
 ```ts
-// export
-data.card_lots = await db.card_lots.toArray();
-data.scan_sale_links = await db.scan_sale_links.toArray();
+// In exportData():
+const data: any = {
+  cards: await db.cards.toArray(),
+  holdings: await db.holdings.toArray(),
+  transactions: await db.transactions.toArray(),
+  scans: await db.scans.toArray(),
+  decks: await db.decks.toArray(),
+  deck_cards: await db.deck_cards.toArray(),
+  price_points: await db.price_points.toArray(),
+  valuations: await db.valuations.toArray(),
+  settings: await db.settings.toArray(),
+  card_lots: await db.card_lots.toArray(),            // ⬅ add
+  scan_sale_links: await db.scan_sale_links.toArray()  // ⬅ add
+};
 
-// import (after clears)
-if (data.card_lots) await db.card_lots.bulkAdd(data.card_lots);
-if (data.scan_sale_links) await db.scan_sale_links.bulkAdd(data.scan_sale_links);
+// In importData() (after clear):
+if (data.card_lots) await db.card_lots.bulkAdd(data.card_lots);             // ⬅ add
+if (data.scan_sale_links) await db.scan_sale_links.bulkAdd(data.scan_sale_links); // ⬅ add
 ```
 
-This prevents silent data loss for lot‑based ownership after restore.&#x20;
+**Why:** Prevents data loss when restoring; lots are canonical.
+**Verify:** Export → clear DB → import → lots & links restored.&#x20;
 
 ---
 
-### 5) Correct unrealized cost basis for partial disposals
+### PR 4 — **fix(valuation): cost basis uses remaining units**
 
-**File:** `src/features/analytics/ValuationEngine.ts`
-Use remaining quantity for lot cost basis:
+**File**
+
+* `src/features/analytics/ValuationEngine.ts`
+
+**Patch**
 
 ```ts
+// Replace calculateLotCostBasis with:
 static async calculateLotCostBasis(lot: any): Promise<Money> {
   const unitCost = new Money(lot.unitCost, lot.currency || 'EUR');
   const remaining = lot.disposedQuantity ? (lot.quantity - lot.disposedQuantity) : lot.quantity;
@@ -203,75 +178,120 @@ static async calculateLotCostBasis(lot: any): Promise<Money> {
 }
 ```
 
-And keep the same condition in `calculateTotalCostBasis`. This aligns with how you value lots.&#x20;
+**Also ensure** `calculateTotalCostBasis()` sums cost basis across active lots (it already does).
+**Verify:** Unit test for partial disposal: qty=3, disposed=1, unit=10.00 → cost basis = 20.00. &#x20;
 
 ---
 
-### 6) Compute deck coverage from lots (or keep holdings in sync)
+### PR 5 — **chore(cards): hide release‑date sort OR persist it**
 
-**File:** `src/features/decks/views/DeckDetailView.vue`
-Replace the holdings lookup with a lot‑based sum of **remaining** quantities for the card (mirroring the logic you already have in `CardsView.vue`). Alternatively, write holdings in the import path whenever you add a lot—but having one canonical source (lots) is cleaner.&#x20;
+**Option A (quick):** remove “Release Date” from `CardsView.vue`.
+**Option B:** extend card writes to include Scryfall `released_at` and enable sort.
 
----
+**File**
 
-### 7) Make imports consistent & robust (idempotency + IDs first)
+* `src/features/cards/views/CardsView.vue`
 
-**File:** `src/features/imports/ImportService.ts`
+**Patch (Option A)**
 
-* Ensure **all** Cardmarket ingests use a consistent `externalRef` format (`cardmarket:{orderId}:{lineNo}` for row‑based CSVs; `cardmarket:tx:{reference}` for summary rows).
-* Keep “Cardmarket Product ID → Scryfall cards/collection” as the **first** lookup path (you began implementing `getByCardmarketId` – great).
-* Use collector number fallback only if needed and **never** pass a set **name** to Scryfall’s `set=` param.&#x20;
-  (See your own guidance in `ai_docs/BUGS.md` / `ai_docs/CARDMARKET_IMPORT_FIXES.md`.)
-
----
-
-### 8) Remove the `.ts` extension in SFC imports
-
-**File:** `src/features/dashboard/HomeView.vue`
-
-```ts
-// BEFORE
-import { ValuationEngine } from '../analytics/ValuationEngine.ts';
-
-// AFTER
-import { ValuationEngine } from '../analytics/ValuationEngine';
+```diff
+- <option value="releasedAt">Release Date</option>
 ```
 
-If you do prefer extensionful imports, set `allowImportingTsExtensions: true` in **tsconfig.app.json** as well (it’s only in `tsconfig.node.json` now).&#x20;
+**Verify:** Sort menu shows only working options; no console warnings. &#x20;
 
 ---
 
-### 9) Use stable keys in deck lists
+### PR 6 — **chore(ts): remove .ts extension in import**
 
-**File:** `src/features/decks/views/DeckDetailView.vue`
-Use `:key="deckCard.id"` instead of `${deckId}-${cardId}` to avoid collisions.&#x20;
+**File**
 
----
+* `src/features/dashboard/HomeView.vue`
 
-### 10) Choose one ESLint config
+**Patch**
 
-Delete either `eslint.config.js` (flat) **or** `.eslintrc.json` (legacy). I’d keep flat config and migrate the rules from `.eslintrc.json` into it for one source of truth.&#x20;
+```diff
+- import { ValuationEngine } from '../analytics/ValuationEngine.ts';
++ import { ValuationEngine } from '../analytics/ValuationEngine';
+```
 
----
-
-## Other suggestions
-
-* **Virtualize large card grids** to keep the UI snappy once collections grow (e.g., Vue Virtual Scroller). Wire it into `CardsView.vue`.&#x20;
-
-* **Expose “Last price update” and “Next eligible update”** on card and dashboard using a setting keyed by provider. You’re already checking in `HomeView.vue`—surface it in the UI.&#x20;
-
-* **More tests where it hurts:**
-
-  * SetCodeResolver edge cases from `ai_docs/BUGS.md` (Commander/Extras/UB “Stellar Sights”).
-  * Import idempotency (re‑import same CSV → 0 new rows).
-  * FIFO realized P/L reconciliation with mixed partial disposals.&#x20;
-
-* **Consistency polish**: rename `CsvImportView.vue` to be specific (`CardmarketImportView.vue`) or remove if the wizard fully replaces it; align `README` quick start title and `index.html` title; ensure router links match your final UX.&#x20;
+**(Alternative)** If you prefer extensionful imports, set `allowImportingTsExtensions: true` in `tsconfig.app.json`.
+**Verify:** Typecheck & build pass.&#x20;
 
 ---
 
-### TL;DR priorities
+### PR 7 — **chore(lint): single ESLint config**
 
-1. Fix deck text regex; 2) Add SW navigation fallback; 3) Include `card_lots` in backup; 4) Compute coverage/cost basis from **lots**; 5) Unify idempotency + product‑ID‑first lookups; 6) Clean up icons, titles, ESLint, and `.ts` imports. These are quick wins that materially improve correctness and UX.&#x20;
+**Files**
 
-If you want, I can draft the exact patches for any of the above as a ready‑to‑paste diff.
+* Remove `.eslintrc.json`, merge its settings into `eslint.config.js` (flat).
+
+**Verify:** `npm run lint` passes with one config.&#x20;
+
+---
+
+### PR 8 — **feat(import): unify Cardmarket “IDs first” + idempotency**
+
+**Files**
+
+* `src/features/pricing/ScryfallProvider.ts` — add `getByCardmarketIds(ids: string[])`.
+* `src/features/imports/ImportService.ts` — prefer batch by ID; standardize `externalRef`.
+* `src/workers/cardmarketCsv.ts` — ensure we extract Product IDs and stable row identifiers.
+
+**Hints**
+
+* Batch: `POST /cards/collection` with `{ identifiers: [{ cardmarket_id: '...' }, ...] }`.
+* `externalRef` examples:
+
+    * Transactions: `cardmarket:tx:{ShipmentNr or uniqueRef}`
+    * Orders/articles: `cardmarket:article:{ShipmentNr}:{line}`
+
+**Verify:** Re‑import same CSVs → 0 new rows; logs show batch lookups executed once.  &#x20;
+
+---
+
+### PR 9 — **test: re‑enable critical tests**
+
+**Files**
+
+* `src/test/features/deckImportRegex.test.ts`
+* `src/test/features/scryfallProviderBatch.test.ts`
+* `src/test/features/valuationEngine.test.ts`
+
+**Actions**
+
+* Un‑comment suites; update imports/mocks to match current services; add new test for partial disposal cost basis.
+  **Verify:** `npm test` green. &#x20;
+
+---
+
+## Commands & checks (agent checklist)
+
+1. **Install & build**
+
+    * `npm ci`
+    * `npm run lint && npm run typecheck`
+    * `npm run build`
+
+2. **Run tests**
+
+    * `npm test` (after re‑enabling test files)
+
+3. **Manual QA**
+
+    * Import sample Cardmarket CSV → confirm lots created and prices recorded.&#x20;
+    * Export → clear DB → import backup → confirm lots & links restored.&#x20;
+    * Open `/cards` and sort by **Price**; verify it uses store price points. &#x20;
+    * Install PWA; toggle offline; refresh `/decks` route → app shell loads.&#x20;
+
+4. **Docs/Changelog**
+
+    * Update `docs/AI_CHANGELOG.md` with each PR’s summary (date, scope, verification steps). (You’re already doing this—keep it going.)&#x20;
+
+---
+
+## Notes on a couple of edge cases
+
+* **Money math across currencies:** Your `Money` ops assume same currency; pricing + costs are EUR across the app today, which is fine. If a non‑EUR path ever appears, enforce currency equality in operations. (Watch realized P/L where transaction currency might differ from lot currency.)&#x20;
+
+* **Holdings vs. lots:** The repo treats holdings as transitional (derived). Prefer lots as the single source of truth; if you keep holdings for legacy views, ensure they’re written from lots (not vice‑versa).&#x20;
