@@ -11,9 +11,9 @@
     <div class="card-info">
       <h3 class="card-name">{{ card.name }}</h3>
       <p class="card-set">{{ card.set }} #{{ card.number }}</p>
-      <div v-if="currentPrice" class="card-price">
+      <div v-if="displayPrice" class="card-price">
         <span class="price-label">Current:</span>
-        <span class="price-value">{{ currentPrice.format('de-DE') }}</span>
+        <span class="price-value">{{ displayPrice.format('de-DE') }}</span>
       </div>
       <div v-else-if="loadingPrice" class="price-loading">
         Loading...
@@ -150,6 +150,7 @@ defineOptions({
 // Props
 const props = defineProps<{
   card: any;
+  price?: any; // Optional price prop
 }>();
 
 // Reactive state
@@ -158,6 +159,16 @@ const currentPrice = ref<Money | null>(null);
 const loadingPrice = ref(false);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
+
+// Computed
+const displayPrice = computed(() => {
+  // If price prop is provided, use it
+  if (props.price) {
+    return props.price;
+  }
+  // Otherwise, use the price loaded in the modal
+  return currentPrice.value;
+});
 
 // Computed
 const totalOwnedQuantity = computed(() => {

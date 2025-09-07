@@ -39,6 +39,7 @@
         v-for="card in sortedCards" 
         :key="card.id" 
         :card="card"
+        :price="cardPrices[card.id]"
         class="card-item"
       />
     </div>
