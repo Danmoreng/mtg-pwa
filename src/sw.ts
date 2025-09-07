@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute } from 'workbox-precaching'
-import { registerRoute } from 'workbox-routing'
+import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching'
+import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
@@ -9,6 +9,13 @@ declare let self: ServiceWorkerGlobalScope
 
 // Precache and route manifest
 precacheAndRoute(self.__WB_MANIFEST)
+
+// Add navigation fallback for SPA
+registerRoute(
+  new NavigationRoute(
+    createHandlerBoundToURL('index.html')
+  )
+)
 
 // Cache Scryfall API responses
 registerRoute(

@@ -1,8 +1,12 @@
-/*import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ScryfallProvider } from '../../features/pricing/ScryfallProvider';
 
 // Mock the fetch function
 global.fetch = vi.fn();
+
+// Keep the Scryfall batch test quiet
+const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+afterAll(() => errSpy.mockRestore());
 
 describe('ScryfallProvider Batch Lookup', () => {
   beforeEach(() => {
@@ -93,4 +97,3 @@ describe('ScryfallProvider Batch Lookup', () => {
     expect(result[0].id).toBe('card1');
   });
 });
-*/

@@ -30,9 +30,9 @@ export class ValuationEngine {
 
   // Calculate the cost basis of a card lot
   static async calculateLotCostBasis(lot: CardLot): Promise<Money> {
-    // The cost basis is simply the unit cost multiplied by quantity
     const unitCost = new Money(lot.unitCost, lot.currency || 'EUR');
-    return unitCost.multiply(lot.quantity);
+    const remaining = lot.disposedQuantity ? (lot.quantity - lot.disposedQuantity) : lot.quantity;
+    return unitCost.multiply(remaining);
   }
 
   // Calculate realized P/L from SELL transactions

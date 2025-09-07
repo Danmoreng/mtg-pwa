@@ -17,6 +17,8 @@ export class BackupService {
       data.price_points = await db.price_points.toArray();
       data.valuations = await db.valuations.toArray();
       data.settings = await db.settings.toArray();
+      data.card_lots = await db.card_lots.toArray();            // add card_lots
+      data.scan_sale_links = await db.scan_sale_links.toArray();  // add scan_sale_links
       
       // Return as JSON string
       return JSON.stringify(data, null, 2);
@@ -42,6 +44,8 @@ export class BackupService {
       await db.price_points.clear();
       await db.valuations.clear();
       await db.settings.clear();
+      await db.card_lots.clear();             // add card_lots
+      await db.scan_sale_links.clear();         // add scan_sale_links
       
       // Import data into each table
       if (data.cards) await db.cards.bulkAdd(data.cards);
@@ -53,6 +57,8 @@ export class BackupService {
       if (data.price_points) await db.price_points.bulkAdd(data.price_points);
       if (data.valuations) await db.valuations.bulkAdd(data.valuations);
       if (data.settings) await db.settings.bulkAdd(data.settings);
+      if (data.card_lots) await db.card_lots.bulkAdd(data.card_lots);             // add card_lots
+      if (data.scan_sale_links) await db.scan_sale_links.bulkAdd(data.scan_sale_links); // add scan_sale_links
     } catch (error) {
       console.error('Error importing data:', error);
       throw error;

@@ -15,7 +15,7 @@ describe('Cards Store', () => {
     expect(store.error).toBeNull();
   });
 
-  it('should add a card', () => {
+  it('should add a card', async () => {
     const store = useCardsStore();
     const card = {
       id: 'test-card',
@@ -29,7 +29,7 @@ describe('Cards Store', () => {
       updatedAt: new Date()
     };
 
-    store.addCard(card);
+    await store.addCard(card);
     expect(store.cards).toHaveProperty('test-card');
     expect(store.cards['test-card']).toEqual(card);
   });

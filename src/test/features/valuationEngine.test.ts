@@ -1,4 +1,4 @@
-/*import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ValuationEngine } from '../../features/analytics/ValuationEngine';
 import { Money } from '../../core/Money';
 import { cardLotRepository, pricePointRepository } from '../../data/repos';
@@ -67,12 +67,14 @@ describe('ValuationEngine', () => {
     it('should calculate the cost basis of a card lot', async () => {
       const lot = {
         unitCost: 1000, // 10.00 EUR in cents
-        quantity: 3
+        quantity: 3,
+        disposedQuantity: 1
       };
 
       const costBasis = await ValuationEngine.calculateLotCostBasis(lot);
       expect(costBasis).toBeInstanceOf(Money);
-      expect(costBasis.getCents()).toBe(3000); // 3 * 10.00 EUR
+      // Should calculate cost basis for remaining quantity (3 - 1 = 2)
+      expect(costBasis.getCents()).toBe(2000); // 2 * 10.00 EUR
     });
   });
 
@@ -127,11 +129,13 @@ describe('ValuationEngine', () => {
       vi.mocked(cardLotRepository.getAll).mockResolvedValue([
         {
           unitCost: 1000, // 10.00 EUR in cents
-          quantity: 2
+          quantity: 2,
+          disposedQuantity: 0
         },
         {
           unitCost: 1500, // 15.00 EUR in cents
-          quantity: 1
+          quantity: 1,
+          disposedQuantity: 0
         }
       ]);
 
@@ -160,4 +164,4 @@ describe('ValuationEngine', () => {
       expect(unrealizedPnL.getCents()).toBe(1500);
     });
   });
-});*/
+});
