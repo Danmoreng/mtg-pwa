@@ -28,7 +28,6 @@
             v-for="deckCard in deckCards"
             :key="deckCard.id"
             :card="getCardDetails(deckCard.cardId)"
-            class="card-grid-item"
           />
         </div>
       </div>

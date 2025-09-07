@@ -1,11 +1,15 @@
 import { defineStore } from 'pinia';
 import { cardRepository } from '../data/repos';
+import db from '../data/db';
+import { Money } from '../core/Money';
 import type { Card } from '../data/db';
 
 // Define the state structure for cards
 interface CardsState {
   cards: Record<string, Card>;
+  cardPrices: Record<string, Money>;
   loading: boolean;
+  loadingPrices: boolean;
   error: string | null;
 }
 
@@ -13,7 +17,9 @@ interface CardsState {
 export const useCardsStore = defineStore('cards', {
   state: (): CardsState => ({
     cards: {},
+    cardPrices: {},
     loading: false,
+    loadingPrices: false,
     error: null
   }),
 
@@ -33,6 +39,11 @@ export const useCardsStore = defineStore('cards', {
       return (setCode: string) => {
         return Object.values(state.cards).filter(card => card.setCode === setCode);
       };
+    },
+
+    // Get price for a specific card
+    getCardPrice: (state) => {
+      return (cardId: string) => state.cardPrices[cardId] || null;
     }
   },
 
@@ -55,6 +66,53 @@ export const useCardsStore = defineStore('cards', {
       } finally {
         this.loading = false;
       }
+    },
+
+    // Load prices for all cards from the database
+    async loadCardPrices() {
+      this.loadingPrices = true;
+      this.error = null;
+      
+      try {
+        // Get all price points
+        const allPricePoints = await db.price_points.toArray();
+        
+        // Group by cardId and find most recent for each
+        const pricesMap: Record<string, Money> = {};
+        const grouped: Record<string, any[]> = {};
+        
+        allPricePoints.forEach(point => {
+          if (!grouped[point.cardId]) {
+            grouped[point.cardId] = [];
+          }
+          grouped[point.cardId].push(point);
+        });
+        
+        Object.keys(grouped).forEach(cardId => {
+          const points = grouped[cardId];
+          if (points.length > 0) {
+            // Sort by date descending to get the most recent price
+            points.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
+            const latest = points[0];
+            pricesMap[cardId] = new Money(latest.price, latest.currency);
+          }
+        });
+        
+        this.cardPrices = pricesMap;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to load card prices';
+        console.error('Error loading card prices:', error);
+      } finally {
+        this.loadingPrices = false;
+      }
+    },
+
+    // Load both cards and prices
+    async loadCardsAndPrices() {
+      await Promise.all([
+        this.loadCards(),
+        this.loadCardPrices()
+      ]);
     },
 
     // Add a new card
@@ -91,6 +149,8 @@ export const useCardsStore = defineStore('cards', {
         await cardRepository.delete(id);
         // Update the store
         delete this.cards[id];
+        // Also remove the price
+        delete this.cardPrices[id];
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to remove card';
         console.error('Error removing card:', error);

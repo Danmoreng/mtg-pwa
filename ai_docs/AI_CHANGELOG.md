@@ -2,6 +2,39 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-07 17:30 — fix: Resolve Vue warning about extraneous non-props attributes
+- **Author**: AI (Qwen)
+- **Scope**: src/components/CardComponent.vue, src/features/cards/views/CardsView.vue
+- **Type**: fix
+- **Summary**: Fix Vue warning about extraneous non-props attributes by properly handling class attributes in CardComponent.
+- **Details**:
+  - Removed class attribute from CardComponent usage in CardsView
+  - Added card-item class directly to CardComponent's root element
+  - Fixed Vue warning about non-props attributes not being automatically inherited
+  - Maintained visual styling consistency
+  - Preserved modal dialog functionality
+- **Impact/Risks**: Resolves console warnings without affecting functionality. No breaking changes.
+- **Verification Steps**: `npm run build` completes successfully. No Vue warnings in console when viewing cards.
+
+## 2025-09-07 17:00 — feat: Implement centralized card price management with Pinia store
+- **Author**: AI (Qwen)
+- **Scope**: src/stores/cards.ts, src/components/CardComponent.vue, src/features/cards/views/CardsView.vue
+- **Type**: feat
+- **Summary**: Implement centralized card price management using existing Pinia store instead of props for better data handling and performance.
+- **Details**:
+  - Enhanced cards store with card price management capabilities
+  - Added cardPrices state to store price data for all cards
+  - Implemented loadCardPrices action to fetch and cache price data from database
+  - Added getCardPrice getter for easy price retrieval
+  - Updated CardComponent to use cards store for price data instead of props
+  - Updated CardsView to use cards store instead of local state management
+  - Removed redundant price loading logic from CardsView
+  - Improved loading state handling with combined card and price loading indicators
+  - Eliminated props drilling for price data
+  - Improved performance by centralizing data management
+- **Impact/Risks**: Significant architectural improvement with better performance and maintainability. No breaking changes.
+- **Verification Steps**: `npm run build` completes successfully. Cards view displays prices from store and sorting by price works correctly.
+
 ## 2025-09-07 16:30 — fix: Display card prices in cards overview without opening modal
 - **Author**: AI (Qwen)
 - **Scope**: src/components/CardComponent.vue, src/features/cards/views/CardsView.vue
