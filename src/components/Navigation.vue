@@ -1,31 +1,37 @@
 <template>
-  <nav class="main-nav">
-    <div class="nav-container">
-      <router-link to="/" class="nav-logo">
+  <nav class="navbar navbar-expand-md navbar-light bg-body fixed-top border-bottom">
+    <div class="container-fluid">
+      <router-link to="/" class="navbar-brand">
         MTG Tracker
       </router-link>
-      <ul class="nav-links">
-        <li>
-          <router-link to="/" class="nav-link" :class="{ active: $route.name === 'home' }">
-            Dashboard
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/decks" class="nav-link" :class="{ active: isDecksRoute }">
-            Decks
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/cards" class="nav-link" :class="{ active: $route.name === 'cards' }">
-            Cards
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/import/cardmarket" class="nav-link" :class="{ active: $route.name === 'cardmarket-import' }">
-            Cardmarket Import
-          </router-link>
-        </li>
-      </ul>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <router-link to="/" class="nav-link" :class="{ active: $route.name === 'home' }">
+              Dashboard
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/decks" class="nav-link" :class="{ active: isDecksRoute }">
+              Decks
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/cards" class="nav-link" :class="{ active: $route.name === 'cards' }">
+              Cards
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/import/cardmarket" class="nav-link" :class="{ active: $route.name === 'cardmarket-import' }">
+              Cardmarket Import
+            </router-link>
+          </li>
+        </ul>
+      </div>
     </div>
   </nav>
 </template>
@@ -44,54 +50,4 @@ const isDecksRoute = computed(() => {
 </script>
 
 <style scoped>
-.main-nav {
-  background: var(--color-surface);
-  box-shadow: var(--shadow-md);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 var(--space-lg);
-}
-
-.nav-logo {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  text-decoration: none;
-  padding: var(--space-md) 0;
-}
-
-.nav-links {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  gap: var(--space-md);
-}
-
-.nav-link {
-  display: block;
-  padding: var(--space-md) var(--space-sm);
-  text-decoration: none;
-  color: var(--color-text);
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s;
-}
-
-.nav-link:hover {
-  background: var(--color-background);
-}
-
-.nav-link.active {
-  background: var(--color-primary);
-  color: white;
-}
 </style>

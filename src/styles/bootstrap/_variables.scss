@@ -1,3 +1,5 @@
+// src/styles/bootstrap/_variables.scss
+
 :root {
   /* Colors */
   --color-primary: #2563eb;
@@ -85,3 +87,14 @@ body {
   display: grid;
   gap: var(--space-md);
 }
+
+// Enable CSS variables generation for many Bootstrap tokens.
+$enable-csscustom-properties: true;
+
+// Typography & radius (compile-time examples)
+$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+$border-radius: .375rem; // match your --radius-md
+$border-radius-lg: .5rem;
+$border-radius-sm: .25rem;
+
+// Spacing scale (optional – Bootstrap has its own; keep default unless you need parity)

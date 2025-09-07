@@ -1,30 +1,38 @@
 <template>
   <div class="home">
     <h1>MTG Collection Value Tracker</h1>
-    <div class="dashboard-stats">
-      <div class="stat-card">
-        <h2>Portfolio Value</h2>
-        <p class="stat-value">{{ portfolioValue }}</p>
+    <div class="dashboard-stats row g-4">
+      <div class="col-lg-3 col-md-6">
+        <div class="stat-card h-100">
+          <h2>Portfolio Value</h2>
+          <p class="stat-value">{{ portfolioValue }}</p>
+        </div>
       </div>
-      <div class="stat-card">
-        <h2>Total Cost</h2>
-        <p class="stat-value">{{ totalCost }}</p>
+      <div class="col-lg-3 col-md-6">
+        <div class="stat-card h-100">
+          <h2>Total Cost</h2>
+          <p class="stat-value">{{ totalCost }}</p>
+        </div>
       </div>
-      <div class="stat-card">
-        <h2>Unrealized P/L</h2>
-        <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">
-          {{ unrealizedPL }}
-        </p>
+      <div class="col-lg-3 col-md-6">
+        <div class="stat-card h-100">
+          <h2>Unrealized P/L</h2>
+          <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">
+            {{ unrealizedPL }}
+          </p>
+        </div>
       </div>
-      <div class="stat-card">
-        <h2>Realized P/L</h2>
-        <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">
-          {{ realizedPL }}
-        </p>
+      <div class="col-lg-3 col-md-6">
+        <div class="stat-card h-100">
+          <h2>Realized P/L</h2>
+          <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">
+            {{ realizedPL }}
+          </p>
+        </div>
       </div>
     </div>
     <div class="actions">
-      <button @click="refreshPrices">Refresh Prices</button>
+      <button @click="refreshPrices" class="btn btn-primary">Refresh Prices</button>
     </div>
   </div>
 </template>
@@ -112,9 +120,6 @@ onMounted(async () => {
 }
 
 .dashboard-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-lg);
   margin: var(--space-xl) 0;
 }
 
@@ -153,16 +158,11 @@ onMounted(async () => {
   margin-top: var(--space-xl);
 }
 
-button {
-  padding: var(--space-sm) var(--space-lg);
-}
-
 .import-section {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   margin-top: var(--space-xl);
-  box-shadow: var(--shadow-md);
 }
 
 .import-section h2 {

@@ -18,19 +18,20 @@
       </router-link>
     </div>
     
-    <div v-else class="decks-grid">
+    <div v-else class="row g-4">
       <div 
         v-for="deck in decks" 
         :key="deck.id" 
-        class="deck-card"
-        @click="viewDeck(deck.id)"
+        class="col-lg-4 col-md-6"
       >
-        <h2>{{ deck.name }}</h2>
-        <p class="deck-info">
-          <span class="platform">{{ deck.platform }}</span>
-          <span class="date">{{ formatDate(deck.importedAt) }}</span>
-        </p>
-        <p class="card-count">{{ getCardCount(deck.id) }} cards</p>
+        <div class="deck-card h-100" @click="viewDeck(deck.id)">
+          <h2>{{ deck.name }}</h2>
+          <p class="deck-info">
+            <span class="platform">{{ deck.platform }}</span>
+            <span class="date">{{ formatDate(deck.importedAt) }}</span>
+          </p>
+          <p class="card-count">{{ getCardCount(deck.id) }} cards</p>
+        </div>
       </div>
     </div>
   </div>
@@ -130,12 +131,6 @@ onMounted(() => {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
   margin-bottom: var(--space-lg);
-}
-
-.decks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-lg);
 }
 
 .deck-card {

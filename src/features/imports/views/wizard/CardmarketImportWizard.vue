@@ -817,9 +817,6 @@ const getFileType = (fileName: string): string => {
 }
 
 .column-mapping {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-md);
   margin-bottom: var(--space-lg);
 }
 
@@ -909,9 +906,6 @@ const getFileType = (fileName: string): string => {
 }
 
 .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--space-md);
   margin-top: var(--space-md);
 }
 

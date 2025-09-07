@@ -7,18 +7,18 @@
             v-model="searchQuery" 
             type="text" 
             placeholder="Search cards..." 
-            class="search-input"
+            class="form-control"
           />
         </div>
         <div class="sort-controls">
-          <select v-model="sortBy" class="sort-select">
+          <select v-model="sortBy" class="form-select">
             <option value="name">Name</option>
             <option value="set">Set</option>
             <option value="price">Price</option>
             <option value="releasedAt">Release Date</option>
             <option value="owned">Owned Quantity</option>
           </select>
-          <button @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'" class="sort-direction-button">
+          <button @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'" class="btn btn-outline-primary">
             {{ sortDirection === 'asc' ? '↑' : '↓' }}
           </button>
         </div>
@@ -34,12 +34,14 @@
       <p v-else>You don't have any cards in your collection yet.</p>
     </div>
     
-    <div v-else class="cards-grid">
-      <CardComponent
+    <div v-else class="row g-4">
+      <div 
         v-for="card in sortedCards" 
         :key="card.id" 
-        :card="card"
-      />
+        class="col-xl-2 col-lg-3 col-md-4 col-sm-6"
+      >
+        <CardComponent :card="card" />
+      </div>
     </div>
   </div>
 </template>
@@ -152,50 +154,6 @@ onMounted(() => {
   align-items: center;
 }
 
-.sort-select {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface);
-  font-size: var(--font-size-base);
-  color: var(--color-text);
-}
-
-.sort-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-.sort-direction-button {
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  transition: background-color 0.2s;
-}
-
-.sort-direction-button:hover {
-  background: var(--color-primary-dark);
-}
-
-.search-input {
-  width: 100%;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
 .loading,
 .empty-state {
   text-align: center;
@@ -206,12 +164,6 @@ onMounted(() => {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
   margin: 0;
-}
-
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--space-lg);
 }
 
 .card-item {
