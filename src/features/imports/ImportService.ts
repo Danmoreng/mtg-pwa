@@ -4,6 +4,7 @@ import { Money } from '../../core/Money';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import { resolveSetCode } from '../pricing/SetCodeResolver';
 import db from '../../data/db';
+import type { Card, CardLot } from '../../data/db';
 
 export class ImportService {
   // Import Cardmarket transactions
@@ -229,7 +230,7 @@ export class ImportService {
             // Try to extract collector number from the card name for the card record using enhanced parsing
             let collectorNumberForRecord = extractCollectorNumber(article.name);
 
-          const cardRecord = {
+            const cardRecord: Card = {
               id: cardId,
               oracleId: scryfallData?.oracle_id || cardData?.oracle_id || '',
               name: article.name,
@@ -303,11 +304,12 @@ export class ImportService {
         }
         
         // Create card lot record if card was bought
+        let lotIdForTransaction: string | undefined = undefined;
         if (article.direction === 'purchase') {
           // Check if we already have a lot for this card without a purchase transaction
           // This would be the case if we imported a deck first and then the Cardmarket purchase
           const existingLots = await cardLotRepository.getByCardId(cardId || '');
-          let lotToLink = null;
+          let lotToLink: CardLot | null = null;
           
           // Look for a lot that doesn't have a purchase transaction yet
           for (const lot of existingLots) {
@@ -329,39 +331,32 @@ export class ImportService {
               purchasedAt: new Date(article.dateOfPurchase),
               updatedAt: now
             });
+            
+            lotIdForTransaction = lotToLink.id;
           } else {
             // Create a new lot for this purchase
             const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
-            const lot = {
-                  id: lotId,
-                  cardId: cardId || '', // Will be empty if not resolved
-                  quantity: parseInt(article.amount) || 1,
-                  unitCost: price.getCents(),
-                  condition: '', // Not available in articles CSV
-                  language: '', // Not available in articles CSV
-                  foil: false, // Not available in articles CSV
-                  finish: 'nonfoil', // Default to nonfoil
-                  source: 'cardmarket',
-                  currency: 'EUR', // Add currency
-                  purchasedAt: new Date(article.dateOfPurchase),
-                  createdAt: now,
-                  updatedAt: now
-                };
+            const lot: CardLot = {
+              id: lotId,
+              cardId: cardId || '', // Will be empty if not resolved
+              quantity: parseInt(article.amount) || 1,
+              unitCost: price.getCents(),
+              condition: '', // Not available in articles CSV
+              language: '', // Not available in articles CSV
+              foil: false, // Not available in articles CSV
+              finish: 'nonfoil', // Default to nonfoil
+              source: 'cardmarket',
+              currency: 'EUR', // Add currency
+              purchasedAt: new Date(article.dateOfPurchase),
+              createdAt: now,
+              updatedAt: now
+            };
             
             // Save lot
             await cardLotRepository.add(lot);
-          }
-        }
-        
-        // Find the lot we just created or updated
-        let lotIdForTransaction: string | undefined = undefined;
-        if (article.direction === 'purchase') {
-          const lots = await cardLotRepository.getByCardId(cardId || '');
-          // Get the most recently updated lot
-          lots.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-          if (lots.length > 0) {
-            lotIdForTransaction = lots[0].id;
+            
+            lotIdForTransaction = lotId;
           }
         }
         
@@ -390,5 +385,85 @@ export class ImportService {
       console.error('Error importing Cardmarket articles:', error);
       throw error;
     }
+  }
+  
+  // Get or create lot for a card purchase
+  static async getOrCreateLotForPurchase(cardId: string, quantity: number, unitCost: number, purchaseDate: Date): Promise<string> {
+    const now = new Date();
+    
+    // Check if we already have a lot for this card without a purchase transaction
+    const existingLots = await cardLotRepository.getByCardId(cardId);
+    
+    // Look for a lot that doesn't have a purchase transaction yet
+    for (const lot of existingLots) {
+      // Check if this lot already has a purchase transaction linked to it
+      const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
+      const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
+      
+      if (!hasPurchaseTransaction) {
+        // Update the existing lot with purchase information
+        await cardLotRepository.update(lot.id, {
+          unitCost: unitCost,
+          quantity: lot.quantity + quantity, // Add to existing quantity
+          source: 'cardmarket',
+          purchasedAt: purchaseDate,
+          updatedAt: now
+        });
+        
+        return lot.id;
+      }
+    }
+    
+    // Create a new lot for this purchase
+    const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const lot: CardLot = {
+      id: lotId,
+      cardId: cardId,
+      quantity: quantity,
+      unitCost: unitCost,
+      condition: 'NM', // Default condition
+      language: 'en', // Default language
+      foil: false, // Default to nonfoil
+      finish: 'nonfoil', // Default to nonfoil
+      source: 'cardmarket',
+      currency: 'EUR',
+      purchasedAt: purchaseDate,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    // Save lot
+    await cardLotRepository.add(lot);
+    
+    return lotId;
+  }
+  
+  // Get lot for a card sale
+  static async getLotForSale(cardId: string, saleDate: Date, quantity: number): Promise<{ lotId: string, remainingQuantity: number } | null> {
+    // Get all active lots for this card, sorted by purchase date (FIFO)
+    const lots = await cardLotRepository.getByCardId(cardId);
+    
+    // Filter and sort lots by purchase date (FIFO)
+    const activeLots = lots
+      .filter(lot => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity))
+      .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime());
+    
+    // Try to find a lot that can fulfill this sale
+    for (const lot of activeLots) {
+      // Calculate how many items from this lot are still available
+      const availableQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
+      
+      if (availableQuantity >= quantity) {
+        // This lot can fulfill the entire sale
+        return { 
+          lotId: lot.id, 
+          remainingQuantity: availableQuantity - quantity 
+        };
+      }
+    }
+    
+    // No single lot can fulfill the entire sale
+    return null;
   }
 }
