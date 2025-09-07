@@ -1,6 +1,6 @@
 # Architecture (Authoritative)
 
-_Status updated: 2025-09-02_
+_Status updated: 2025-09-07_
 
 ## Overview
 
@@ -215,6 +215,12 @@ The application implements a comprehensive offline strategy:
   - Resolved database constraint errors during import
   - Improved deck detail view with grid layout and card images
 - **Data Integrity**: Enhanced ownership calculation and display
+- **Card Data Management**: 
+  - Implemented centralized card price management using Pinia store
+  - Eliminated props drilling for card data between components
+  - Improved performance by centralizing data loading and caching
+  - Fixed Vue warnings about non-props attributes
+  - Enhanced CardComponent with modal dialog for detailed information
 
 ### ✅ Key Services Implemented
 - Money utility for financial calculations
@@ -238,7 +244,8 @@ The application implements a comprehensive offline strategy:
 - Rate-limited API requests
 
 ### State Management
-- Pinia stores for cards, holdings, transactions, decks, and settings
+- Enhanced Pinia stores with improved card price management capabilities
+- Cards store now handles both card data and price data centrally
 - Unified MTG store that combines all individual stores
 
 ### UI Components

@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-07 18:00 — docs: Update documentation to reflect recent improvements and fix paths
+- **Author**: AI (Qwen)
+- **Scope**: README.md, ai_docs/ARCHITECTURE.md, ai_docs/ROADMAP.md
+- **Type**: docs
+- **Summary**: Update documentation to reflect recent improvements and fix incorrect documentation paths.
+- **Details**:
+  - Updated README.md with correct documentation paths pointing to ai_docs directory
+  - Updated ARCHITECTURE.md to reflect recent card data management improvements
+  - Added "Card Data Management" to Enhanced Core Features section
+  - Enhanced State Management section to reflect improved Pinia store capabilities
+  - Updated status date in ARCHITECTURE.md to 2025-09-07
+  - Updated status date in ROADMAP.md to 2025-09-07
+- **Impact/Risks**: Documentation updates only. No code changes or breaking changes.
+- **Verification Steps**: Review updated documentation files for accuracy and correct paths.
+
 ## 2025-09-07 17:30 — fix: Resolve Vue warning about extraneous non-props attributes
 - **Author**: AI (Qwen)
 - **Scope**: src/components/CardComponent.vue, src/features/cards/views/CardsView.vue
