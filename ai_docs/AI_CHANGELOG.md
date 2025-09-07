@@ -58,7 +58,7 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 
 ## 2025-09-05 16:00 — docs: Document Cardmarket import fixes and implementation approach
 - **Author**: AI (Qwen)
-- **Scope**: docs/CARDMARKET_IMPORT_FIXES.md
+- **Scope**: ai_docs/CARDMARKET_IMPORT_FIXES.md
 - **Type**: docs
 - **Summary**: Create comprehensive documentation for fixing Cardmarket import issues with set code resolution and product ID lookups.
 - **Details**:
@@ -203,7 +203,7 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 
 ## 2025-09-02 15:00 — docs: Restructure documentation to reduce sprawl
 - **Author**: AI (Qwen)
-- **Scope**: README.md, docs/ARCHITECTURE.md, docs/IMPORTERS.md, docs/ROADMAP.md, docs/QWEN.md, .github/pull_request_template.md
+- **Scope**: README.md, ai_docs/ARCHITECTURE.md, ai_docs/IMPORTERS.md, ai_docs/ROADMAP.md, ai_docs/QWEN.md, .github/pull_request_template.md
 - **Type**: docs
 - **Summary**: Restructured documentation according to lean structure to reduce sprawl and improve organization.
 - **Details**:
@@ -328,7 +328,7 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 
 ## 2025-09-01 12:00 — docs: Update implementation status based on code review
 - **Author**: AI (Qwen)
-- **Scope**: docs/implementation-checklist.md, .github/issues/
+- **Scope**: ai_docs/implementation-checklist.md, .github/issues/
 - **Type**: chore
 - **Summary**: Updated implementation checklist and issue files to reflect the actual completion status of various milestones based on code review.
 - **Details**:
@@ -346,7 +346,7 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
 
 ## 2025-09-01 11:30 — docs: Create issues and update documentation for planned improvements
 - **Author**: AI (Qwen)
-- **Scope**: .github/issues, docs/implementation-checklist.md, docs/project_plan.md
+- **Scope**: .github/issues, ai_docs/implementation-checklist.md, ai_docs/project_plan.md
 - **Type**: chore
 - **Summary**: Created new issues for historical pricing, API caching, and 24h price caching. Updated implementation checklist and project plan to reflect these enhancements.
 - **Details**:
