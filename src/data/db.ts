@@ -31,6 +31,7 @@ export interface CardLot {
   disposedQuantity?: number;
   saleTransactionId?: string;
   currency?: string; // Add currency property
+  externalRef?: string; // Add external reference for deduplication
   createdAt: Date;
   updatedAt: Date;
 }
@@ -309,6 +310,21 @@ class MtgTrackerDb extends Dexie {
           return undefined;
         }
       });
+    });
+
+    // Version 5 - Add externalRef to card_lots for deduplication
+    this.version(5).stores({
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
+      card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
+      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
+      transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
+      scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
+      decks: 'id, platform, name, importedAt, createdAt, updatedAt',
+      deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
+      price_points: 'id, cardId, provider, currency, asOf, source, createdAt, [cardId+asOf], [provider+asOf]',
+      valuations: 'id, asOf, createdAt, [asOf+createdAt]',
+      settings: 'k, createdAt, updatedAt',
+      scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
     });
   }
 }

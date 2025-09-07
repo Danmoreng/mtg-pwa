@@ -53,6 +53,10 @@ export const cardLotRepository = {
     return await db.card_lots.where('cardId').equals(cardId).toArray();
   },
 
+  async getByExternalRef(externalRef: string): Promise<CardLot[]> {
+    return await db.card_lots.where('externalRef').equals(externalRef).toArray();
+  },
+
   async getActiveLotsByCardId(cardId: string): Promise<CardLot[]> {
     return await db.card_lots
       .where('cardId')

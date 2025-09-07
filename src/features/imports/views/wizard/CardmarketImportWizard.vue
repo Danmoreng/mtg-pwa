@@ -95,6 +95,7 @@
                       <th v-if="fileType.includes('articles')">Price</th>
                       <th v-if="fileType.includes('articles')">Quantity</th>
                       <th v-if="fileType.includes('articles')">Order ID</th>
+                      <th v-if="fileType.includes('articles')">Status</th>
                       <th v-if="fileType.includes('orders')">Order ID</th>
                       <th v-if="fileType.includes('orders')">Username</th>
                       <th v-if="fileType.includes('orders')">Article Count</th>
@@ -116,6 +117,11 @@
                       </td>
                       <td v-if="fileType.includes('articles')">{{ row.amount }}</td>
                       <td v-if="fileType.includes('articles')">{{ row.shipmentId }}</td>
+                      <td v-if="fileType.includes('articles')">
+                        <span :class="isArticleImported(fileType, row) ? 'text-success' : 'text-primary'">
+                          {{ isArticleImported(fileType, row) ? 'Already Imported' : 'New' }}
+                        </span>
+                      </td>
                       <td v-if="fileType.includes('orders')">{{ row.orderId }}</td>
                       <td v-if="fileType.includes('orders')">{{ row.username }}</td>
                       <td v-if="fileType.includes('orders')">{{ row.articleCount }}</td>
@@ -125,9 +131,9 @@
                       </td>
                       <td v-if="fileType === 'transactions'">{{ row.category }}</td>
                       <td v-if="fileType === 'transactions'">{{ row.type }}</td>
-                      <td v-if="fileType === 'transactions'">
-                        {{ formatCurrency(parseFloat(row.amount.replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }}
-                      </td>
+                      <td v-if="fileType === 'transactions'">{{
+                        formatCurrency(parseFloat(row.amount.replace(/[€$£\s]/g, '').replace(',', '.')) * 100)
+                      }}</td>
                     </tr>
                     <tr v-if="getValidRows(parsedData[fileType], fileType).length > 5">
                       <td :colspan="getPreviewColumnCount(fileType)" class="more-rows-cell">
@@ -167,6 +173,52 @@
 
             <div v-for="(fileType, fileTypeKey) in fileTypes" :key="fileTypeKey" class="file-conflicts">
               <h3>{{ getFileTypeName(fileType) }}</h3>
+              
+              <div v-if="fileType.includes('articles') && getImportedRecords(fileType).length > 0" class="conflicts-section">
+                <h4>Already Imported Articles</h4>
+                <p>The following articles have already been imported and will be skipped:</p>
+                
+                <div class="conflicts-list">
+                  <div 
+                    v-for="(row, index) in getImportedRecords(fileType)" 
+                    :key="index" 
+                    class="d-flex justify-content-between align-items-center p-2 bg-light rounded"
+                  >
+                    <div class="flex-grow-1">
+                      <div class="fw-medium">{{ row.name }}</div>
+                      <div class="small text-muted">
+                        {{ row.expansion }} • {{ row.amount }} × {{ formatCurrency(parseFloat(row.price.replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }} • Order #{{ row.shipmentId }}
+                      </div>
+                    </div>
+                    <div class="ms-3">
+                      <span class="text-success fw-medium">Already Imported</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="fileType.includes('articles') && getNewRecords(fileType).length > 0" class="conflicts-section">
+                <h4>New Articles to Import</h4>
+                <p>The following articles will be imported:</p>
+                
+                <div class="conflicts-list">
+                  <div 
+                    v-for="(row, index) in getNewRecords(fileType).filter(row => !isArticleImported(fileType, row))" 
+                    :key="index" 
+                    class="d-flex justify-content-between align-items-center p-2 bg-light rounded"
+                  >
+                    <div class="flex-grow-1">
+                      <div class="fw-medium">{{ row.name }}</div>
+                      <div class="small text-muted">
+                        {{ row.expansion }} • {{ row.amount }} × {{ formatCurrency(parseFloat(row.price.replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }} • Order #{{ row.shipmentId }}
+                      </div>
+                    </div>
+                    <div class="ms-3">
+                      <span class="text-primary fw-medium">New</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -186,6 +238,10 @@
                 <div class="stat">
                   <div class="stat-value">{{ getInvalidRows(parsedData[fileType] || [], fileType).length }}</div>
                   <div class="stat-label">Invalid Rows</div>
+                </div>
+                <div v-if="fileType.includes('articles')" class="stat">
+                  <div class="stat-value">{{ getImportedRecords(fileType).length }}</div>
+                  <div class="stat-label">Already Imported</div>
                 </div>
               </div>
             </div>
@@ -272,12 +328,15 @@ const fileTypes = ref<Record<string, string>>({});
 // Parsed data for each file type
 const parsedData = ref<Record<string, any[]>>({});
 
-// Errors
-const errors = ref<string[]>([]);
-
 // Import status
 const importStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 const isImporting = ref(false);
+
+// Existing imports check
+const existingImports = ref<Record<string, boolean>>({});
+
+// Errors
+const errors = ref<string[]>([]);
 
 // Format file size
 const formatFileSize = (bytes: number): string => {
@@ -409,6 +468,9 @@ const autoDetectAndParse = async () => {
       // Clean up worker
       worker.terminate();
     }
+    
+    // Check for existing imports
+    await checkForExistingImports();
   } catch (error) {
     errors.value.push('Failed to parse CSV data: ' + (error as Error).message);
   }
@@ -500,6 +562,12 @@ const getNewRecords = (fileType: string): any[] => {
   // In a real implementation, this would filter out duplicates
   // For now, we'll return all valid rows
   return getValidRows(parsedData.value[fileType] || [], fileType);
+};
+
+// Get imported records for a file type
+const getImportedRecords = (fileType: string): any[] => {
+  const validRows = getValidRows(parsedData.value[fileType] || [], fileType);
+  return validRows.filter(row => isArticleImported(fileType, row));
 };
 
 // Get total parsed rows across all file types
@@ -598,7 +666,7 @@ const getPreviewColumnCount = (fileType: string): number => {
       return 6;
     case 'sold-articles':
     case 'purchased-articles':
-      return 7;
+      return 8; // Added status column
     default:
       return 5;
   }
@@ -714,6 +782,36 @@ const getFileType = (fileName: string): string => {
   if (name.includes('purchased articles')) return 'purchased-articles';
   return 'unknown';
 };
+
+// Check for existing imports
+const checkForExistingImports = async () => {
+  try {
+    // Reset existing imports
+    existingImports.value = {};
+    
+    // Check each file type
+    for (const [fileType, rows] of Object.entries(parsedData.value)) {
+      if (!rows || rows.length === 0) continue;
+      
+      // Only check articles for now
+      if (fileType.includes('articles')) {
+        const results = await ImportService.checkForExistingImports(rows);
+        for (const result of results) {
+          const key = `${fileType}:${result.article.shipmentId}:${result.article.lineNumber}`;
+          existingImports.value[key] = result.exists;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking for existing imports:', error);
+  }
+};
+
+// Check if an article already exists
+const isArticleImported = (fileType: string, article: any): boolean => {
+  const key = `${fileType}:${article.shipmentId}:${article.lineNumber}`;
+  return !!existingImports.value[key];
+};
 </script>
 
 <style scoped>
@@ -791,6 +889,24 @@ const getFileType = (fileName: string): string => {
 
 .step-content h2 {
   margin-top: 0;
+}
+
+.conflicts-section {
+  margin-bottom: var(--space-lg);
+}
+
+.conflicts-section h4 {
+  margin-bottom: var(--space-sm);
+}
+
+.conflicts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.conflict-info {
+  flex: 1;
 }
 
 .file-upload-section {
