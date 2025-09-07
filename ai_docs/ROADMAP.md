@@ -1,156 +1,83 @@
-# Roadmap (Authoritative)
+# ROADMAP.md
 
-_Status updated: 2025-09-07_
+## TL;DR Status
+- **M2: Enhanced Data Model** — ✅ Complete  
+- **M3: Cardmarket Import (UI & polish)** — ⏳ ~85–90%  
+- **M4: Pricing & Automatic Tracking** — ⏳ In progress  
+- **M6: Moxfield Decks** — ⏳ ~90%  
+
+---
 
 ## Now
-- Implement enhanced data model for lot-based card tracking
-- Migrate database schema to support individual card tracking
-- Update valuation engine to work with new data model
-- Remove manual snapshot functionality
+- SW navigation fallback for SPA routes  
+- Backup includes lots and provenance  
+- Compute deck coverage from lots  
+- Idempotency consistency across Cardmarket ingests  
+- Regex fix in deck text import  
+- Branding polish: PWA icons, title/favicon  
+- ESLint config: flat config only  
+- `.ts` SFC imports cleanup  
+- Docs refresh (align with lots + wizard)  
 
 ## Next
-- Finish Cardmarket Import wizard (idempotent, error surfaces)
-- Finalize automatic daily price tracking
-- Fix ESLint/TS configuration issues
+- **M4 complete**  
+  - Batch price sync by set; 24h TTL; exponential backoff  
+  - Show last/next price update (card + dashboard)  
+  - Valuation uses only `price_points`  
+- **Tests**  
+  - Idempotency  
+  - SetCodeResolver edge cases  
+  - FIFO math with partial disposals  
+- **Performance**  
+  - Virtualized card grids/tables  
+  - Chunked CSV processing with progress  
 
 ## Later
-- ManaBox scans + Sold/Owned matching with provenance tracking
-- Moxfield polish (Need list export)
-- PWA offline staging + background sync
-- Analytics deep-dive: KPIs, per-card FIFO P/L, time series chart
-- UI component refactor (tables, virtualized lists)
-- Historical pricing analysis tools
+- **M5: ManaBox scans + Sold/Owned matching**  
+- **M7: Offline UX** (background sync + import retry)  
+- **M8: Analytics deep-dive** (KPIs, P/L charts)  
+- UI refactor with tokens and reusable components  
+
+---
 
 ## Milestones & Acceptance
 
-### M2: Enhanced Data Model (New Foundation)
+### M2 — Enhanced Data Model (✅)
+**Outcome:** Lot-based inventory + provenance  
+**Acceptance:** Traceable purchase → scan → deck/sale; valuation constrained to lots  
 
-**Outcome:** Individual card tracking with lot-based acquisitions and disposals; detailed provenance tracking from purchase → scan → deck/sale.
+### M3 — Cardmarket Import (⏳ ~85–90%)
+**Outcome:** Idempotent, pleasant import UX  
+**Tasks:** Wizard complete; unify idempotency keys; tests  
+**Acceptance:** Re-import = zero changes  
 
-**Key Tasks:**
-- Implement CardLot entity for tracking individual card acquisitions
-- Update Transaction entity to support lot tracking
-- Enhance Scan entity for better provenance tracking
-- Update DeckCard entity to track specific lots
-- Modify ValuationEngine to work with new data model
-- Remove manual snapshot functionality
-- Implement automatic daily price tracking
+### M4 — Pricing & Automatic Tracking (⏳)
+**Outcome:** Trustworthy current value + history  
+**Tasks:** Worker scheduling; UI surfacing; valuation from `price_points`  
+**Acceptance:** Daily automatic updates, accurate history  
 
-**Acceptance:** Each physical card can be traced through its entire lifecycle with accurate cost basis tracking. Portfolio valuation correctly accounts for individual card transactions.
+### M5 — ManaBox Scans + Matching
+**Outcome:** Sold vs owned clear via provenance  
 
-### M3 Finish: Cardmarket Import (UI & polish)
+### M6 — Moxfield Decks (⏳ ~90%)
+**Outcome:** Coverage from lots; export need list  
+**Acceptance:** Handles private decks + missing images  
 
-**Outcome:** fully idempotent, pleasant import UX; holdings & valuation update deterministically.
+### M7 — PWA & Offline UX
+**Outcome:** Offline-first, resilient sync/import  
 
-**Key Tasks:**
-- Complete Import Wizard screens (drop/preview → column map → conflicts → summary)
-- Strict idempotency: `externalRef = cardmarket:{orderId}:{lineNo}`
-- Error surfaces: unknown set/number, currency parse, malformed rows
-- Unit tests: parser variants; repo writes; dupe-skip
+### M8 — Analytics Deep-Dive
+**Outcome:** KPIs + charts + reconciled FIFO math  
 
-**Acceptance:** Importing the same CSV twice changes **0** rows; dashboard updates immediately.
+---
 
-**Linked Issues:** 
-- #03-import-wizard-framework.md
-- #04-cardmarket-csv-parser.md
+## Quality Track
+- Strict TypeScript + ESLint hygiene  
+- Vitest unit tests + Playwright happy path  
+- Structured logs for imports; row-level counters  
 
-### M4: Pricing & Automatic Tracking (ship it)
+---
 
-**Outcome:** "Current value" and "History" are trustworthy without manual fiddling.
-
-**Key Tasks:**
-- Price sync worker: batch by set; respect 24h TTL; exponential backoff
-- Automatic daily price tracking (no manual "Take snapshot" action)
-- Use **price_points** as the only source for valuation (no live calls during calc)
-- Display "Last price update" + "Next eligible update" per card
-
-**Acceptance:** Prices are automatically updated daily; historical tracking is accurate and complete.
-
-**Linked Issues:**
-- #07-historical-pricing.md
-- #08-scryfall-api-caching.md
-- #09-24h-price-caching.md
-
-### M5: ManaBox Scans + Sold/Owned Matching
-
-**Outcome:** Scanned rares clearly marked **Sold** or **Still owned**; traceable to sale with full provenance.
-
-**Key Tasks:**
-- ManaBox CSV worker: variant detection; `cardFingerprint` from `(name,set,collector,finish,language)`
-- Enhanced matching algorithm with lot tracking (greedy FIFO by sale date)
-- Scans view with filters; per-scan sale link; partial matches supported
-- Reconciliation job re-runs when a fingerprint becomes a `cardId`
-
-**Acceptance:** Import scans → selling the same card later marks the corresponding scans as **Sold** with sale reference and lot tracking.
-
-**Linked Issues:**
-- #06-manabox-scans-matching.md
-
-### M6 Wrap: Moxfield Decks (90% → Done)
-
-**Outcome:** Deck page clearly shows ownership coverage and missing pieces.
-
-**Key Tasks:**
-- Empty/edge cases (private deck, missing images)
-- "Owned / Need / Extra" breakdown; export "Need list" CSV
-- Retry/resume import on failure
-
-**Acceptance:** Given a deck URL, details load without blocking UI; ownership % is correct for proxy and language variants.
-
-**Linked Issues:**
-- #05-valuation-engine-dashboard.md (partially)
-
-### M7: PWA Polish & Offline UX
-
-**Outcome:** Offline-first, resilient; imports and price sync recover gracefully.
-
-**Key Tasks:**
-- SW caching strategies: `app-shell`, `images`, `scryfall`, `moxfield`
-- Background sync (periodic & on-retry) for price updates
-- Offline import staging: store file + parse result, apply writes when online
-- Backup/restore JSON (full DB)
-
-**Acceptance:** Turn off network: app still opens, holdings visible, staged imports queue until online.
-
-**Linked Issues:**
-- #10-pinia-state-management.md (partially)
-
-### M8: Analytics Deep-Dive
-
-**Outcome:** Clear KPIs and history, per-card P/L with FIFO.
-
-**Key Tasks:**
-- KPIs: Money Spent, Sales (net fees/ship), Realized P/L, Unrealized P/L
-- Per-card lots, FIFO cost basis, realized/unrealized split
-- Time series chart from snapshots (SVG, no lib); tooltips and range selector
-
-**Acceptance:** KPIs match test fixtures; per-card detail shows lot math that reconciles to totals.
-
-**Linked Issues:**
-- #05-valuation-engine-dashboard.md (partially)
-- #11-ui-component-refactoring.md (partially)
-
-## Cross-Cutting "Quality First" Track
-
-### Lint/Type hygiene (do this first)
-- Fix ESLint and TS config; enable `strict: true`, `noUncheckedIndexedAccess`, and path aliases
-- Pre-commit hook: `eslint --max-warnings=0` + `tsc --noEmit`
-
-### Testing (get signal early)
-- Vitest: Money math, CSV parsers, FIFO, matching algorithm
-- Playwright "happy path": import → price sync → snapshot → dashboard checks
-
-### Performance
-- Web workers for all heavy tasks; chunk large CSV imports; virtualized tables in holdings
-- IndexedDB: compound indices for `(cardId, happenedAt)` and `(fingerprint, scannedAt)`
-
-### UX consistency (no UI lib, but tidy)
-- Small design tokens, reusable table/card/button components, consistent spacing & keyboard focus
-
-## Non-Goals & Constraints
-
-- Client-only application (no server required)
-- Primary currency: EUR (extensible to other currencies later)
-- No secrets stored in client (Scryfall public pricing only)
-- Plain CSS only (no external UI libraries)
-- Offline-first design
+## Migration Notes
+- On restore, derive holdings from lots if legacy views need them  
+- All exports include `card_lots` & `scan_sale_links`  
