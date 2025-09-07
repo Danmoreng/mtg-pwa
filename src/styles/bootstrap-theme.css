@@ -67,6 +67,26 @@
   --bs-border-color: var(--color-border);
 }
 
+/* Dark theme variables - support both data-theme and data-bs-theme */
+[data-theme="dark"],
+[data-bs-theme="dark"] {
+  --color-primary: #60a5fa;
+  --color-primary-hover: #3b82f6;
+  --color-secondary: #94a3b8;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+  
+  --bs-body-bg: var(--color-background);
+  --bs-body-color: var(--color-text);
+  --bs-border-color: var(--color-border);
+}
+
 /* Reset styles */
 *,
 *::before,
@@ -101,10 +121,3 @@ body {
   display: grid;
   gap: var(--space-md);
 }
-
-/* Optional: dark theme hook
-html[data-bs-theme='dark'] {
-  --bs-body-bg: #0b1220;
-  --bs-body-color: #e5e7eb;
-  --bs-primary: #60a5fa;
-} */

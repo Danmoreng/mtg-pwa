@@ -9,7 +9,7 @@
         <span class="navbar-toggler-icon"></span>
       </button>
       <div id="navbarNav" class="collapse navbar-collapse" :class="{ show: isOpen }">
-        <ul class="navbar-nav">
+        <ul class="navbar-nav me-auto">
           <li class="nav-item">
             <router-link to="/" class="nav-link" :class="{ active: route.name === 'home' }">
               Dashboard
@@ -31,6 +31,9 @@
             </router-link>
           </li>
         </ul>
+        <div class="d-flex">
+          <ThemeSwitcher />
+        </div>
       </div>
     </div>
   </nav>
@@ -39,6 +42,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import ThemeSwitcher from './ThemeSwitcher.vue';
 
 // Route
 const route = useRoute();
