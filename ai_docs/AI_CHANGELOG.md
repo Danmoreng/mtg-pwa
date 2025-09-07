@@ -2,6 +2,20 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-07 16:00 — fix: Restore price sorting functionality in cards overview
+- **Author**: AI (Qwen)
+- **Scope**: src/features/cards/views/CardsView.vue
+- **Type**: fix
+- **Summary**: Fix cards overview to restore ability to sort by price after unifying card component.
+- **Details**:
+  - Re-implemented price data loading in CardsView to enable sorting by price
+  - Added cardPrices reactive object to store price data for all cards
+  - Implemented loadCardPrices method to fetch price data from database
+  - Updated sortedCards computed property to use price data for sorting
+  - Fixed issue where sorting by price was not working after card component unification
+- **Impact/Risks**: Restores missing functionality without breaking changes. Improves user experience.
+- **Verification Steps**: `npm run build` completes successfully. Cards view can now be sorted by price.
+
 ## 2025-09-07 15:00 — feat: Enhance lot-based valuation engine and import services
 - **Author**: AI (Qwen)
 - **Scope**: src/features/analytics/ValuationEngine.ts, src/features/scans/ScanMatchingService.ts, src/features/imports/ImportService.ts
