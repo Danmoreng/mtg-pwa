@@ -2,6 +2,20 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-07 16:30 — fix: Display card prices in cards overview without opening modal
+- **Author**: AI (Qwen)
+- **Scope**: src/components/CardComponent.vue, src/features/cards/views/CardsView.vue
+- **Type**: fix
+- **Summary**: Fix cards overview to display card prices without requiring modal to be opened.
+- **Details**:
+  - Modified CardComponent to accept optional price prop
+  - Updated CardComponent to use price prop when available instead of only loading when modal opens
+  - Updated CardsView to pass price data to CardComponent instances
+  - Added displayPrice computed property to handle both prop-based and modal-loaded prices
+  - Fixed issue where card prices were only visible after opening the modal dialog
+- **Impact/Risks**: Restores missing functionality without breaking changes. Improves user experience.
+- **Verification Steps**: `npm run build` completes successfully. Cards view displays prices without opening modal.
+
 ## 2025-09-07 16:00 — fix: Restore price sorting functionality in cards overview
 - **Author**: AI (Qwen)
 - **Scope**: src/features/cards/views/CardsView.vue
