@@ -31,6 +31,7 @@
 - **DO**: Include data model/migration steps when touching Dexie.
 - **DO**: Provide unit/E2E test specs and fixtures.
 - **DO**: Supply documentation updates when altering behavior.
+- **DO**: Use **Bootstrap 5 utility classes** for styling and **Reka UI** components for interactive elements.
 
 ## Communication Guidelines
 
@@ -52,7 +53,8 @@
 - **Vue 3** (Vite) + **TypeScript**
 - **PWA** (service worker + offline shell)
 - **IndexedDB via Dexie** for storage & migrations
-- **Plain CSS** (scoped/CSS modules), no UI library
+- **Bootstrap 5** for CSS styling and layout
+- **Reka UI** for unstyled Vue.js components
 - **Web Workers** for CSV parsing and price/snapshot jobs
 
 ### Key Product Components (from the project plan)
@@ -184,6 +186,7 @@ Additionally, for each proposed commit message, prefix with `[AI]` and use Conve
 - **Accessibility**: keyboard focus, proper labels, high contrast.
 - **Performance**: virtualize large tables; avoid main‑thread blocking.
 - **Privacy**: local‑first, no secrets in client; optional proxy for Cardmarket later.
+- **Styling**: Use **Bootstrap 5 utility classes** for layout and styling. For components, use **Reka UI** unstyled components when available, or Bootstrap components when appropriate.
 
 ## Ready‑Made Templates (the AI may propose these files)
 
@@ -214,7 +217,41 @@ Additionally, for each proposed commit message, prefix with `[AI]` and use Conve
 (Initialize this file; see format in the main instructions.)
 ```
 
-## Task Intake Checklist (for the AI)
+### UI Component Usage
+
+When implementing UI components, follow these guidelines:
+
+1. **Use Bootstrap 5 utility classes** for layout, spacing, and basic styling
+2. **Use Reka UI components** for interactive elements like dialogs, dropdowns, and form controls
+3. **Use Bootstrap components** for simple UI elements like buttons, cards, and navigation
+4. **Avoid custom CSS** unless absolutely necessary - prefer utility classes
+5. **Follow existing patterns** in the codebase for consistency
+
+Example of proper component usage:
+```vue
+<template>
+  <!-- Bootstrap layout and styling -->
+  <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+    <!-- Reka UI interactive component -->
+    <DialogRoot v-model:open="showDialog">
+      <DialogTrigger as-child>
+        <button class="btn btn-primary">Open Dialog</button>
+      </DialogTrigger>
+      <DialogPortal>
+        <DialogOverlay class="modal-backdrop fade show" />
+        <DialogContent class="modal d-block">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <DialogTitle class="modal-title">Dialog Title</DialogTitle>
+              <DialogDescription>Dialog content</DialogDescription>
+            </div>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+  </div>
+</template>
+```
 
 Before proposing changes, the AI should confirm:
 - **Goal & Acceptance** criteria

@@ -306,20 +306,32 @@ export class ImportService {
         // Create card lot record if card was bought
         let lotIdForTransaction: string | undefined = undefined;
         if (article.direction === 'purchase') {
-          // Check if we already have a lot for this card without a purchase transaction
-          // This would be the case if we imported a deck first and then the Cardmarket purchase
-          const existingLots = await cardLotRepository.getByCardId(cardId || '');
+          // Create external reference for the lot to avoid duplicates
+          const lotExternalRef = `cardmarket:lot:${article.shipmentId}:${article.lineNumber}`;
+          
+          // Check if we already have a lot for this article
+          const existingLots = await cardLotRepository.getByExternalRef(lotExternalRef);
+          
           let lotToLink: CardLot | null = null;
           
-          // Look for a lot that doesn't have a purchase transaction yet
-          for (const lot of existingLots) {
-            // Check if this lot already has a purchase transaction linked to it
-            const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
-            const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
+          if (existingLots.length > 0) {
+            // Use the existing lot
+            lotToLink = existingLots[0];
+          } else {
+            // Check if we already have a lot for this card without a purchase transaction
+            // This would be the case if we imported a deck first and then the Cardmarket purchase
+            const existingCardLots = await cardLotRepository.getByCardId(cardId || '');
             
-            if (!hasPurchaseTransaction) {
-              lotToLink = lot;
-              break;
+            // Look for a lot that doesn't have a purchase transaction yet
+            for (const lot of existingCardLots) {
+              // Check if this lot already has a purchase transaction linked to it
+              const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
+              const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
+              
+              if (!hasPurchaseTransaction) {
+                lotToLink = lot;
+                break;
+              }
             }
           }
           
@@ -348,6 +360,7 @@ export class ImportService {
               finish: 'nonfoil', // Default to nonfoil
               source: 'cardmarket',
               currency: 'EUR', // Add currency
+              externalRef: lotExternalRef, // Add external reference for deduplication
               purchasedAt: new Date(article.dateOfPurchase),
               createdAt: now,
               updatedAt: now
@@ -361,6 +374,12 @@ export class ImportService {
         }
         
         // Create transaction record
+        const transactionExternalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+        
+        // Check if transaction already exists
+        const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
+        if (existingTransaction) continue;
+        
         const transactionRecord = {
           id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
@@ -372,7 +391,7 @@ export class ImportService {
           shipping: 0, // Shipping would be in order records
           currency: 'EUR',
           source: 'cardmarket',
-          externalRef: `cardmarket:article:${article.shipmentId}:${article.lineNumber}`,
+          externalRef: transactionExternalRef,
           happenedAt: new Date(article.dateOfPurchase),
           createdAt: now,
           updatedAt: now
@@ -465,5 +484,25 @@ export class ImportService {
     
     // No single lot can fulfill the entire sale
     return null;
+  }
+  
+  // Check if articles have already been imported
+  static async checkForExistingImports(articles: any[]): Promise<{ article: any, exists: boolean }[]> {
+    const results = [];
+    
+    for (const article of articles) {
+      // Create external reference to check for duplicates
+      const externalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+      
+      // Check if transaction already exists
+      const existing = await db.transactions.where('externalRef').equals(externalRef).first();
+      
+      results.push({
+        article,
+        exists: !!existing
+      });
+    }
+    
+    return results;
   }
 }
