@@ -440,7 +440,7 @@ export class ImportService {
   }
   
   // Get lot for a card sale
-  static async getLotForSale(cardId: string, saleDate: Date, quantity: number): Promise<{ lotId: string, remainingQuantity: number } | null> {
+  static async getLotForSale(cardId: string, quantity: number): Promise<{ lotId: string, remainingQuantity: number } | null> {
     // Get all active lots for this card, sorted by purchase date (FIFO)
     const lots = await cardLotRepository.getByCardId(cardId);
     

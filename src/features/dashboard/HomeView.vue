@@ -174,17 +174,4 @@ onMounted(async () => {
   gap: var(--space-md);
   flex-wrap: wrap;
 }
-
-.import-button {
-  padding: var(--space-sm) var(--space-lg);
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  transition: background-color 0.2s;
-}
-
-.import-button:hover {
-  background: var(--color-primary-dark);
-}
 </style>

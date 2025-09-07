@@ -2,7 +2,7 @@
   <div class="decks-view">
     <div class="header">
       <h1>Decks</h1>
-      <router-link to="/import/deck" class="import-button">
+      <router-link to="/import/deck" class="btn btn-primary">
         Import Deck
       </router-link>
     </div>
@@ -13,7 +13,7 @@
     
     <div v-else-if="decks.length === 0" class="empty-state">
       <p>You haven't imported any decks yet.</p>
-      <router-link to="/import/deck" class="import-button">
+      <router-link to="/import/deck" class="btn btn-primary">
         Import Your First Deck
       </router-link>
     </div>
@@ -106,19 +106,6 @@ onMounted(() => {
 
 .header h1 {
   margin: 0;
-}
-
-.import-button {
-  padding: var(--space-sm) var(--space-lg);
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  transition: background-color 0.2s;
-}
-
-.import-button:hover {
-  background: var(--color-primary-dark);
 }
 
 .loading,

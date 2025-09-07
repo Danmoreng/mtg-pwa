@@ -10,7 +10,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     BootstrapRekaDemo: typeof import('./src/components/BootstrapRekaDemo.vue')['default']
     CardComponent: typeof import('./src/components/CardComponent.vue')['default']
-    HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     Navigation: typeof import('./src/components/Navigation.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
