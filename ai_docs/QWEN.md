@@ -1,7 +1,7 @@
 # Working with the AI (Qwen)
 
 - Human runs all commands; AI proposes patches + tests.
-- Every AI change MUST include a **CHANGELOG ENTRY** appended to `docs/AI_CHANGELOG.md`.
+- Every AI change MUST include a **CHANGELOG ENTRY** appended to `ai_docs/AI_CHANGELOG.md`.
 - Use Conventional Commits with `[AI]` prefix, e.g., `[AI] feat(import): add idempotency key`.
 
 ## Core Principles
@@ -120,7 +120,7 @@ When proposing changes, the AI should reply with these sections:
 4. **Migrations** — Dexie schema version bump + migration code and how to validate.
 5. **Tests** — new/updated unit and E2E tests with file paths.
 6. **Verification** — exact commands for the human to run, expected outputs, and manual UI checks.
-7. **Changelog** — an entry to append to `docs/AI_CHANGELOG.md`.
+7. **Changelog** — an entry to append to `ai_docs/AI_CHANGELOG.md`.
 
 ### Example Verification Commands (run by human)
 ```bash
@@ -133,9 +133,9 @@ npm run dev    # Human runs dev server at http://localhost:5173
 
 ## Changelog Discipline
 
-Maintain a persistent log at **`docs/AI_CHANGELOG.md`**. Each AI proposal must include an entry the human can paste or commit.
+Maintain a persistent log at **`ai_docs/AI_CHANGELOG.md`**. Each AI proposal must include an entry the human can paste or commit.
 
-**File:** `docs/AI_CHANGELOG.md` (create if missing)
+**File:** `ai_docs/AI_CHANGELOG.md` (create if missing)
 ```markdown
 # AI Change Log
 
@@ -205,10 +205,10 @@ Additionally, for each proposed commit message, prefix with `[AI]` and use Conve
 ## Risks & Rollback
 
 ## CHANGELOG ENTRY
-(Paste the entry for docs/AI_CHANGELOG.md)
+(Paste the entry for ai_docs/AI_CHANGELOG.md)
 ```
 
-**2) Changelog file seed** — `docs/AI_CHANGELOG.md`
+**2) Changelog file seed** — `ai_docs/AI_CHANGELOG.md`
 ```markdown
 # AI Change Log
 (Initialize this file; see format in the main instructions.)

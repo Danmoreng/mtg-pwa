@@ -742,7 +742,7 @@ define(['exports'], (function (exports) { 'use strict';
       }
       /**
        * Adds a message event listener for URLs to cache from the window.
-       * This is useful to cache resources loaded on the page prior to when the
+       * This is useful to cache resources loaded on the docs prior to when the
        * service worker started controlling it.
        *
        * The format of the message data sent from the window should be as follows.

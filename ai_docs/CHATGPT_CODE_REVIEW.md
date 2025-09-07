@@ -5,7 +5,7 @@ Below is a focused, actionable review of your MTG Collection Value Tracker repo.
 ## What’s good?
 
 * **Clear, living docs & roadmap.** You ship an “authoritative” architecture, importer specs, and a prioritized roadmap that line up with the code. This makes it easy to reason about scope and next steps.&#x20;
-  (See `docs/ARCHITECTURE.md`, `docs/IMPORTERS.md`, `docs/ROADMAP.md`.)
+  (See `ai_docs/ARCHITECTURE.md`, `ai_docs/IMPORTERS.md`, `ai_docs/ROADMAP.md`.)
 
 * **Local‑first PWA with sane caching.** You use `vite-plugin-pwa` (injectManifest) and a custom service worker that caches Scryfall API and images. That’s the right direction for an offline‑capable app shell.&#x20;
   (See `vite.config.ts`, `src/sw.ts`.)
@@ -23,7 +23,7 @@ Below is a focused, actionable review of your MTG Collection Value Tracker repo.
   (See `src/core/Money.ts`, `src/core/Money.test.ts`.)
 
 * **Importer design acknowledges real-world mess.** The docs and code clearly grapple with Cardmarket ↔ Scryfall mapping; you’ve planned to prefer `cardmarket_id` and only fall back to heuristics. That’s the correct priority.&#x20;
-  (See `docs/BUGS.md`, `docs/CARDMARKET_IMPORT_FIXES.md`, `src/features/imports/ImportService.ts`.)
+  (See `ai_docs/BUGS.md`, `ai_docs/CARDMARKET_IMPORT_FIXES.md`, `src/features/imports/ImportService.ts`.)
 
 ---
 
@@ -59,7 +59,7 @@ Below is a focused, actionable review of your MTG Collection Value Tracker repo.
 
 8. **Idempotency keys for imports are inconsistent.**
    `importCardmarketTransactions` uses `externalRef = cardmarket:{reference}:{lineNumber}` (transactions CSV may not even have `lineNumber`). Orders use `cardmarket:order:{orderId}:{lineNumber}` (again, orders CSV usually isn’t line‑oriented). Articles logic uses a different scheme in docs. Tighten these to your documented `"cardmarket:{orderId}:{lineNo}"` per importer.&#x20;
-   (See `src/features/imports/ImportService.ts`, `docs/IMPORTERS.md`.)
+   (See `src/features/imports/ImportService.ts`, `ai_docs/IMPORTERS.md`.)
 
 9. **Unrealized cost basis is overstated for partially disposed lots.**
    `ValuationEngine.calculateLotCostBasis` multiplies unit cost by **full** lot quantity; in the total you filter fully disposed lots, but partially disposed lots still use full quantity. Use “remaining” quantity, same as you do for valuation.&#x20;
@@ -93,7 +93,7 @@ Your services write across multiple tables (e.g., importing articles touches `ca
 
 **Typed validation at edges (e.g., zod) and structured logs.**
 Your importers will benefit from schema‑validated parsing (CSV→DTO→domain). Use Zod (or similar) to validate rows and produce typed, normalized objects. Enhance logs to one structured “resolution report” per row (you’ve begun this), then show a summarized UI for unknown sets/failed lookups.&#x20;
-(See the structured log example already in `ImportService.importCardmarketArticles` and the guidance in `docs/BUGS.md`.)
+(See the structured log example already in `ImportService.importCardmarketArticles` and the guidance in `ai_docs/BUGS.md`.)
 
 **Background jobs orchestration.**
 You already have workers; add a tiny job scheduler that:
@@ -221,7 +221,7 @@ Replace the holdings lookup with a lot‑based sum of **remaining** quantities f
 * Ensure **all** Cardmarket ingests use a consistent `externalRef` format (`cardmarket:{orderId}:{lineNo}` for row‑based CSVs; `cardmarket:tx:{reference}` for summary rows).
 * Keep “Cardmarket Product ID → Scryfall cards/collection” as the **first** lookup path (you began implementing `getByCardmarketId` – great).
 * Use collector number fallback only if needed and **never** pass a set **name** to Scryfall’s `set=` param.&#x20;
-  (See your own guidance in `docs/BUGS.md` / `docs/CARDMARKET_IMPORT_FIXES.md`.)
+  (See your own guidance in `ai_docs/BUGS.md` / `ai_docs/CARDMARKET_IMPORT_FIXES.md`.)
 
 ---
 
@@ -262,7 +262,7 @@ Delete either `eslint.config.js` (flat) **or** `.eslintrc.json` (legacy). I’d 
 
 * **More tests where it hurts:**
 
-  * SetCodeResolver edge cases from `docs/BUGS.md` (Commander/Extras/UB “Stellar Sights”).
+  * SetCodeResolver edge cases from `ai_docs/BUGS.md` (Commander/Extras/UB “Stellar Sights”).
   * Import idempotency (re‑import same CSV → 0 new rows).
   * FIFO realized P/L reconciliation with mixed partial disposals.&#x20;
 

@@ -13,7 +13,7 @@ export default defineConfig({
             },
             strategies: 'injectManifest',
             srcDir: 'src',
-            outDir: "./page",
+            outDir: "./docs",
             filename: 'sw.ts',
             manifest: {
                 name: 'MTG Collection Value Tracker',
@@ -36,6 +36,6 @@ export default defineConfig({
         })
     ],
     build: {
-        outDir: "./page",
+        outDir: "./docs",
     }
 })
