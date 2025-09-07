@@ -1,6 +1,6 @@
 # Roadmap (Authoritative)
 
-_Status updated: 2025-09-04_
+_Status updated: 2025-09-07_
 
 ## Now
 - Implement enhanced data model for lot-based card tracking
