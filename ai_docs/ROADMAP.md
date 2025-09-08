@@ -64,6 +64,12 @@ _Last updated: 2025‑09‑07_
 **Accept:** Re‑import same CSVs → 0 new rows; logs show batch lookups.  
 **Refs:** `src/features/pricing/ScryfallProvider.ts`, `src/features/imports/ImportService.ts`, `src/workers/cardmarketCsv.ts`.
 
+### P2 — Refactor Pinia stores to remove duplication
+**Why:** The `mtg.ts` store duplicates state, getters, and actions from other stores, increasing maintenance overhead and risk of inconsistencies.  
+**Changes:** Remove `mtg.ts` and refactor components to use the individual, domain-specific stores directly.  
+**Accept:** The `mtg.ts` file is deleted; app functionality is unchanged; codebase is smaller and easier to maintain.  
+**Refs:** `src/stores/`.
+
 ### P2 — Deck coverage based on **lots**
 **Why:** Coverage should reflect **remaining** owned units per card.  
 **Changes:** Compute deck coverage from `card_lots` (remaining qty).  
