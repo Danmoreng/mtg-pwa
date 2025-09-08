@@ -9,38 +9,38 @@ import CardsView from '../features/cards/views/CardsView.vue'
 
 const routes = [
     {
-        path: '/mtg-pwa/',
+        path: '/',
         name: 'home',
         component: HomeView
     },
     {
-        path: '/mtg-pwa/import/csv',
+        path: '/import/csv',
         name: 'csv-import',
         component: CsvImportView
     },
     {
-        path: '/mtg-pwa/import/cardmarket',
+        path: '/import/cardmarket',
         name: 'cardmarket-import',
         component: CardmarketImportWizard
     },
     {
-        path: '/mtg-pwa/import/deck',
+        path: '/import/deck',
         name: 'deck-import',
         component: DeckImportView
     },
     {
-        path: '/mtg-pwa/decks',
+        path: '/decks',
         name: 'decks',
         component: DecksView
     },
     {
-        path: '/mtg-pwa/decks/:id',
+        path: '/decks/:id',
         name: 'deck-detail',
         component: DeckDetailView,
         props: true
     },
     {
-        path: '/mtg-pwa/cards',
+        path: '/cards',
         name: 'cards',
         component: CardsView
     }
