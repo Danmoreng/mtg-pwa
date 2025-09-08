@@ -4,49 +4,38 @@ import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
+import { clientsClaim } from 'workbox-core'
 
 declare let self: ServiceWorkerGlobalScope
 
-// Precache and route manifest
+self.skipWaiting()
+clientsClaim()
+
 precacheAndRoute(self.__WB_MANIFEST)
 
-// Add navigation fallback for SPA
-registerRoute(
-  new NavigationRoute(
-    createHandlerBoundToURL('index.html')
-  )
-)
+// SPA navigation fallback (scope is /mtg-pwa/, so 'index.html' resolves correctly)
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
 
-// Cache Scryfall API responses
+// Scryfall API cache
 registerRoute(
   ({ url }) => url.origin === 'https://api.scryfall.com',
   new StaleWhileRevalidate({
     cacheName: 'scryfall-api-cache',
     plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        maxEntries: 1000,
-      }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxAgeSeconds: 86400, maxEntries: 1000 })
     ],
   })
 )
 
-// Cache image requests
+// Images cache
 registerRoute(
   ({ request }) => request.destination === 'image',
   new CacheFirst({
     cacheName: 'images-cache',
     plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-        maxEntries: 1000,
-      }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxAgeSeconds: 2592000, maxEntries: 1000 })
     ],
   })
 )

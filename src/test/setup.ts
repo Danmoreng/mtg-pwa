@@ -1,3 +1,5 @@
+/// <reference types="vitest/globals" />
+
 import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
 import { vi } from 'vitest'
@@ -10,8 +12,10 @@ setActivePinia(createPinia())
 Dexie.debug = false;
 
 // Ensure a clean DB between tests (since we run single-threaded this is safe)
+import db from '../data/db';
+
 beforeEach(async () => {
-  try { await Dexie.delete('MtgTrackerDb'); } catch {}
+  await Promise.all(db.tables.map(table => table.clear()));
 });
 
 // restore timers/mocks per test

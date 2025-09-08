@@ -4,6 +4,13 @@ import App from './App.vue'
 import router from './app/router'
 import { createPinia } from 'pinia'
 import { AutomaticPriceUpdateService } from './features/pricing/AutomaticPriceUpdateService'
+import { registerSW } from 'virtual:pwa-register'
+
+registerSW({
+    immediate: true,
+    onRegistered(r) { console.log('SW registered', r) },
+    onRegisterError(e) { console.error('SW registration error', e) },
+})
 
 const app = createApp(App)
 
