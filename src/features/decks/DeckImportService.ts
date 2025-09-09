@@ -2,7 +2,7 @@
 import { cardRepository, holdingRepository, cardLotRepository } from '../../data/repos';
 import { EntityLinker } from '../linker/EntityLinker';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import db from '../../data/db';
+import db, { type Card } from '../../data/db';
 
 export class DeckImportService {
   // Process a deck from text data
