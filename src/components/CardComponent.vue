@@ -1,12 +1,10 @@
 <template>
   <div class="card h-100 card-item" @click="openModal">
     <div class="card-image-container position-relative overflow-hidden rounded" style="padding-bottom: 140%;">
-      <img
-          :src="card.imageUrl || 'https://placehold.co/200x280?text=Card+Image'"
-          :alt="card.name"
-          class="card-img-top position-absolute top-0 start-0 w-100 h-100 object-fit-cover"
-          @error="handleImageError"
-      />
+      <div v-if="card.imageUrl" class="card-img-top position-absolute top-0 start-0 w-100 h-100" :style="{ backgroundImage: `url(${card.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }"></div>
+      <div v-else class="placeholder-image card-img-top position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+        <span class="text-muted">Missing Image</span>
+      </div>
     </div>
     <div class="card-body">
       <h3 class="card-title fs-6 fw-medium mb-1">{{ card.name }}</h3>
@@ -42,12 +40,25 @@
               <div class="row g-3 align-items-start">
                 <!-- Left: compact image + metadata -->
                 <div class="col-lg-5">
-                  <img
-                      :src="card.imageUrl || 'https://placehold.co/200x280?text=Card+Image'"
-                      :alt="card.name"
-                      @error="handleImageError"
-                      class="w-100 h-100 rounded-4"
-                  />
+                  <div class="card-flipper position-relative" :class="{ 'is-flipped': isFlipped }">
+                    <div class="card-inner" style="padding-bottom: 140%;">
+                      <div class="card-front">
+                        <div v-if="card.imageUrl" class="w-100 h-100 rounded-4" :style="{ backgroundImage: `url(${card.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }"></div>
+                        <div v-else class="placeholder-image w-100 h-100 rounded-4 position-relative">
+                          <div class="position-absolute top-50 start-50 translate-middle">
+                            <span class="text-muted">Missing Image</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="card-back">
+                        <div v-if="card.imageUrlBack" class="w-100 h-100 rounded-4" :style="{ backgroundImage: `url(${card.imageUrlBack})`, backgroundSize: 'cover', backgroundPosition: 'center' }"></div>
+                      </div>
+                    </div>
+                    <button v-if="card.imageUrlBack" @click="isFlipped = !isFlipped" class="btn btn-sm btn-dark flip-button">
+                      Flip
+                    </button>
+                  </div>
+                  <img :src="card.imageUrlBack" style="display: none;" />
 
                   <dl class="row row-cols-2 g-2 small mt-3 mb-0 meta-grid">
                     <dt class="col text-muted">Set</dt>
@@ -191,8 +202,16 @@ const currentPrice = ref<Money | null>(null);
 const loadingPrice = ref(false);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
+const isFlipped = ref(false);
 
 const showLots = ref(false);
+
+const currentImageUrl = computed(() => {
+  if (isFlipped.value && props.card.imageUrlBack) {
+    return props.card.imageUrlBack;
+  }
+  return props.card.imageUrl || '';
+});
 
 const transactionsSorted = computed(() => {
   if (!transactions.value) return [];
@@ -234,10 +253,6 @@ const openModal = () => {
 
 const closeModal = () => {
   showModal.value = false;
-};
-
-const handleImageError = (event: any) => {
-  event.target.src = 'https://placehold.co/200x280?text=Card+Image';
 };
 
 const formatDate = (date: Date) => {
@@ -287,4 +302,50 @@ const loadCurrentPrice = async () => {
 </script>
 
 <style scoped>
+.placeholder-image {
+  background-color: #e9ecef; /* A slightly darker grey */
+}
+
+.placeholder-image .text-muted {
+  color: #6c757d !important; /* A darker, more visible text color */
+}
+
+.card-flipper {
+  perspective: 1000px;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.card-flipper.is-flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
+.flip-button {
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
 </style>

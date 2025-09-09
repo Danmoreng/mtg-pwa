@@ -224,27 +224,32 @@ export class ImportService {
               collectorNumber: '' // Not available in articles CSV
             });
             
-            // Get image URL from Scryfall
-            const imageUrl = await ScryfallProvider.getImageUrlById(cardId);
-            
-            // Try to extract collector number from the card name for the card record using enhanced parsing
-            let collectorNumberForRecord = extractCollectorNumber(article.name);
+            const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
+            let imageUrl = '';
+            let imageUrlBack = '';
+            if (typeof imageUrls === 'string') {
+              imageUrl = imageUrls;
+            } else if (imageUrls) {
+              imageUrl = imageUrls.front;
+              imageUrlBack = imageUrls.back;
+            }
 
-            const cardRecord: Card = {
+            const newCard: Card = {
               id: cardId,
               oracleId: scryfallData?.oracle_id || cardData?.oracle_id || '',
               name: article.name,
               set: scryfallData?.set_name || cardData?.set_name || article.expansion,
-              setCode: scryfallData?.set || cardData?.set || article.expansion,
-              number: scryfallData?.collector_number || cardData?.collector_number || collectorNumberForRecord || '', // Use parsed collector number if available
+              setCode: scryfallData?.set || cardData?.set || (await resolveSetCode(article.expansion) || ''),
+              number: scryfallData?.collector_number || cardData?.collector_number || collectorNumber || '', // Use parsed collector number if available
               lang: scryfallData?.lang || cardData?.lang || 'en',
-              finish: 'nonfoil', // Default to nonfoil
-              imageUrl: imageUrl || '',
+              finish: 'nonfoil', // Assuming non-foil for now, will need to be updated later
+              imageUrl: imageUrl,
+              imageUrlBack: imageUrlBack,
               createdAt: now,
-              updatedAt: now
+              updatedAt: now,
             };
             
-            await cardRepository.add(cardRecord);
+            await cardRepository.add(newCard);
             
             // Fetch and save price data for the new card
             try {
