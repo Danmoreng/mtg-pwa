@@ -78,9 +78,17 @@ export class DeckImportService {
                 });
                 
                 // Get image URL from Scryfall
-                const imageUrl = await ScryfallProvider.getImageUrlById(cardId);
-                
-                const cardRecord = {
+                const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
+                let imageUrl = '';
+                let imageUrlBack = '';
+                if (typeof imageUrls === 'string') {
+                  imageUrl = imageUrls;
+                } else if (imageUrls) {
+                  imageUrl = imageUrls.front;
+                  imageUrlBack = imageUrls.back;
+                }
+
+                const newCard: Card = {
                   id: cardId,
                   oracleId: scryfallData?.oracle_id || '',
                   name: cardName.trim(),
@@ -89,13 +97,14 @@ export class DeckImportService {
                   number: collectorNumber.trim(),
                   lang: scryfallData?.lang || 'en',
                   finish: 'nonfoil',
-                  imageUrl: imageUrl || '',
+                  imageUrl: imageUrl,
+                  imageUrlBack: imageUrlBack,
                   createdAt: now,
-                  updatedAt: now
+                  updatedAt: now,
                 };
                 
-                await cardRepository.add(cardRecord);
-                console.log('Added new card to database:', cardRecord);
+                await cardRepository.add(newCard);
+                console.log('Added new card to database:', newCard);
                 
                 // Fetch and save price data for the new card
                 try {
