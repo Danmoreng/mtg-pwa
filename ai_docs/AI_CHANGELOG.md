@@ -2,6 +2,20 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-09 18:00 — feat: Comprehensive Double-Faced and Split Card Support
+
+- **Scope**: `src/components/CardComponent.vue`, `src/data/db.ts`, `src/features/decks/DeckImportService.ts`, `src/features/imports/ImportService.ts`, `src/features/pricing/ScryfallProvider.ts`
+- **Summary**: Implemented full support for double-faced and split cards, including database schema updates, enhanced Scryfall API integration, and improved UI/UX in the card component.
+- **Details**:
+    - **Database Schema**: Added `imageUrlBack` field to `Card` interface for storing back-face images.
+    - **Scryfall Provider**: Updated image fetching logic to correctly differentiate and retrieve images for `transform` (double-faced) and `split` cards.
+    - **Import Services**: Ensured `DeckImportService` and `ImportService` correctly store both front and back image URLs during card import.
+    - **Card Component**:
+        - Introduced a 3D flip animation for double-faced cards in the modal view.
+        - Replaced external placeholder service with a local, self-generated "Missing Image" placeholder with improved styling and centering.
+        - Fixed various layout and styling regressions in the modal, including image sizing, metadata visibility, and flip button positioning/styling.
+- **Verification Steps**: Verified correct display and functionality of double-faced and split cards, including image loading, flipping animation, and placeholder behavior.
+
 ## 2025-09-07 20:00 — Multiple fixes: PWA navigation, branding, backup, valuation, and tests
 
 - **Author**: AI (Qwen)
