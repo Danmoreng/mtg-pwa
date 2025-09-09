@@ -1,5 +1,5 @@
 # Roadmap — MTG Collection Value Tracker
-_Last updated: 2025‑09‑07_
+_Last updated: 2025‑09‑09_
 
 ## Principles
 - **Lots are source of truth** for ownership, cost basis, P/L.
@@ -9,7 +9,7 @@ _Last updated: 2025‑09‑07_
 
 ---
 
-## NOW (stability & correctness)
+## COMPLETED ✓
 
 ### P0 — Offline SPA navigation
 **Why:** Deep links 404 offline without a navigation fallback.  
@@ -54,11 +54,7 @@ _Last updated: 2025‑09‑07_
 **Accept:** Build and typecheck pass.  
 **Refs:** `src/features/dashboard/HomeView.vue`.
 
----
-
-## NEXT (importer reliability & UX)
-
-### P1 — Cardmarket “IDs first”, consistent idempotency
+### P1 — Cardmarket "IDs first", consistent idempotency
 **Why:** Robust linking and safe re‑imports.  
 **Changes:** Prefer Scryfall `/cards/collection` by Cardmarket IDs; unify `externalRef` formats (`cardmarket:{type}:{id}:{line}`); fall back to set+collector only.  
 **Accept:** Re‑import same CSVs → 0 new rows; logs show batch lookups.  
@@ -69,6 +65,10 @@ _Last updated: 2025‑09‑07_
 **Changes:** Remove `mtg.ts` and refactor components to use the individual, domain-specific stores directly.  
 **Accept:** The `mtg.ts` file is deleted; app functionality is unchanged; codebase is smaller and easier to maintain.  
 **Refs:** `src/stores/`.
+
+---
+
+## NOW (importer reliability & UX)
 
 ### P2 — Deck coverage based on **lots**
 **Why:** Coverage should reflect **remaining** owned units per card.  
@@ -88,9 +88,28 @@ _Last updated: 2025‑09‑07_
 
 ---
 
+## NEXT (enhancements)
+
+### P1 — Background job scheduler
+**Why:** Better UX for long-running operations.  
+**Changes:** Implement a job queue for price sync/import progress with persisted status.  
+**Accept:** Import and price sync operations show progress and can be resumed after app restart.
+
+### P2 — Periodic valuation snapshots
+**Why:** Historical tracking of portfolio value.  
+**Changes:** Implement automatic daily snapshots of portfolio valuation.  
+**Accept:** Dashboard shows valuation history charts.
+
+### P2 — Background Sync registration
+**Why:** Automatic price updates when connectivity returns.  
+**Changes:** Register Background Sync to refresh prices when network returns.  
+**Accept:** Prices update automatically when device comes online.
+
+---
+
 ## LATER (nice‑to‑have)
 
-- **Background job scheduler** for price sync/import progress with persisted status.
-- **Periodic valuation snapshots** + charts.
-- **Background Sync** registration to refresh prices when network returns.  
-
+- **Advanced analytics** with filtering and custom reports
+- **Multi-currency support** for international users
+- **Sharing features** to export deck lists or collection summaries
+- **Mobile app optimizations** including install prompts and mobile-specific UX
