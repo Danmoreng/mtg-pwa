@@ -159,6 +159,8 @@ export class ImportService {
           return '';
         };
         
+        let collectorNumber = extractCollectorNumber(article.name);
+
         // Priority 2: If no product ID or product ID lookup failed, try set code resolution
         if (!cardId) {
           const setCode = await resolveSetCode(article.expansion);
@@ -173,7 +175,7 @@ export class ImportService {
           }
           
           // Try to extract collector number from the card name using enhanced parsing
-          let collectorNumber = extractCollectorNumber(article.name);
+          collectorNumber = extractCollectorNumber(article.name);
           
           // Add structured logging
           console.log(JSON.stringify({

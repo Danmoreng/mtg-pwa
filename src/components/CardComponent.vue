@@ -206,13 +206,6 @@ const isFlipped = ref(false);
 
 const showLots = ref(false);
 
-const currentImageUrl = computed(() => {
-  if (isFlipped.value && props.card.imageUrlBack) {
-    return props.card.imageUrlBack;
-  }
-  return props.card.imageUrl || '';
-});
-
 const transactionsSorted = computed(() => {
   if (!transactions.value) return [];
   return [...transactions.value].sort(
