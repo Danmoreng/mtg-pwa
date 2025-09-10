@@ -2,3 +2,4 @@
 export { default as CardComponent } from './CardComponent.vue';
 export { default as Navigation } from './Navigation.vue';
 export { default as BootstrapRekaDemo } from './BootstrapRekaDemo.vue';
+export { default as ImportStatusIndicator } from './ImportStatusIndicator.vue';
