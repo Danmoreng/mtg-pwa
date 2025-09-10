@@ -32,7 +32,8 @@
             </router-link>
           </li>
         </ul>
-        <div class="d-flex">
+        <div class="d-flex align-items-center">
+          <ImportStatusIndicator />
           <ThemeSwitcher />
         </div>
       </div>
@@ -44,6 +45,7 @@
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import ThemeSwitcher from './ThemeSwitcher.vue';
+import ImportStatusIndicator from './ImportStatusIndicator.vue';
 
 // Route
 const route = useRoute();

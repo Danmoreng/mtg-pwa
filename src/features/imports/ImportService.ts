@@ -1,508 +1,594 @@
 // Import service for handling CSV imports
-import { transactionRepository, cardLotRepository, cardRepository } from '../../data/repos';
-import { Money } from '../../core/Money';
-import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import { resolveSetCode } from '../pricing/SetCodeResolver';
+import {transactionRepository, cardLotRepository, cardRepository} from '../../data/repos';
+import {Money} from '../../core/Money';
+import {ScryfallProvider} from '../pricing/ScryfallProvider';
+import {resolveSetCode} from '../pricing/SetCodeResolver';
 import db from '../../data/db';
-import type { Card, CardLot } from '../../data/db';
+import type {Card, CardLot} from '../../data/db';
+import {useImportStatusStore} from '../../stores/importStatus';
+import {v4 as uuidv4} from 'uuid';
 
 export class ImportService {
-  // Import Cardmarket transactions
-  static async importCardmarketTransactions(transactions: any[]): Promise<void> {
-    try {
-      const now = new Date();
-      
-      for (const transaction of transactions) {
-        // Create external reference to avoid duplicates
-        const externalRef = `cardmarket:${transaction.reference}:${transaction.lineNumber}`;
-        
-        // Check if transaction already exists
-        const existing = await db.transactions.where('externalRef').equals(externalRef).first();
-        if (existing) continue;
-        
-        // Parse amount as Money
-        const amount = Money.parse(transaction.amount, 'EUR');
-        
-        // Create transaction record
-        const transactionRecord = {
-          id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          kind: amount.isPositive() ? ('SELL' as const) : ('BUY' as const),
-          quantity: 1, // For transactions, quantity is typically 1
-          unitPrice: amount.getCents(),
-          fees: 0, // Fees would be in separate records
-          shipping: 0, // Shipping would be in separate records
-          currency: 'EUR',
-          source: 'cardmarket',
-          externalRef,
-          happenedAt: new Date(transaction.date),
-          createdAt: now,
-          updatedAt: now
-        };
-        
-        // Save transaction
-        await transactionRepository.add(transactionRecord);
-      }
-    } catch (error) {
-      console.error('Error importing Cardmarket transactions:', error);
-      throw error;
-    }
-  }
+    // Import Cardmarket transactions
+    static async importCardmarketTransactions(transactions: any[]): Promise<void> {
+        const importStatusStore = useImportStatusStore();
 
-  // Import Cardmarket orders
-  static async importCardmarketOrders(orders: any[]): Promise<void> {
-    try {
-      const now = new Date();
-      
-      for (const order of orders) {
-        // Create external reference to avoid duplicates
-        const externalRef = `cardmarket:order:${order.orderId}:${order.lineNumber}`;
-        
-        // Check if order already exists
-        const existing = await db.transactions.where('externalRef').equals(externalRef).first();
-        if (existing) continue;
-        
-        // Parse values as Money
-        const merchandiseValue = Money.parse(order.merchandiseValue, 'EUR');
-        const shipmentCosts = Money.parse(order.shipmentCosts, 'EUR');
-        const commission = Money.parse(order.commission, 'EUR');
-        
-        // Create transaction record
-        const transactionRecord = {
-          id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          kind: order.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
-          quantity: parseInt(order.articleCount) || 1,
-          unitPrice: Math.round(merchandiseValue.getCents() / (parseInt(order.articleCount) || 1)),
-          fees: commission.getCents(),
-          shipping: shipmentCosts.getCents(),
-          currency: 'EUR',
-          source: 'cardmarket',
-          externalRef,
-          happenedAt: new Date(order.dateOfPurchase),
-          createdAt: now,
-          updatedAt: now
-        };
-        
-        // Save transaction
-        await transactionRepository.add(transactionRecord);
-      }
-    } catch (error) {
-      console.error('Error importing Cardmarket orders:', error);
-      throw error;
-    }
-  }
-
-  // Import Cardmarket articles
-  static async importCardmarketArticles(articles: any[]): Promise<void> {
-    try {
-      const now = new Date();
-      
-      for (const article of articles) {
-        let cardData = null;
-        let cardId = null;
-        
-        // Priority 1: Try to resolve by Cardmarket product ID first
-        if (article.productId) {
-          // Handle multiple product IDs separated by " | "
-          const productIds = article.productId.split(' | ').map((id: string) => id.trim());
-          
-          // Use batch lookup for multiple IDs, or single lookup for one ID
-          if (productIds.length === 1) {
-            // Single product ID
-            cardData = await ScryfallProvider.getByCardmarketId(productIds[0]);
-            // Add structured logging
-            console.log(JSON.stringify({
-              product_ids: productIds,
-              resolved_via: 'cardmarket_id',
-              cardmarket_id: productIds[0],
-              final_uri: `/cards/cardmarket/${productIds[0]}`
-            }));
-          } else if (productIds.length > 1) {
-            // Multiple product IDs - use batch lookup
-            const cards = await ScryfallProvider.getByCardmarketIds(productIds);
-            if (cards && cards.length > 0) {
-              // Use the first card found
-              cardData = cards[0];
-              // Add structured logging
-              console.log(JSON.stringify({
-                product_ids: productIds,
-                resolved_via: 'cardmarket_id',
-                cardmarket_id: productIds[0], // Log the first ID as reference
-                final_uri: `/cards/collection`
-              }));
-            }
-          }
-          
-          cardId = cardData?.id || null;
-        }
-        
-        // Enhanced collector number parsing function
-        const extractCollectorNumber = (name: string): string => {
-          // Enhanced regex to handle various collector number formats:
-          // - Standard: "- 167 -"
-          // - With letters: "- 167a -"
-          // - Roman numerals: "- IV -"
-          // - With special characters: "- 167★ -"
-          const patterns = [
-            /-\s*(\d+[a-zA-Z★]*)\s*-/i,  // Standard with optional letters/special chars
-            /-\s*([IVXLCDM]+)\s*-/i,     // Roman numerals
-            /\s+(\d+[a-zA-Z★]*)\s*$/i,   // At end of name with space
-            /\((\d+[a-zA-Z★]*)\)/i       // In parentheses
-          ];
-          
-          for (const pattern of patterns) {
-            const match = name.match(pattern);
-            if (match) {
-              return match[1];
-            }
-          }
-          
-          return '';
-        };
-        
-        let collectorNumber = extractCollectorNumber(article.name);
-
-        // Priority 2: If no product ID or product ID lookup failed, try set code resolution
-        if (!cardId) {
-          const setCode = await resolveSetCode(article.expansion);
-          
-          // Check if card name contains version information
-          let cleanCardName = article.name;
-          let versionInfo = null;
-          const versionMatch = article.name.match(/^(.+?)\s*\((V\.\d+)\)$/i);
-          if (versionMatch) {
-            cleanCardName = versionMatch[1].trim();
-            versionInfo = versionMatch[2]; // e.g., "V.1"
-          }
-          
-          // Try to extract collector number from the card name using enhanced parsing
-          collectorNumber = extractCollectorNumber(article.name);
-          
-          // Add structured logging
-          console.log(JSON.stringify({
-            product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [],
-            resolved_via: 'set+cn',
-            set_code: setCode,
-            collector_number: collectorNumber,
-            final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : ''
-          }));
-          
-          // Try to resolve to a Scryfall ID
-          cardData = await ScryfallProvider.hydrateCard({
-            name: cleanCardName,
-            setCode: setCode || article.expansion, // Fallback to original if we can't resolve
-            collectorNumber: collectorNumber,
-            version: versionInfo
-          });
-          
-          cardId = cardData?.id || null;
-          
-          // Add structured logging when no resolution is possible
-          if (!cardId) {
-            console.log(JSON.stringify({
-              product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [],
-              resolved_via: 'none',
-              set_code: null,
-              collector_number: '',
-              final_uri: '',
-              name: article.name,
-              expansion: article.expansion
-            }));
-          }
-        }
-        
-        // Parse price as Money
-        const price = Money.parse(article.price, 'EUR');
-        
-        // If we have a card ID, fetch and save price data
-        if (cardId) {
-          // Check if the card exists in our database
-          const existingCard = await cardRepository.getById(cardId);
-          if (!existingCard) {
-            // Get full card data from Scryfall
-            const scryfallData = cardData || await ScryfallProvider.hydrateCard({
-              scryfall_id: cardId,
-              name: article.name,
-              setCode: article.expansion,
-              collectorNumber: '' // Not available in articles CSV
-            });
-            
-            const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
-
-            const newCard: Card = {
-              id: cardId,
-              oracleId: scryfallData?.oracle_id || cardData?.oracle_id || '',
-              name: article.name,
-              set: scryfallData?.set_name || cardData?.set_name || article.expansion,
-              setCode: scryfallData?.set || cardData?.set || (await resolveSetCode(article.expansion) || ''),
-              number: scryfallData?.collector_number || cardData?.collector_number || collectorNumber || '', // Use parsed collector number if available
-              lang: scryfallData?.lang || cardData?.lang || 'en',
-              finish: 'nonfoil', // Assuming non-foil for now, will need to be updated later
-              layout: imageUrls?.layout || 'normal',
-              imageUrl: imageUrls?.front || '',
-              imageUrlBack: imageUrls?.back || '',
-              createdAt: now,
-              updatedAt: now,
-            };
-            
-            await cardRepository.add(newCard);
-            
-            // Fetch and save price data for the new card
-            try {
-              const price = await ScryfallProvider.getPriceById(cardId);
-              if (price) {
-                // Create price point ID with date
-                const dateStr = now.toISOString().split('T')[0];
-                const pricePointId = `${cardId}:scryfall:${dateStr}`;
-                
-                // Create price point
-                const pricePoint = {
-                  id: pricePointId,
-                  cardId: cardId,
-                  provider: 'scryfall',
-                  currency: price.getCurrency(),
-                  price: price.getCents(),
-                  asOf: now,
-                  createdAt: now
-                };
-                
-                // Save price point
-                await db.price_points.put(pricePoint);
-              }
-            } catch (error) {
-              console.error(`Error fetching price for new card ${cardId}:`, error);
-            }
-          } else {
-            // Card already exists, but we might want to update its price data
-            // For now, we'll just make sure there's a price point for today
-            try {
-              const dateStr = now.toISOString().split('T')[0];
-              const pricePointId = `${cardId}:scryfall:${dateStr}`;
-              const existingPricePoint = await db.price_points.get(pricePointId);
-              
-              if (!existingPricePoint) {
-                const price = await ScryfallProvider.getPriceById(cardId);
-                if (price) {
-                  // Create price point
-                  const pricePoint = {
-                    id: pricePointId,
-                    cardId: cardId,
-                    provider: 'scryfall',
-                    currency: price.getCurrency(),
-                    price: price.getCents(),
-                    asOf: now,
-                    createdAt: now
-                  };
-                  
-                  // Save price point
-                  await db.price_points.put(pricePoint);
-                }
-              }
-            } catch (error) {
-              console.error(`Error checking/updating price for existing card ${cardId}:`, error);
-            }
-          }
-        }
-        
-        // Create card lot record if card was bought
-        let lotIdForTransaction: string | undefined = undefined;
-        if (article.direction === 'purchase') {
-          // Create external reference for the lot to avoid duplicates
-          const lotExternalRef = `cardmarket:lot:${article.shipmentId}:${article.lineNumber}`;
-          
-          // Check if we already have a lot for this article
-          const existingLots = await cardLotRepository.getByExternalRef(lotExternalRef);
-          
-          let lotToLink: CardLot | null = null;
-          
-          if (existingLots.length > 0) {
-            // Use the existing lot
-            lotToLink = existingLots[0];
-          } else {
-            // Check if we already have a lot for this card without a purchase transaction
-            // This would be the case if we imported a deck first and then the Cardmarket purchase
-            const existingCardLots = await cardLotRepository.getByCardId(cardId || '');
-            
-            // Look for a lot that doesn't have a purchase transaction yet
-            for (const lot of existingCardLots) {
-              // Check if this lot already has a purchase transaction linked to it
-              const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
-              const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
-              
-              if (!hasPurchaseTransaction) {
-                lotToLink = lot;
-                break;
-              }
-            }
-          }
-          
-          if (lotToLink) {
-            // Update the existing lot with purchase information
-            await cardLotRepository.update(lotToLink.id, {
-              unitCost: price.getCents(),
-              source: 'cardmarket',
-              purchasedAt: new Date(article.dateOfPurchase),
-              updatedAt: now
-            });
-            
-            lotIdForTransaction = lotToLink.id;
-          } else {
-            // Create a new lot for this purchase
-            const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            
-            const lot: CardLot = {
-              id: lotId,
-              cardId: cardId || '', // Will be empty if not resolved
-              quantity: parseInt(article.amount) || 1,
-              unitCost: price.getCents(),
-              condition: '', // Not available in articles CSV
-              language: '', // Not available in articles CSV
-              foil: false, // Not available in articles CSV
-              finish: 'nonfoil', // Default to nonfoil
-              source: 'cardmarket',
-              currency: 'EUR', // Add currency
-              externalRef: lotExternalRef, // Add external reference for deduplication
-              purchasedAt: new Date(article.dateOfPurchase),
-              createdAt: now,
-              updatedAt: now
-            };
-            
-            // Save lot
-            await cardLotRepository.add(lot);
-            
-            lotIdForTransaction = lotId;
-          }
-        }
-        
-        // Create transaction record
-        const transactionExternalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
-        
-        // Check if transaction already exists
-        const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
-        if (existingTransaction) continue;
-        
-        const transactionRecord = {
-          id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
-          cardId: cardId || undefined, // Will be undefined if not resolved
-          lotId: lotIdForTransaction, // Link to the lot if we have one
-          quantity: parseInt(article.amount) || 1,
-          unitPrice: price.getCents(),
-          fees: 0, // Fees would be in order records
-          shipping: 0, // Shipping would be in order records
-          currency: 'EUR',
-          source: 'cardmarket',
-          externalRef: transactionExternalRef,
-          happenedAt: new Date(article.dateOfPurchase),
-          createdAt: now,
-          updatedAt: now
-        };
-        
-        // Save transaction
-        await transactionRepository.add(transactionRecord);
-      }
-    } catch (error) {
-      console.error('Error importing Cardmarket articles:', error);
-      throw error;
-    }
-  }
-  
-  // Get or create lot for a card purchase
-  static async getOrCreateLotForPurchase(cardId: string, quantity: number, unitCost: number, purchaseDate: Date): Promise<string> {
-    const now = new Date();
-    
-    // Check if we already have a lot for this card without a purchase transaction
-    const existingLots = await cardLotRepository.getByCardId(cardId);
-    
-    // Look for a lot that doesn't have a purchase transaction yet
-    for (const lot of existingLots) {
-      // Check if this lot already has a purchase transaction linked to it
-      const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
-      const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
-      
-      if (!hasPurchaseTransaction) {
-        // Update the existing lot with purchase information
-        await cardLotRepository.update(lot.id, {
-          unitCost: unitCost,
-          quantity: lot.quantity + quantity, // Add to existing quantity
-          source: 'cardmarket',
-          purchasedAt: purchaseDate,
-          updatedAt: now
+        // Create import tracking
+        const importId = uuidv4();
+        importStatusStore.addImport({
+            id: importId,
+            type: 'cardmarket',
+            name: 'Cardmarket Transactions',
+            status: 'pending',
+            progress: 0,
+            totalItems: transactions.length,
+            processedItems: 0
         });
-        
-        return lot.id;
-      }
+
+        try {
+            const now = new Date();
+
+            for (let i = 0; i < transactions.length; i++) {
+                const transaction = transactions[i];
+
+                // Update progress
+                importStatusStore.updateImport(importId, {
+                    status: 'processing',
+                    processedItems: i + 1,
+                    progress: Math.round(((i + 1) / transactions.length) * 100)
+                });
+
+                // Create external reference to avoid duplicates
+                const externalRef = `cardmarket:${transaction.reference}:${transaction.lineNumber}`;
+
+                // Check if transaction already exists
+                const existing = await db.transactions.where('externalRef').equals(externalRef).first();
+                if (existing) continue;
+
+                // Parse amount as Money
+                const amount = Money.parse(transaction.amount, 'EUR');
+
+                // Create transaction record
+                const transactionRecord = {
+                    id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    kind: amount.isPositive() ? ('SELL' as const) : ('BUY' as const),
+                    quantity: 1, // For transactions, quantity is typically 1
+                    unitPrice: amount.getCents(),
+                    fees: 0, // Fees would be in separate records
+                    shipping: 0, // Shipping would be in separate records
+                    currency: 'EUR',
+                    source: 'cardmarket',
+                    externalRef,
+                    happenedAt: new Date(transaction.date),
+                    createdAt: now,
+                    updatedAt: now
+                };
+
+                // Save transaction
+                await transactionRepository.add(transactionRecord);
+            }
+
+            // Mark import as completed
+            importStatusStore.completeImport(importId);
+        } catch (error) {
+            console.error('Error importing Cardmarket transactions:', error);
+            importStatusStore.completeImport(importId, (error as Error).message);
+            throw error;
+        }
     }
-    
-    // Create a new lot for this purchase
-    const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const lot: CardLot = {
-      id: lotId,
-      cardId: cardId,
-      quantity: quantity,
-      unitCost: unitCost,
-      condition: 'NM', // Default condition
-      language: 'en', // Default language
-      foil: false, // Default to nonfoil
-      finish: 'nonfoil', // Default to nonfoil
-      source: 'cardmarket',
-      currency: 'EUR',
-      purchasedAt: purchaseDate,
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    // Save lot
-    await cardLotRepository.add(lot);
-    
-    return lotId;
-  }
-  
-  // Get lot for a card sale
-  static async getLotForSale(cardId: string, quantity: number): Promise<{ lotId: string, remainingQuantity: number } | null> {
-    // Get all active lots for this card, sorted by purchase date (FIFO)
-    const lots = await cardLotRepository.getByCardId(cardId);
-    
-    // Filter and sort lots by purchase date (FIFO)
-    const activeLots = lots
-      .filter(lot => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity))
-      .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime());
-    
-    // Try to find a lot that can fulfill this sale
-    for (const lot of activeLots) {
-      // Calculate how many items from this lot are still available
-      const availableQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
-      
-      if (availableQuantity >= quantity) {
-        // This lot can fulfill the entire sale
-        return { 
-          lotId: lot.id, 
-          remainingQuantity: availableQuantity - quantity 
+
+    // Import Cardmarket orders
+    static async importCardmarketOrders(orders: any[]): Promise<void> {
+        const importStatusStore = useImportStatusStore();
+
+        // Create import tracking
+        const importId = uuidv4();
+        importStatusStore.addImport({
+            id: importId,
+            type: 'cardmarket',
+            name: 'Cardmarket Orders',
+            status: 'pending',
+            progress: 0,
+            totalItems: orders.length,
+            processedItems: 0
+        });
+
+        try {
+            const now = new Date();
+
+            for (let i = 0; i < orders.length; i++) {
+                const order = orders[i];
+
+                // Update progress
+                importStatusStore.updateImport(importId, {
+                    status: 'processing',
+                    processedItems: i + 1,
+                    progress: Math.round(((i + 1) / orders.length) * 100)
+                });
+
+                // Create external reference to avoid duplicates
+                const externalRef = `cardmarket:order:${order.orderId}:${order.lineNumber}`;
+
+                // Check if order already exists
+                const existing = await db.transactions.where('externalRef').equals(externalRef).first();
+                if (existing) continue;
+
+                // Parse values as Money
+                const merchandiseValue = Money.parse(order.merchandiseValue, 'EUR');
+                const shipmentCosts = Money.parse(order.shipmentCosts, 'EUR');
+                const commission = Money.parse(order.commission, 'EUR');
+
+                // Create transaction record
+                const transactionRecord = {
+                    id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    kind: order.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
+                    quantity: parseInt(order.articleCount) || 1,
+                    unitPrice: Math.round(merchandiseValue.getCents() / (parseInt(order.articleCount) || 1)),
+                    fees: commission.getCents(),
+                    shipping: shipmentCosts.getCents(),
+                    currency: 'EUR',
+                    source: 'cardmarket',
+                    externalRef,
+                    happenedAt: new Date(order.dateOfPurchase),
+                    createdAt: now,
+                    updatedAt: now
+                };
+
+                // Save transaction
+                await transactionRepository.add(transactionRecord);
+            }
+
+            // Mark import as completed
+            importStatusStore.completeImport(importId);
+        } catch (error) {
+            console.error('Error importing Cardmarket orders:', error);
+            importStatusStore.completeImport(importId, (error as Error).message);
+            throw error;
+        }
+    }
+
+    // Import Cardmarket articles
+    static async importCardmarketArticles(articles: any[]): Promise<void> {
+        const importStatusStore = useImportStatusStore();
+
+        // Create import tracking
+        const importId = uuidv4();
+        importStatusStore.addImport({
+            id: importId,
+            type: 'cardmarket',
+            name: 'Cardmarket Articles',
+            status: 'pending',
+            progress: 0,
+            totalItems: articles.length,
+            processedItems: 0
+        });
+
+        try {
+            const now = new Date();
+
+            for (let i = 0; i < articles.length; i++) {
+                const article = articles[i];
+
+                // Update progress
+                importStatusStore.updateImport(importId, {
+                    status: 'processing',
+                    processedItems: i + 1,
+                    progress: Math.round(((i + 1) / articles.length) * 100)
+                });
+
+                let cardData = null;
+                let cardId = null;
+
+                // Priority 1: Try to resolve by Cardmarket product ID first
+                if (article.productId) {
+                    // Handle multiple product IDs separated by " | "
+                    const productIds = article.productId.split(' | ').map((id: string) => id.trim());
+
+                    // Use batch lookup for multiple IDs, or single lookup for one ID
+                    if (productIds.length === 1) {
+                        // Single product ID
+                        cardData = await ScryfallProvider.getByCardmarketId(productIds[0]);
+                        // Add structured logging
+                        console.log(JSON.stringify({
+                            product_ids: productIds,
+                            resolved_via: 'cardmarket_id',
+                            cardmarket_id: productIds[0],
+                            final_uri: `/cards/cardmarket/${productIds[0]}`
+                        }));
+                    } else if (productIds.length > 1) {
+                        // Multiple product IDs - use batch lookup
+                        const cards = await ScryfallProvider.getByCardmarketIds(productIds);
+                        if (cards && cards.length > 0) {
+                            // Use the first card found
+                            cardData = cards[0];
+                            // Add structured logging
+                            console.log(JSON.stringify({
+                                product_ids: productIds,
+                                resolved_via: 'cardmarket_id',
+                                cardmarket_id: productIds[0], // Log the first ID as reference
+                                final_uri: `/cards/collection`
+                            }));
+                        }
+                    }
+
+                    cardId = cardData?.id || null;
+                }
+
+                // Enhanced collector number parsing function
+                const extractCollectorNumber = (name: string): string => {
+                    // Enhanced regex to handle various collector number formats:
+                    // - Standard: "- 167 -"
+                    // - With letters: "- 167a -"
+                    // - Roman numerals: "- IV -"
+                    // - With special characters: "- 167★ -"
+                    const patterns = [
+                        /-\s*(\d+[a-zA-Z★]*)\s*-/i,  // Standard with optional letters/special chars
+                        /-\s*([IVXLCDM]+)\s*-/i,     // Roman numerals
+                        /\s+(\d+[a-zA-Z★]*)\s*$/i,   // At end of name with space
+                        /\((\d+[a-zA-Z★]*)\)/i       // In parentheses
+                    ];
+
+                    for (const pattern of patterns) {
+                        const match = name.match(pattern);
+                        if (match) {
+                            return match[1];
+                        }
+                    }
+
+                    return '';
+                };
+
+                let collectorNumber = extractCollectorNumber(article.name);
+
+                // Priority 2: If no product ID or product ID lookup failed, try set code resolution
+                if (!cardId) {
+                    const setCode = await resolveSetCode(article.expansion);
+
+                    // Check if card name contains version information
+                    let cleanCardName = article.name;
+                    let versionInfo = null;
+                    const versionMatch = article.name.match(/^(.+?)\s*\((V\.\d+)\)$/i);
+                    if (versionMatch) {
+                        cleanCardName = versionMatch[1].trim();
+                        versionInfo = versionMatch[2]; // e.g., "V.1"
+                    }
+
+                    // Try to extract collector number from the card name using enhanced parsing
+                    collectorNumber = extractCollectorNumber(article.name);
+
+                    // Add structured logging
+                    console.log(JSON.stringify({
+                        product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [],
+                        resolved_via: 'set+cn',
+                        set_code: setCode,
+                        collector_number: collectorNumber,
+                        final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : ''
+                    }));
+
+                    // Try to resolve to a Scryfall ID
+                    cardData = await ScryfallProvider.hydrateCard({
+                        name: cleanCardName,
+                        setCode: setCode || article.expansion, // Fallback to original if we can't resolve
+                        collectorNumber: collectorNumber,
+                        version: versionInfo
+                    });
+
+                    cardId = cardData?.id || null;
+
+                    // Add structured logging when no resolution is possible
+                    if (!cardId) {
+                        console.log(JSON.stringify({
+                            product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [],
+                            resolved_via: 'none',
+                            set_code: null,
+                            collector_number: '',
+                            final_uri: '',
+                            name: article.name,
+                            expansion: article.expansion
+                        }));
+                    }
+                }
+
+                // Parse price as Money
+                const price = Money.parse(article.price, 'EUR');
+
+                // If we have a card ID, fetch and save price data
+                if (cardId) {
+                    // Check if the card exists in our database
+                    const existingCard = await cardRepository.getById(cardId);
+                    if (!existingCard) {
+                        // Get full card data from Scryfall
+                        const scryfallData = cardData || await ScryfallProvider.hydrateCard({
+                            scryfall_id: cardId,
+                            name: article.name,
+                            setCode: article.expansion,
+                            collectorNumber: '' // Not available in articles CSV
+                        });
+
+                        const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
+
+                        const newCard: Card = {
+                            id: cardId,
+                            oracleId: scryfallData?.oracle_id || cardData?.oracle_id || '',
+                            name: article.name,
+                            set: scryfallData?.set_name || cardData?.set_name || article.expansion,
+                            setCode: scryfallData?.set || cardData?.set || (await resolveSetCode(article.expansion) || ''),
+                            number: scryfallData?.collector_number || cardData?.collector_number || collectorNumber || '', // Use parsed collector number if available
+                            lang: scryfallData?.lang || cardData?.lang || 'en',
+                            finish: 'nonfoil', // Assuming non-foil for now, will need to be updated later
+                            layout: imageUrls?.layout || 'normal',
+                            imageUrl: imageUrls?.front || '',
+                            imageUrlBack: imageUrls?.back || '',
+                            createdAt: now,
+                            updatedAt: now,
+                        };
+
+                        await cardRepository.add(newCard);
+
+                        // Fetch and save price data for the new card
+                        try {
+                            const price = await ScryfallProvider.getPriceById(cardId);
+                            if (price) {
+                                // Create price point ID with date
+                                const dateStr = now.toISOString().split('T')[0];
+                                const pricePointId = `${cardId}:scryfall:${dateStr}`;
+
+                                // Create price point
+                                const pricePoint = {
+                                    id: pricePointId,
+                                    cardId: cardId,
+                                    provider: 'scryfall',
+                                    currency: price.getCurrency(),
+                                    price: price.getCents(),
+                                    asOf: now,
+                                    createdAt: now
+                                };
+
+                                // Save price point
+                                await db.price_points.put(pricePoint);
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching price for new card ${cardId}:`, error);
+                        }
+                    } else {
+                        // Card already exists, but we might want to update its price data
+                        // For now, we'll just make sure there's a price point for today
+                        try {
+                            const dateStr = now.toISOString().split('T')[0];
+                            const pricePointId = `${cardId}:scryfall:${dateStr}`;
+                            const existingPricePoint = await db.price_points.get(pricePointId);
+
+                            if (!existingPricePoint) {
+                                const price = await ScryfallProvider.getPriceById(cardId);
+                                if (price) {
+                                    // Create price point
+                                    const pricePoint = {
+                                        id: pricePointId,
+                                        cardId: cardId,
+                                        provider: 'scryfall',
+                                        currency: price.getCurrency(),
+                                        price: price.getCents(),
+                                        asOf: now,
+                                        createdAt: now
+                                    };
+
+                                    // Save price point
+                                    await db.price_points.put(pricePoint);
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`Error checking/updating price for existing card ${cardId}:`, error);
+                        }
+                    }
+                }
+
+                // Create card lot record if card was bought
+                let lotIdForTransaction: string | undefined = undefined;
+                if (article.direction === 'purchase') {
+                    // Create external reference for the lot to avoid duplicates
+                    const lotExternalRef = `cardmarket:lot:${article.shipmentId}:${article.lineNumber}`;
+
+                    // Check if we already have a lot for this article
+                    const existingLots = await cardLotRepository.getByExternalRef(lotExternalRef);
+
+                    let lotToLink: CardLot | null = null;
+
+                    if (existingLots.length > 0) {
+                        // Use the existing lot
+                        lotToLink = existingLots[0];
+                    } else {
+                        // Check if we already have a lot for this card without a purchase transaction
+                        // This would be the case if we imported a deck first and then the Cardmarket purchase
+                        const existingCardLots = await cardLotRepository.getByCardId(cardId || '');
+
+                        // Look for a lot that doesn't have a purchase transaction yet
+                        for (const lot of existingCardLots) {
+                            // Check if this lot already has a purchase transaction linked to it
+                            const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
+                            const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
+
+                            if (!hasPurchaseTransaction) {
+                                lotToLink = lot;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (lotToLink) {
+                        // Update the existing lot with purchase information
+                        await cardLotRepository.update(lotToLink.id, {
+                            unitCost: price.getCents(),
+                            source: 'cardmarket',
+                            purchasedAt: new Date(article.dateOfPurchase),
+                            updatedAt: now
+                        });
+
+                        lotIdForTransaction = lotToLink.id;
+                    } else {
+                        // Create a new lot for this purchase
+                        const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+                        const lot: CardLot = {
+                            id: lotId,
+                            cardId: cardId || '', // Will be empty if not resolved
+                            quantity: parseInt(article.amount) || 1,
+                            unitCost: price.getCents(),
+                            condition: '', // Not available in articles CSV
+                            language: '', // Not available in articles CSV
+                            foil: false, // Not available in articles CSV
+                            finish: 'nonfoil', // Default to nonfoil
+                            source: 'cardmarket',
+                            currency: 'EUR', // Add currency
+                            externalRef: lotExternalRef, // Add external reference for deduplication
+                            purchasedAt: new Date(article.dateOfPurchase),
+                            createdAt: now,
+                            updatedAt: now
+                        };
+
+                        // Save lot
+                        await cardLotRepository.add(lot);
+
+                        lotIdForTransaction = lotId;
+                    }
+                }
+
+                // Create transaction record
+                const transactionExternalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+
+                // Check if transaction already exists
+                const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
+                if (existingTransaction) continue;
+
+                const transactionRecord = {
+                    id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
+                    cardId: cardId || undefined, // Will be undefined if not resolved
+                    lotId: lotIdForTransaction, // Link to the lot if we have one
+                    quantity: parseInt(article.amount) || 1,
+                    unitPrice: price.getCents(),
+                    fees: 0, // Fees would be in order records
+                    shipping: 0, // Shipping would be in order records
+                    currency: 'EUR',
+                    source: 'cardmarket',
+                    externalRef: transactionExternalRef,
+                    happenedAt: new Date(article.dateOfPurchase),
+                    createdAt: now,
+                    updatedAt: now
+                };
+
+                // Save transaction
+                await transactionRepository.add(transactionRecord);
+            }
+
+            // Mark import as completed
+            importStatusStore.completeImport(importId);
+        } catch (error) {
+            console.error('Error importing Cardmarket articles:', error);
+            importStatusStore.completeImport(importId, (error as Error).message);
+            throw error;
+        }
+    }
+
+    // Get or create lot for a card purchase
+    static async getOrCreateLotForPurchase(cardId: string, quantity: number, unitCost: number, purchaseDate: Date): Promise<string> {
+        const now = new Date();
+
+        // Check if we already have a lot for this card without a purchase transaction
+        const existingLots = await cardLotRepository.getByCardId(cardId);
+
+        // Look for a lot that doesn't have a purchase transaction yet
+        for (const lot of existingLots) {
+            // Check if this lot already has a purchase transaction linked to it
+            const purchaseTransactions = await transactionRepository.getByLotId(lot.id);
+            const hasPurchaseTransaction = purchaseTransactions.some(tx => tx.kind === 'BUY');
+
+            if (!hasPurchaseTransaction) {
+                // Update the existing lot with purchase information
+                await cardLotRepository.update(lot.id, {
+                    unitCost: unitCost,
+                    quantity: lot.quantity + quantity, // Add to existing quantity
+                    source: 'cardmarket',
+                    purchasedAt: purchaseDate,
+                    updatedAt: now
+                });
+
+                return lot.id;
+            }
+        }
+
+        // Create a new lot for this purchase
+        const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const lot: CardLot = {
+            id: lotId,
+            cardId: cardId,
+            quantity: quantity,
+            unitCost: unitCost,
+            condition: 'NM', // Default condition
+            language: 'en', // Default language
+            foil: false, // Default to nonfoil
+            finish: 'nonfoil', // Default to nonfoil
+            source: 'cardmarket',
+            currency: 'EUR',
+            purchasedAt: purchaseDate,
+            createdAt: now,
+            updatedAt: now
         };
-      }
+
+        // Save lot
+        await cardLotRepository.add(lot);
+
+        return lotId;
     }
-    
-    // No single lot can fulfill the entire sale
-    return null;
-  }
-  
-  // Check if articles have already been imported
-  static async checkForExistingImports(articles: any[]): Promise<{ article: any, exists: boolean }[]> {
-    const results = [];
-    
-    for (const article of articles) {
-      // Create external reference to check for duplicates
-      const externalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
-      
-      // Check if transaction already exists
-      const existing = await db.transactions.where('externalRef').equals(externalRef).first();
-      
-      results.push({
-        article,
-        exists: !!existing
-      });
+
+    // Get lot for a card sale
+    static async getLotForSale(cardId: string, quantity: number): Promise<{
+        lotId: string,
+        remainingQuantity: number
+    } | null> {
+        // Get all active lots for this card, sorted by purchase date (FIFO)
+        const lots = await cardLotRepository.getByCardId(cardId);
+
+        // Filter and sort lots by purchase date (FIFO)
+        const activeLots = lots
+            .filter(lot => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity))
+            .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime());
+
+        // Try to find a lot that can fulfill this sale
+        for (const lot of activeLots) {
+            // Calculate how many items from this lot are still available
+            const availableQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
+
+            if (availableQuantity >= quantity) {
+                // This lot can fulfill the entire sale
+                return {
+                    lotId: lot.id,
+                    remainingQuantity: availableQuantity - quantity
+                };
+            }
+        }
+
+        // No single lot can fulfill the entire sale
+        return null;
     }
-    
-    return results;
-  }
+
+    // Check if articles have already been imported
+    static async checkForExistingImports(articles: any[]): Promise<{ article: any, exists: boolean }[]> {
+        const results = [];
+
+        for (const article of articles) {
+            // Create external reference to check for duplicates
+            const externalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+
+            // Check if transaction already exists
+            const existing = await db.transactions.where('externalRef').equals(externalRef).first();
+
+            results.push({
+                article,
+                exists: !!existing
+            });
+        }
+
+        return results;
+    }
 }
