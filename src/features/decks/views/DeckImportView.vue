@@ -32,11 +32,8 @@
         {{ isImporting ? 'Importing...' : 'Import Deck' }}
       </button>
       
-      <div v-if="importProgress !== null" class="progress-container mb-4">
-        <div class="progress">
-          <div class="progress-bar" :style="{ width: importProgress + '%' }"></div>
-        </div>
-        <div class="progress-text">{{ importProgress }}%</div>
+      <div v-if="importError" class="status-message error">
+        {{ importError }}
       </div>
       
       <div class="instructions">
@@ -49,232 +46,52 @@
         </ol>
       </div>
     </div>
-    
-    <div v-if="importStatus" class="status-message" :class="importStatus.type">
-      {{ importStatus.message }}
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { cardRepository, cardLotRepository } from '../../../data/repos';
-import { EntityLinker } from '../../linker/EntityLinker';
-import { ScryfallProvider } from '../../pricing/ScryfallProvider';
-import db from '../../../data/db';
+import { DeckImportService } from '../DeckImportService';
 
 // Reactive state
 const deckName = ref('');
 const decklist = ref('');
 const isImporting = ref(false);
-const importStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
-const importProgress = ref<number | null>(null);
-
-// Show status message
-const showStatus = (type: 'success' | 'error', message: string) => {
-  importStatus.value = { type, message };
-  setTimeout(() => {
-    importStatus.value = null;
-  }, 5000);
-};
+const importError = ref<string | null>(null);
 
 // Import deck
 const importDeck = async () => {
   // Validate inputs
   if (!deckName.value.trim()) {
-    showStatus('error', 'Please enter a deck name');
+    importError.value = 'Please enter a deck name';
     return;
   }
   
   if (!decklist.value.trim()) {
-    showStatus('error', 'Please paste your decklist');
+    importError.value = 'Please paste your decklist';
     return;
   }
   
   isImporting.value = true;
-  importProgress.value = 0;
+  importError.value = null;
   
   try {
-    // Split the decklist into lines for progress tracking
-    const lines = decklist.value.trim().split('\n').filter(line => line.trim());
-    const totalLines = lines.length;
+    // Import the deck using the service
+    await DeckImportService.importDeckFromText(deckName.value.trim(), decklist.value.trim());
     
-    // Create a promise that resolves after a short delay to prevent UI freezing
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    // Show success message
+    importError.value = 'Deck import started successfully! Check the status indicator in the top right for progress.';
     
-    // Import the deck with progress updates
-    const deckId = `deck-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date();
-    const deck = {
-      id: deckId,
-      platform: 'csv' as const,
-      name: deckName.value.trim(),
-      commander: '',
-      url: '',
-      importedAt: now,
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    // Save deck
-    await db.decks.add(deck);
-    
-    // Process cards from text with progress updates
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      // Update progress
-      importProgress.value = Math.round(((i + 1) / totalLines) * 100);
-      
-      // Allow UI to update by yielding control
-      await delay(0);
-      
-      console.log('Processing line:', line);
-      
-      // Parse the line (format: "quantity cardName (setCode) collectorNumber")
-      const match = line.match(/^(\d+)\s+(.+?)\s*\(([^)]+)\)\s*(\d+)(?:\s*\*F\*\s*)?$/i);
-      
-      if (match) {
-        const [, quantityStr, cardName, setCode, collectorNumber] = match;
-        const quantity = parseInt(quantityStr) || 1;
-        
-        if (cardName && setCode && collectorNumber) {
-          // Create a card fingerprint
-          const fingerprint = {
-            name: cardName.trim(),
-            setCode: setCode.trim(),
-            collectorNumber: collectorNumber.trim(),
-            finish: 'nonfoil',
-            language: 'en'
-          };
-          
-          // Try to resolve to a Scryfall ID
-          const cardId = await EntityLinker.resolveFingerprint(fingerprint);
-          
-          if (cardId) {
-            const existingCard = await cardRepository.getById(cardId);
-            if (!existingCard) {
-              // Get full card data from Scryfall
-              const scryfallData = await ScryfallProvider.hydrateCard({
-                scryfall_id: cardId,
-                name: cardName.trim(),
-                setCode: setCode.trim(),
-                collectorNumber: collectorNumber.trim()
-              });
-              
-              // Get image URL from Scryfall data
-              const imageUrl = scryfallData?.image_uris?.normal || 
-                              scryfallData?.image_uris?.large || 
-                              scryfallData?.image_uris?.small || 
-                              '';
-              
-              const now = new Date();
-              const cardRecord = {
-                id: cardId,
-                oracleId: scryfallData?.oracle_id || '',
-                name: cardName.trim(),
-                set: scryfallData?.set_name || setCode.trim(),
-                setCode: setCode.trim(),
-                number: collectorNumber.trim(),
-                lang: scryfallData?.lang || 'en',
-                finish: 'nonfoil',
-                imageUrl: imageUrl,
-                createdAt: now,
-                updatedAt: now
-              };
-              
-              await cardRepository.add(cardRecord);
-            }
-            
-            // Check if we already have this card in our collection
-            // If we do, we don't need to create a new lot unless we need more quantity
-            const existingLots = await cardLotRepository.getByCardId(cardId);
-            const totalOwned = existingLots.reduce((sum, lot) => {
-              // Only count lots that haven't been fully disposed
-              if (!lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity)) {
-                const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
-                return sum + remainingQuantity;
-              }
-              return sum;
-            }, 0);
-            
-            if (totalOwned < quantity) {
-              const neededQuantity = quantity - totalOwned;
-              const now = new Date();
-              
-              // Create a new lot for the additional cards we need
-              const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-              const lot = {
-                id: lotId,
-                cardId: cardId,
-                quantity: neededQuantity,
-                unitCost: 0, // Default to 0 cost for deck imports
-                condition: 'unknown',
-                language: 'en',
-                foil: false,
-                finish: 'nonfoil',
-                source: 'deck_import',
-                currency: 'EUR', // Add currency
-                purchasedAt: now,
-                createdAt: now,
-                updatedAt: now
-              };
-              
-              await cardLotRepository.add(lot);
-            }
-          }
-          
-          // Find an existing lot for this card that we can link to
-          // Prefer lots that are not yet disposed
-          let lotIdToLink: string | undefined = undefined;
-          const existingLots = await cardLotRepository.getByCardId(cardId || '');
-          if (existingLots.length > 0) {
-            // Look for a lot that has enough quantity and is not disposed
-            for (const lot of existingLots) {
-              const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
-              if (remainingQuantity >= quantity && !lot.disposedAt) {
-                lotIdToLink = lot.id;
-                break;
-              }
-            }
-            
-            // If we didn't find a suitable lot, use the first one
-            if (!lotIdToLink && existingLots.length > 0) {
-              lotIdToLink = existingLots[0].id;
-            }
-          }
-          
-          // Create deck card record with new schema
-          const now = new Date();
-          const deckCard = {
-            id: `deckcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            deckId: deckId || 'unknown-deck',
-            cardId: cardId || 'unknown-card',
-            lotId: lotIdToLink, // Link to existing lot if possible
-            quantity: typeof quantity === 'number' && quantity > 0 ? quantity : 1,
-            role: 'main' as const,
-            addedAt: now,
-            createdAt: now
-          };
-          
-          // Save deck card (use put instead of add to handle updates)
-          await db.deck_cards.put(deckCard);
-        }
-      }
-    }
-    
-    showStatus('success', `Successfully imported deck: ${deckName.value}`);
-    
-    // Reset form
-    deckName.value = '';
-    decklist.value = '';
+    // Reset form after successful import
+    setTimeout(() => {
+      deckName.value = '';
+      decklist.value = '';
+      isImporting.value = false;
+      importError.value = null;
+    }, 3000);
   } catch (error) {
-    console.error('Error importing deck:', error);
-    showStatus('error', 'Failed to import deck: ' + (error as Error).message);
-  } finally {
+    importError.value = 'Failed to import deck: ' + (error as Error).message;
     isImporting.value = false;
-    importProgress.value = null;
   }
 };
 </script>
@@ -328,15 +145,5 @@ const importDeck = async () => {
 .status-message.error {
   background: var(--color-error-bg);
   color: var(--color-error);
-}
-
-.progress-container {
-  margin-bottom: var(--space-lg);
-}
-
-.progress-text {
-  text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
 }
 </style>

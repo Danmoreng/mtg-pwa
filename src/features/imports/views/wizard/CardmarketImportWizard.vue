@@ -151,12 +151,12 @@
 
                 <div class="invalid-rows">
                   <div
-                      v-for="(row, index) in getInvalidRows(parsedData[fileType], fileType).slice(0, 3)"
+                      v-for="(item, index) in getInvalidRows(parsedData[fileType], fileType).slice(0, 3)"
                       :key="index"
                       class="invalid-row"
                   >
-                    <div class="row-number">Row {{ row.row.lineNumber || row.row.reference }}</div>
-                    <div class="row-errors">{{ row.errors.join(', ') }}</div>
+                    <div class="row-number">Row {{ item.row.lineNumber || item.row.reference }}</div>
+                    <div class="row-errors">{{ item.errors.join(', ') }}</div>
                   </div>
                   <div v-if="getInvalidRows(parsedData[fileType], fileType).length > 3" class="more-rows">
                     ... and {{ getInvalidRows(parsedData[fileType], fileType).length - 3 }} more rows
@@ -203,7 +203,7 @@
                 
                 <div class="conflicts-list">
                   <div 
-                    v-for="(row, index) in getNewRecords(fileType).filter(row => !isArticleImported(fileType, row))" 
+                    v-for="(row, index) in getNewRecords(fileType).filter(r => !isArticleImported(fileType, r))" 
                     :key="index" 
                     class="d-flex justify-content-between align-items-center p-2 bg-light rounded"
                   >
@@ -264,8 +264,8 @@
               </div>
             </div>
 
-            <div v-if="importStatus" class="import-status" :class="importStatus.type">
-              {{ importStatus.message }}
+            <div v-if="importError" class="import-status error">
+              {{ importError }}
             </div>
           </div>
         </div>
@@ -329,8 +329,8 @@ const fileTypes = ref<Record<string, string>>({});
 const parsedData = ref<Record<string, any[]>>({});
 
 // Import status
-const importStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 const isImporting = ref(false);
+const importError = ref<string | null>(null);
 
 // Existing imports check
 const existingImports = ref<Record<string, boolean>>({});
@@ -517,7 +517,7 @@ const startImport = async () => {
   if (isImporting.value) return;
 
   isImporting.value = true;
-  importStatus.value = null;
+  importError.value = null;
 
   try {
     // Import data for each file type
@@ -543,16 +543,22 @@ const startImport = async () => {
       }
     }
 
-    importStatus.value = {
-      type: 'success',
-      message: 'Successfully imported all data'
-    };
+    // Show success message in UI
+    importError.value = 'Import completed successfully! Check the status indicator in the top right for details.';
+    
+    // Reset form after successful import
+    setTimeout(() => {
+      currentStep.value = 0;
+      uploadedFiles.value = [];
+      fileContents.value = {};
+      fileTypes.value = {};
+      parsedData.value = {};
+      errors.value = [];
+      isImporting.value = false;
+      importError.value = null;
+    }, 3000);
   } catch (error) {
-    importStatus.value = {
-      type: 'error',
-      message: 'Failed to import data: ' + (error as Error).message
-    };
-  } finally {
+    importError.value = 'Failed to import data: ' + (error as Error).message;
     isImporting.value = false;
   }
 };
