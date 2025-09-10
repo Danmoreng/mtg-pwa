@@ -10,6 +10,7 @@ export interface Card {
   number: string;
   lang: string;
   finish: string;
+  layout?: string;
   imageUrl?: string;
   imageUrlBack?: string;
   createdAt: Date;
@@ -313,8 +314,8 @@ class MtgTrackerDb extends Dexie {
       });
     });
 
-    this.version(6).stores({
-      cards: 'id, oracleId, name, set, setCode, number, lang, finish, imageUrl, imageUrlBack, createdAt, updatedAt',
+    this.version(7).stores({
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, createdAt, updatedAt',
       card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
       holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
       transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
@@ -325,6 +326,10 @@ class MtgTrackerDb extends Dexie {
       valuations: 'id, asOf, createdAt, [asOf+createdAt]',
       settings: 'k, createdAt, updatedAt',
       scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
+    }).upgrade(async tx => {
+      await tx.table('cards').toCollection().modify(card => {
+        card.layout = card.layout || 'normal';
+      });
     });
 
     // Version 5 - Add externalRef to card_lots for deduplication

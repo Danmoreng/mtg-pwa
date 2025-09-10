@@ -227,14 +227,6 @@ export class ImportService {
             });
             
             const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
-            let imageUrl = '';
-            let imageUrlBack = '';
-            if (typeof imageUrls === 'string') {
-              imageUrl = imageUrls;
-            } else if (imageUrls) {
-              imageUrl = imageUrls.front;
-              imageUrlBack = imageUrls.back;
-            }
 
             const newCard: Card = {
               id: cardId,
@@ -245,8 +237,9 @@ export class ImportService {
               number: scryfallData?.collector_number || cardData?.collector_number || collectorNumber || '', // Use parsed collector number if available
               lang: scryfallData?.lang || cardData?.lang || 'en',
               finish: 'nonfoil', // Assuming non-foil for now, will need to be updated later
-              imageUrl: imageUrl,
-              imageUrlBack: imageUrlBack,
+              layout: imageUrls?.layout || 'normal',
+              imageUrl: imageUrls?.front || '',
+              imageUrlBack: imageUrls?.back || '',
               createdAt: now,
               updatedAt: now,
             };

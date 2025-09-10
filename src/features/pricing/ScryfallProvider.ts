@@ -70,7 +70,7 @@ export class ScryfallProvider {
   }
 
   // Get the image URL for a card by Scryfall ID
-  static async getImageUrlById(scryfallId: string): Promise<string | { front: string; back: string } | null> {
+  static async getImageUrlById(scryfallId: string): Promise<{ front: string; back: string; layout: string } | null> {
     try {
       // Enforce rate limiting
       await this.enforceRateLimit();
@@ -83,15 +83,34 @@ export class ScryfallProvider {
       const data = await response.json();
 
       // Handle double-faced cards
-      if (data.layout === 'transform' && data.card_faces && data.card_faces.length === 2) {
+      if ((data.layout === 'transform' || data.layout === 'modal_dfc' || data.layout === 'reversible_card') && data.card_faces && data.card_faces.length === 2) {
         return {
-          front: data.card_faces[0].image_uris?.normal || data.card_faces[0].image_uris?.large || data.card_faces[0].image_uris?.small || null,
-          back: data.card_faces[1].image_uris?.normal || data.card_faces[1].image_uris?.large || data.card_faces[1].image_uris?.small || null,
+          front: data.card_faces[0].image_uris?.normal || data.card_faces[0].image_uris?.large || data.card_faces[0].image_uris?.small || '',
+          back: data.card_faces[1].image_uris?.normal || data.card_faces[1].image_uris?.large || data.card_faces[1].image_uris?.small || '',
+          layout: data.layout,
+        };
+      } else if (data.image_uris) {
+        // For single-faced cards, return the normal image URL
+        return {
+            front: data.image_uris.normal || data.image_uris.large || data.image_uris.small || '',
+            back: '',
+            layout: data.layout || 'normal',
+        };
+      } else if (data.card_faces && data.card_faces.length > 0 && data.card_faces[0].image_uris) {
+        // For other multi-faced cards (e.g., split, flip), return the front face image
+        return {
+            front: data.card_faces[0].image_uris.normal || data.card_faces[0].image_uris.large || data.card_faces[0].image_uris.small || '',
+            back: '',
+            layout: data.layout || 'normal',
         };
       }
 
       // Use the normal image for single-faced cards
-      return data.image_uris?.normal || data.image_uris?.large || data.image_uris?.small || null;
+      return {
+        front: data.image_uris?.normal || data.image_uris?.large || data.image_uris?.small || '',
+        back: '',
+        layout: data.layout || 'normal',
+      };
     } catch (error) {
       console.error('Error fetching image from Scryfall:', error);
       return null;
@@ -99,7 +118,7 @@ export class ScryfallProvider {
   }
 
   // Get the image URL for a card by set code and collector number
-  static async getImageUrlBySetAndNumber(setCode: string, collectorNumber: string): Promise<string | { front: string; back: string } | null> {
+  static async getImageUrlBySetAndNumber(setCode: string, collectorNumber: string): Promise<{ front: string; back: string; layout: string } | null> {
     try {
       // Enforce rate limiting
       await this.enforceRateLimit();
@@ -112,15 +131,34 @@ export class ScryfallProvider {
       const data = await response.json();
 
       // Handle double-faced cards
-      if (data.layout === 'transform' && data.card_faces && data.card_faces.length === 2) {
+      if ((data.layout === 'transform' || data.layout === 'modal_dfc' || data.layout === 'reversible_card') && data.card_faces && data.card_faces.length === 2) {
         return {
-          front: data.card_faces[0].image_uris?.normal || data.card_faces[0].image_uris?.large || data.card_faces[0].image_uris?.small || null,
-          back: data.card_faces[1].image_uris?.normal || data.card_faces[1].image_uris?.large || data.card_faces[1].image_uris?.small || null,
+          front: data.card_faces[0].image_uris?.normal || data.card_faces[0].image_uris?.large || data.card_faces[0].image_uris?.small || '',
+          back: data.card_faces[1].image_uris?.normal || data.card_faces[1].image_uris?.large || data.card_faces[1].image_uris?.small || '',
+          layout: data.layout,
+        };
+      } else if (data.image_uris) {
+        // For single-faced cards, return the normal image URL
+        return {
+            front: data.image_uris.normal || data.image_uris.large || data.image_uris.small || '',
+            back: '',
+            layout: data.layout || 'normal',
+        };
+      } else if (data.card_faces && data.card_faces.length > 0 && data.card_faces[0].image_uris) {
+        // For other multi-faced cards (e.g., split, flip), return the front face image
+        return {
+            front: data.card_faces[0].image_uris.normal || data.card_faces[0].image_uris.large || data.card_faces[0].image_uris.small || '',
+            back: '',
+            layout: data.layout || 'normal',
         };
       }
 
       // Use the normal image for single-faced cards
-      return data.image_uris?.normal || data.image_uris?.large || data.image_uris?.small || null;
+      return {
+        front: data.image_uris?.normal || data.image_uris?.large || data.image_uris?.small || '',
+        back: '',
+        layout: data.layout || 'normal',
+      };
     } catch (error) {
       console.error('Error fetching image from Scryfall:', error);
       return null;
