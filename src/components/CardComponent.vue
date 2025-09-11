@@ -87,6 +87,12 @@
                     <span v-else class="small text-muted fst-italic">Price unavailable</span>
                   </div>
 
+                  <!-- Historic Price Chart -->
+                  <div v-if="pricePoints.length > 0" class="mb-3">
+                    <h3 class="h6 mb-2">Price History</h3>
+                    <PriceHistoryChart :price-points="pricePoints" :transactions="transactions" />
+                  </div>
+
                   <!-- Ownership (summary first, expandable details) -->
                   <div v-if="lots && lots.length" class="mb-3">
                     <h3 class="h6 mb-2">Your Collection</h3>
@@ -182,6 +188,7 @@ import db from '../data/db';
 import {Money} from '../core/Money';
 import {useCardsStore} from '../stores';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
+import PriceHistoryChart from './PriceHistoryChart.vue';
 
 // Enable attribute inheritance
 defineOptions({
@@ -202,6 +209,7 @@ const currentPrice = ref<Money | null>(null);
 const loadingPrice = ref(false);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
+const pricePoints = ref<any[]>([]);
 const isFlipped = ref(false);
 
 const showLots = ref(false);
@@ -261,9 +269,20 @@ const formatMoney = (cents: number, currency: string) => {
 };
 
 const loadCardDetails = async () => {
+  loadingPrice.value = true;
   try {
-    // Load current price
-    await loadCurrentPrice();
+    // Fetch price points from database
+    const allPricePoints = await db.price_points.where('cardId').equals(props.card.id).toArray();
+    pricePoints.value = allPricePoints;
+
+    // Find the most recent price point
+    if (allPricePoints.length > 0) {
+      // Sort by date descending to get the most recent price
+      allPricePoints.sort((a: any, b: any) => b.asOf.getTime() - a.asOf.getTime());
+      const latestPricePoint = allPricePoints[0];
+
+      currentPrice.value = new Money(latestPricePoint.price, latestPricePoint.currency);
+    }
 
     // Load lots for this card
     lots.value = await db.card_lots.where('cardId').equals(props.card.id).toArray();
@@ -272,25 +291,6 @@ const loadCardDetails = async () => {
     transactions.value = await db.transactions.where('cardId').equals(props.card.id).toArray();
   } catch (error) {
     console.error('Error loading card details:', error);
-  }
-};
-
-const loadCurrentPrice = async () => {
-  loadingPrice.value = true;
-  try {
-    // Fetch price points from database
-    const pricePoints = await db.price_points.where('cardId').equals(props.card.id).toArray();
-
-    // Find the most recent price point
-    if (pricePoints.length > 0) {
-      // Sort by date descending to get the most recent price
-      pricePoints.sort((a: any, b: any) => b.asOf.getTime() - a.asOf.getTime());
-      const latestPricePoint = pricePoints[0];
-
-      currentPrice.value = new Money(latestPricePoint.price, latestPricePoint.currency);
-    }
-  } catch (error) {
-    console.error('Error loading current price:', error);
   } finally {
     loadingPrice.value = false;
   }
