@@ -62,7 +62,7 @@ const chartData = computed(() => {
 const chartOptions = computed(() => {
   const annotations = props.transactions.map(t => {
     return {
-      type: 'line',
+      type: 'line' as const,
       yMin: new Money(t.unitPrice, t.currency).getDecimal(),
       yMax: new Money(t.unitPrice, t.currency).getDecimal(),
       borderColor: t.kind === 'buy' ? 'green' : 'red',
@@ -78,12 +78,15 @@ const chartOptions = computed(() => {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: false,
+    animation: {},
     scales: {
       y: {
         ticks: {
-          callback: function(value: number) {
-            return new Money(value * 100, 'EUR').format('de-DE');
+          callback: function(value: string | number) {
+            if (typeof value === 'number') {
+              return new Money(value * 100, 'EUR').format('de-DE');
+            }
+            return value;
           }
         }
       }
