@@ -1,6 +1,4 @@
-import db from '../data/db';
 import { cardLotRepository } from '../data/repos';
-import { Money } from '../core/Money';
 
 /**
  * Migration script to update existing card lots with enhanced financial tracking fields
@@ -59,19 +57,6 @@ async function updateCardLotsFinancialTracking() {
     console.error('Migration failed:', error);
     throw error;
   }
-}
-
-// Run the migration if this script is executed directly
-if (require.main === module) {
-  updateCardLotsFinancialTracking()
-    .then(() => {
-      console.log('Migration finished successfully');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('Migration failed with error:', error);
-      process.exit(1);
-    });
 }
 
 export default updateCardLotsFinancialTracking;

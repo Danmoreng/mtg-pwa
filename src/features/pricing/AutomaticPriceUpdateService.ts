@@ -1,6 +1,7 @@
 // Automatic price update service for syncing card prices with TTL and scheduling
 import { PriceUpdateService } from './PriceUpdateService';
 import { settingRepository } from '../../data/repos';
+import { useImportStatusStore } from '../../stores/importStatus';
 
 export class AutomaticPriceUpdateService {
   // Check if we need to update prices based on TTL (24 hours)
@@ -45,17 +46,42 @@ export class AutomaticPriceUpdateService {
 
   // Update prices and record the update time
   static async updatePrices(): Promise<void> {
+    // Create import status for tracking progress
+    const importStatusStore = useImportStatusStore();
+    const importId = importStatusStore.addImport({
+      id: `price-update-${Date.now()}`,
+      type: 'pricing',
+      name: 'Price Updates',
+      status: 'pending',
+      progress: 0,
+      totalItems: 0, // Will be updated when we know the count
+      processedItems: 0
+    });
+
     try {
-      // Perform the price update
-      await PriceUpdateService.syncPrices();
+      // Perform the price update with progress tracking
+      await PriceUpdateService.syncPrices((processed, total) => {
+        // Update the import status with progress
+        importStatusStore.updateImport(importId, {
+          status: 'processing',
+          progress: Math.round((processed / total) * 100),
+          totalItems: total,
+          processedItems: processed
+        });
+      });
       
       // Record the update time
       const now = new Date().toISOString();
       await settingRepository.set('last_price_update_timestamp', now);
       
+      // Mark import as completed
+      importStatusStore.completeImport(importId);
+      
       console.log(`Prices updated successfully at ${now}`);
     } catch (error) {
       console.error('Error updating prices:', error);
+      // Mark import as failed
+      importStatusStore.completeImport(importId, error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   }

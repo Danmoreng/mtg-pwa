@@ -3,7 +3,6 @@
     <div class="d-flex align-items-center">
       <div class="me-2">
         <div class="d-flex align-items-center">
-          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
           <span class="fw-medium">{{ currentImport.name }}</span>
         </div>
         <div class="progress mt-1" style="height: 8px; width: 150px;">

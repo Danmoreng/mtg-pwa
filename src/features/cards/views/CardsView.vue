@@ -110,7 +110,13 @@ const sortedCards = computed(() => {
 
 // Load cards and prices when component mounts
 onMounted(() => {
-  cardsStore.loadCardsAndPrices();
+  // Load cards immediately
+  cardsStore.loadCards();
+  
+  // Load prices in the background without blocking UI
+  setTimeout(() => {
+    cardsStore.loadCardPrices();
+  }, 0);
 });
 </script>
 

@@ -18,17 +18,20 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
 
-// Initialize automatic price updates
+// Initialize automatic price updates in the background (non-blocking)
 async function initApp() {
+  // Mount the app immediately without waiting for price updates
+  app.use(router).mount('#app');
+  
+  // Schedule price updates in the background after app is mounted
   try {
-    // Check if we need to update prices on app start
-    await AutomaticPriceUpdateService.schedulePriceUpdate();
+    // Add a small delay to ensure UI is ready
+    setTimeout(async () => {
+      await AutomaticPriceUpdateService.schedulePriceUpdate();
+    }, 1000);
   } catch (error) {
     console.error('Error initializing automatic price updates:', error);
   }
-  
-  // Mount the app
-  app.use(router).mount('#app');
 }
 
 // Initialize the app

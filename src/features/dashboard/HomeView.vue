@@ -212,11 +212,13 @@ const refreshPrices = async () => {
 
 // Load data when component mounts
 onMounted(async () => {
-  // Check if we need to update prices automatically
-  await checkAndScheduleUpdate();
-  
-  // Load the dashboard data
+  // Load the dashboard data immediately without waiting for price updates
   await loadData();
+  
+  // Check if we need to update prices automatically in the background
+  setTimeout(async () => {
+    await checkAndScheduleUpdate();
+  }, 0);
 });
 </script>
 
