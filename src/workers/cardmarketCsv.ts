@@ -16,16 +16,17 @@ interface CardmarketTransaction {
 
 interface CardmarketOrder {
   orderId: string;
+  direction: 'sale' | 'purchase';
+  merchandiseValue: string;  // Warenwert
+  shipmentCosts: string;       // Versandkosten
+  commission: string;         // Provision/Gebühren
+  totalValue: string;         // Gesamtwert
+  // ... other existing fields
   dateOfPurchase: string;
   username: string;
   country: string;
   city: string;
   articleCount: string;
-  merchandiseValue: string;
-  shipmentCosts: string;
-  commission: string;
-  totalValue: string;
-  direction: 'sale' | 'purchase';
   currency: string;
   lineNumber: number;
 }
