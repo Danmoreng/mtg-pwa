@@ -30,6 +30,13 @@ export class ValuationEngine {
 
   // Calculate the cost basis of a card lot
   static async calculateLotCostBasis(lot: CardLot): Promise<Money> {
+    // Use enhanced cost calculation that includes fees and shipping
+    if (lot.totalAcquisitionCostCent) {
+      const remaining = lot.disposedQuantity ? (lot.quantity - lot.disposedQuantity) : lot.quantity;
+      const proportion = remaining / lot.quantity;
+      return new Money(lot.totalAcquisitionCostCent * proportion, lot.currency || 'EUR');
+    }
+    
     const unitCost = new Money(lot.unitCost, lot.currency || 'EUR');
     const remaining = lot.disposedQuantity ? (lot.quantity - lot.disposedQuantity) : lot.quantity;
     return unitCost.multiply(remaining);
@@ -54,8 +61,11 @@ export class ValuationEngine {
       if (transaction.lotId) {
         const lot = await cardLotRepository.getById(transaction.lotId);
         if (lot) {
-          const lotCost = new Money(lot.unitCost, lot.currency || 'EUR');
-          costs = lotCost.multiply(transaction.quantity);
+          // Use enhanced cost calculation that includes fees and shipping
+          const lotCost = lot.totalAcquisitionCostCent ? 
+                         new Money(lot.totalAcquisitionCostCent, lot.currency || 'EUR') :
+                         new Money(lot.unitCost, lot.currency || 'EUR').multiply(lot.quantity);
+          costs = lotCost.multiply(transaction.quantity / lot.quantity);
         }
       } else if (transaction.cardId) {
         // Fallback to lot-based FIFO calculation if no lot is linked

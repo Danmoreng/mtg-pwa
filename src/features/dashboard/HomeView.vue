@@ -61,6 +61,63 @@
           </div>
         </div>
       </div>
+      
+      <!-- NEW FINANCIAL STATS -->
+      <div class="col-lg-3 col-md-6">
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Total Revenue</h2>
+            <p class="stat-value text-success">{{ totalRevenue }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Total Costs</h2>
+            <p class="stat-value text-danger">{{ totalCosts }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="card h-100 border">
+          <div class="card-body">
+            <h2 class="card-title">Net Profit/Loss</h2>
+            <p class="stat-value" :class="parseFloat(netProfitValue) >= 0 ? 'text-success' : 'text-danger'">
+              {{ netProfitValue }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Detailed breakdown section -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card border">
+          <div class="card-body">
+            <h2 class="card-title">Financial Breakdown</h2>
+            <div class="row">
+              <div class="col-md-3">
+                <h3>Sales Revenue</h3>
+                <p>{{ salesRevenue }}</p>
+              </div>
+              <div class="col-md-3">
+                <h3>Purchase Costs</h3>
+                <p>{{ purchaseCosts }}</p>
+              </div>
+              <div class="col-md-3">
+                <h3>Fees & Commission</h3>
+                <p class="text-danger">{{ totalFees }}</p>
+              </div>
+              <div class="col-md-3">
+                <h3>Shipping Costs</h3>
+                <p class="text-danger">{{ shippingCosts }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -71,6 +128,7 @@ import { useCardsStore } from '../../stores/cards';
 import { useHoldingsStore } from '../../stores/holdings';
 import { useTransactionsStore } from '../../stores/transactions';
 import { ValuationEngine } from '../analytics/ValuationEngine';
+import { FinanceService } from '../analytics/FinanceService';
 import { Money } from '../../core/Money';
 import { usePriceUpdates } from '../../composables/usePriceUpdates';
 
@@ -87,6 +145,13 @@ const portfolioValue = ref('€0.00');
 const totalCost = ref('€0.00');
 const unrealizedPL = ref('€0.00');
 const realizedPL = ref('€0.00');
+const totalRevenue = ref('€0.00');
+const totalCosts = ref('€0.00');
+const netProfitValue = ref('€0.00');
+const salesRevenue = ref('€0.00');
+const purchaseCosts = ref('€0.00');
+const totalFees = ref('€0.00');
+const shippingCosts = ref('€0.00');
 
 // Format money values
 const formatMoney = (money: Money): string => {
@@ -110,6 +175,23 @@ const loadData = async () => {
     totalCost.value = formatMoney(cost);
     unrealizedPL.value = formatMoney(unrealized);
     realizedPL.value = formatMoney(realized);
+    
+    // NEW FINANCIAL CALCULATIONS
+    const revenue = await FinanceService.getTotalRevenue();
+    const costs = await FinanceService.getTotalCosts();
+    const fees = await FinanceService.getTotalFees();
+    const shipping = await FinanceService.getTotalShippingCosts('purchase');
+    const shippingRevenue = await FinanceService.getTotalShippingCosts('sale');
+    const netProfit = await FinanceService.getTotalNetProfit();
+
+    totalRevenue.value = formatMoney(revenue);
+    totalCosts.value = formatMoney(costs);
+    salesRevenue.value = formatMoney(revenue);
+    purchaseCosts.value = formatMoney(costs);
+    totalFees.value = formatMoney(fees);
+    shippingCosts.value = formatMoney(shipping.subtract(shippingRevenue));
+
+    netProfitValue.value = formatMoney(netProfit);
   } catch (error) {
     console.error('Error loading dashboard data:', error);
   }
