@@ -17,10 +17,38 @@ vi.mock('../features/pricing/PriceUpdateService', () => ({
   }
 }));
 
+// Simple mock for the import status store
+let mockImportStatusStore: any;
+
+vi.mock('../stores/importStatus', async () => {
+  const actual = await vi.importActual('../stores/importStatus');
+  return {
+    ...actual,
+    useImportStatusStore: () => mockImportStatusStore
+  };
+});
+
 describe('AutomaticPriceUpdateService', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     vi.clearAllMocks();
+    
+    // Initialize the mock store
+    mockImportStatusStore = {
+      imports: [],
+      addImport: vi.fn(),
+      updateImport: vi.fn(),
+      completeImport: vi.fn(),
+      removeImport: vi.fn(),
+      clearCompletedImports: vi.fn(),
+      getActiveImports: vi.fn().mockReturnValue([]),
+      getCompletedImports: vi.fn().mockReturnValue([])
+    };
+    
+    // Set up default mock implementation for addImport
+    mockImportStatusStore.addImport.mockImplementation((importData) => {
+      return importData.id || 'import-id';
+    });
   });
 
   describe('needsPriceUpdate', () => {
@@ -78,6 +106,82 @@ describe('AutomaticPriceUpdateService', () => {
       (PriceUpdateService.syncPrices as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
 
       await expect(AutomaticPriceUpdateService.updatePrices()).rejects.toThrow('Network error');
+    });
+
+    it('should create import status and track progress during price updates', async () => {
+      // Mock the syncPrices to call the progress callback
+      (PriceUpdateService.syncPrices as ReturnType<typeof vi.fn>).mockImplementation((callback) => {
+        if (callback) {
+          callback(1, 2); // 1 out of 2
+          callback(2, 2); // 2 out of 2
+        }
+        return Promise.resolve();
+      });
+      (settingRepository.set as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+      // Set up mock to return a specific ID
+      const testImportId = 'test-import-id';
+      mockImportStatusStore.addImport.mockImplementation((importData) => {
+        return testImportId;
+      });
+
+      await AutomaticPriceUpdateService.updatePrices();
+
+      // Verify import status interactions
+      expect(mockImportStatusStore.addImport).toHaveBeenCalledWith({
+        id: expect.any(String),
+        type: 'pricing',
+        name: 'Price Updates',
+        status: 'pending',
+        progress: 0,
+        totalItems: 0,
+        processedItems: 0
+      });
+
+      // Verify progress updates
+      expect(mockImportStatusStore.updateImport).toHaveBeenCalledTimes(2);
+      expect(mockImportStatusStore.updateImport).toHaveBeenNthCalledWith(1, testImportId, {
+        status: 'processing',
+        progress: 50, // 1 out of 2 = 50%
+        totalItems: 2,
+        processedItems: 1
+      });
+      expect(mockImportStatusStore.updateImport).toHaveBeenNthCalledWith(2, testImportId, {
+        status: 'processing',
+        progress: 100, // 2 out of 2 = 100%
+        totalItems: 2,
+        processedItems: 2
+      });
+
+      // Verify completion
+      expect(mockImportStatusStore.completeImport).toHaveBeenCalledWith(testImportId);
+    });
+
+    it('should mark import as failed when price update throws an error', async () => {
+      const errorMessage = 'Network error';
+      (PriceUpdateService.syncPrices as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
+
+      // Set up mock to return a specific ID
+      const testImportId = 'test-import-id';
+      mockImportStatusStore.addImport.mockImplementation((importData) => {
+        return testImportId;
+      });
+
+      await expect(AutomaticPriceUpdateService.updatePrices()).rejects.toThrow(errorMessage);
+
+      // Verify import status interactions
+      expect(mockImportStatusStore.addImport).toHaveBeenCalledWith({
+        id: expect.any(String),
+        type: 'pricing',
+        name: 'Price Updates',
+        status: 'pending',
+        progress: 0,
+        totalItems: 0,
+        processedItems: 0
+      });
+
+      // Verify failure
+      expect(mockImportStatusStore.completeImport).toHaveBeenCalledWith(testImportId, errorMessage);
     });
   });
 

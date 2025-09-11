@@ -1,12 +1,13 @@
 // Import service for handling CSV imports
-import {transactionRepository, cardLotRepository, cardRepository} from '../../data/repos';
-import {Money} from '../../core/Money';
-import {ScryfallProvider} from '../pricing/ScryfallProvider';
-import {resolveSetCode} from '../pricing/SetCodeResolver';
+import { transactionRepository, cardLotRepository, cardRepository } from '../../data/repos';
+import { Money } from '../../core/Money';
+import { ScryfallProvider } from '../pricing/ScryfallProvider';
+import { resolveSetCode } from '../pricing/SetCodeResolver';
 import db from '../../data/db';
-import type {Card, CardLot} from '../../data/db';
-import {useImportStatusStore} from '../../stores/importStatus';
-import {v4 as uuidv4} from 'uuid';
+import type { Card, CardLot } from '../../data/db';
+import { useImportStatusStore } from '../../stores/importStatus';
+import { v4 as uuidv4 } from 'uuid';
+import { FinanceService } from '../analytics/FinanceService';
 
 export class ImportService {
     // Import Cardmarket transactions

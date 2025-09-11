@@ -54,7 +54,7 @@
                         <div v-if="card.imageUrlBack" class="w-100 h-100 rounded-4" :style="{ backgroundImage: `url(${card.imageUrlBack})`, backgroundSize: 'cover', backgroundPosition: 'center' }"></div>
                       </div>
                     </div>
-                    <button v-if="card.layout === 'transform' || card.layout === 'modal_dfc' || card.layout === 'reversible_card'" @click="isFlipped = !isFlipped" class="btn btn-sm btn-dark flip-button">
+                    <button v-if="card.layout === 'transform' || card.layout === 'modal_dfc' || card.layout === 'reversible_card' || card.imageUrl && card.imageUrlBack" @click="isFlipped = !isFlipped" class="btn btn-sm btn-dark flip-button">
                       Flip
                     </button>
                   </div>
@@ -241,7 +241,10 @@ const totalOwnedQuantity = computed(() => {
 // Methods
 const openModal = () => {
   showModal.value = true;
-  loadCardDetails();
+  // Load card details in the background
+  setTimeout(() => {
+    loadCardDetails();
+  }, 0);
 };
 
 const closeModal = () => {

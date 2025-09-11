@@ -1,6 +1,5 @@
 import { Money } from '../../core/Money';
 import { cardLotRepository, transactionRepository } from '../../data/repos';
-import db from '../../data/db';
 import type { CardLot } from '../../data/db';
 
 // Finance service for handling complex financial calculations

@@ -6,15 +6,17 @@ import { pricePointRepository } from '../../data/repos';
 
 export class PriceUpdateService {
   // Sync prices for all cards in the collection
-  static async syncPrices(): Promise<void> {
+  static async syncPrices(progressCallback?: (processed: number, total: number) => void): Promise<void> {
     try {
       const now = new Date();
       
       // Get all cards with Scryfall IDs
       const cards = await cardRepository.getAll();
+      const totalCards = cards.length;
       
       // Update prices for each card
-      for (const card of cards) {
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i];
         try {
           // Get price from Scryfall
           const price = await ScryfallProvider.getPriceById(card.id);
@@ -40,6 +42,11 @@ export class PriceUpdateService {
           }
         } catch (error) {
           console.error(`Error syncing price for card ${card.id}:`, error);
+        }
+        
+        // Report progress if callback provided
+        if (progressCallback) {
+          progressCallback(i + 1, totalCards);
         }
       }
     } catch (error) {
