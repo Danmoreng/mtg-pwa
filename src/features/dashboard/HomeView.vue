@@ -203,10 +203,8 @@ const refreshPrices = async () => {
     await forceUpdatePrices();
     // Reload data to reflect updated prices
     await loadData();
-    alert('Prices refreshed successfully');
   } catch (error) {
     console.error('Error refreshing prices:', error);
-    alert('Failed to refresh prices: ' + (error as Error).message);
   }
 };
 
