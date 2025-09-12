@@ -9,6 +9,9 @@ A Progressive Web App (PWA) for tracking the value of your Magic: The Gathering 
 - Import ManaBox scanned cards
 - Import decks from Moxfield
 - View portfolio statistics including value, cost basis, and profit/loss
+- Historical price charts for individual cards
+- Real-time import progress tracking
+- Interactive card details with image flipping for transform cards
 - Offline functionality with PWA support
 - Responsive design that works on desktop and mobile
 

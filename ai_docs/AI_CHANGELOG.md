@@ -2,6 +2,18 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 14:00 — docs: Update documentation to reflect recent features
+- **Author**: AI (Qwen)
+- **Scope**: README.md, ai_docs/ARCHITECTURE.md, ai_docs/ROADMAP.md
+- **Type**: docs
+- **Summary**: Updated project documentation to reflect recently implemented features and maintain accuracy.
+- **Details**:
+  - Updated README.md with new features: historical price charts, import progress tracking, and card image flipping
+  - Updated ARCHITECTURE.md with new components and current capabilities
+  - Updated ROADMAP.md with newly completed items and refreshed the last updated date
+- **Impact/Risks**: No code changes; documentation improvements only.
+- **Verification Steps**: Review documentation for accuracy and completeness.
+
 ## 2025-09-11 22:00 — fix: Fix failing tests and enable successful build
 - **Author**: AI (Qwen)
 - **Scope**: src/test/AutomaticPriceUpdateService.test.ts, src/test/components/CardComponentWithProgress.test.ts, src/test/views/CardsView.test.ts, src/test/views/HomeView.test.ts

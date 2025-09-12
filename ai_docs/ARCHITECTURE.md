@@ -1,6 +1,6 @@
 # Architecture (Authoritative)
 
-_Status updated: 2025-09-07_
+_Status updated: 2025-09-12_
 
 ## Overview
 Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-first design; all card data, pricing history, and user state live on-device. Background work handled via Web Workers.
@@ -102,5 +102,7 @@ Provider: Scryfall. Multi-layer caching:
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
 - Cardmarket Import Wizard  
-- Unified CardComponent with modal details  
+- Unified CardComponent with modal details and price history charts  
 - Deck import from Moxfield; ownership from lots  
+- Real-time import progress tracking  
+- Interactive card image flipping for transform cards  

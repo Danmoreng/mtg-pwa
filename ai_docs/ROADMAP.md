@@ -1,5 +1,5 @@
 # Roadmap — MTG Collection Value Tracker
-_Last updated: 2025‑09‑09_
+_Last updated: 2025‑09‑12_
 
 ## Principles
 - **Lots are source of truth** for ownership, cost basis, P/L.
@@ -48,6 +48,18 @@ _Last updated: 2025‑09‑09_
 **Accept:** `npm run lint` passes; CI uses a single config.  
 **Refs:** `eslint.config.js`, `.eslintrc.json`.
 
+### P1 — Add historic price graphs to card details
+**Why:** Users need to see price trends over time to make informed decisions.  
+**Changes:** Added PriceHistoryChart component to card modal with historical price data visualization.  
+**Accept:** Card modal shows price history chart with transaction annotations.  
+**Refs:** `src/components/PriceHistoryChart.vue`, `src/components/CardComponent.vue`.
+
+### P2 — Enhance import status tracking and UI
+**Why:** Users need real-time feedback during import operations.  
+**Changes:** Implemented import status store with progress tracking and updated navbar indicator.  
+**Accept:** Import operations show real-time progress in navbar with detailed status information.  
+**Refs:** `src/stores/importStatus.ts`, `src/components/ImportStatusIndicator.vue`.
+
 ### P1 — Minor TS import cleanup
 **Why:** Avoid `.ts` SFC imports unless explicitly configured.  
 **Changes:** Drop the `.ts` extension or enable in `tsconfig.app.json`.  
@@ -65,6 +77,18 @@ _Last updated: 2025‑09‑09_
 **Changes:** Remove `mtg.ts` and refactor components to use the individual, domain-specific stores directly.  
 **Accept:** The `mtg.ts` file is deleted; app functionality is unchanged; codebase is smaller and easier to maintain.  
 **Refs:** `src/stores/`.
+
+### P1 — Add historic price graphs to card details
+**Why:** Users need to see price trends over time to make informed decisions.  
+**Changes:** Added PriceHistoryChart component to card modal with historical price data visualization.  
+**Accept:** Card modal shows price history chart with transaction annotations.  
+**Refs:** `src/components/PriceHistoryChart.vue`, `src/components/CardComponent.vue`.
+
+### P2 — Enhance import status tracking and UI
+**Why:** Users need real-time feedback during import operations.  
+**Changes:** Implemented import status store with progress tracking and updated navbar indicator.  
+**Accept:** Import operations show real-time progress in navbar with detailed status information.  
+**Refs:** `src/stores/importStatus.ts`, `src/components/ImportStatusIndicator.vue`.
 
 ---
 
