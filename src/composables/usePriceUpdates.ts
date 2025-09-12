@@ -1,6 +1,7 @@
 // Composable for handling automatic price updates
 import { ref } from 'vue';
 import { AutomaticPriceUpdateService } from '../features/pricing/AutomaticPriceUpdateService';
+import { ValuationEngine } from '../features/analytics/ValuationEngine';
 
 // Global state for price update information
 const lastUpdate = ref<Date | null>(null);
@@ -39,6 +40,8 @@ export function usePriceUpdates() {
     isUpdating.value = true;
     try {
       await AutomaticPriceUpdateService.schedulePriceUpdate();
+      // Create a valuation snapshot after price update
+      await ValuationEngine.createValuationSnapshot();
       await updatePriceInfo();
     } catch (error) {
       console.error('Error scheduling price update:', error);
@@ -54,6 +57,8 @@ export function usePriceUpdates() {
     isUpdating.value = true;
     try {
       await AutomaticPriceUpdateService.updatePrices();
+      // Create a valuation snapshot after price update
+      await ValuationEngine.createValuationSnapshot();
       await updatePriceInfo();
     } catch (error) {
       console.error('Error updating prices:', error);

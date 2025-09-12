@@ -2,6 +2,19 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 21:00 — fix(dashboard): Implement missing valuation snapshot functionality
+- **Author**: AI (Qwen)
+- **Scope**: src/features/analytics/ValuationEngine.ts, src/composables/usePriceUpdates.ts, src/features/dashboard/HomeView.vue
+- **Type**: fix
+- **Summary**: Implemented the missing createValuationSnapshot method and integrated it with the price update process to enable the portfolio value chart.
+- **Details**:
+  - Added the missing createValuationSnapshot method to ValuationEngine.ts to save portfolio valuation snapshots to the database
+  - Updated usePriceUpdates.ts to call createValuationSnapshot after price updates to populate historical data
+  - Fixed type issues in the Valuation interface implementation
+  - Verified dashboard statistics calculations are working correctly
+- **Impact/Risks**: Fixes the empty portfolio value chart issue. No breaking changes.
+- **Verification Steps**: After refreshing prices, the dashboard chart should start showing data points.
+
 ## 2025-09-12 20:10 — fix(dashboard): Populate portfolio value chart with historical data
 - **Author**: AI (Gemini)
 - **Scope**: src/features/analytics/ValuationEngine.ts, src/composables/usePriceUpdates.ts

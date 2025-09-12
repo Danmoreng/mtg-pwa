@@ -1,16 +1,12 @@
 <template>
   <button 
-    type="button" 
-    class="btn btn-outline-primary"
+    type="button"
+    :class="currentTheme === 'light' ? 'rounded-4 btn btn-outline-dark' : 'rounded-4 btn btn-outline-light'"
     @click="toggleTheme"
     :aria-label="`Switch to ${currentTheme === 'light' ? 'dark' : 'light'} mode`"
   >
-    <span v-if="currentTheme === 'light'">
-      🌙 Dark
-    </span>
-    <span v-else>
-      ☀️ Light
-    </span>
+    <span v-if="currentTheme === 'light'">🌑</span>
+    <span v-else>☀️</span>
   </button>
 </template>
 

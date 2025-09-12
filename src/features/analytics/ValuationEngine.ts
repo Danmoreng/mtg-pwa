@@ -1,5 +1,5 @@
 import { Money } from '../../core/Money';
-import {cardLotRepository, pricePointRepository, transactionRepository} from '../../data/repos';
+import {cardLotRepository, pricePointRepository, transactionRepository, valuationRepository} from '../../data/repos';
 import type { CardLot } from '../../data/db';
 
 // Valuation engine for calculating portfolio value and P/L
@@ -174,5 +174,33 @@ export class ValuationEngine {
     }
     
     return totalOwned;
+  }
+
+  // Create a valuation snapshot for historical tracking
+  static async createValuationSnapshot(): Promise<void> {
+    try {
+      // Calculate current portfolio metrics
+      const portfolioValue = await this.calculatePortfolioValue();
+      const costBasis = await this.calculateTotalCostBasis();
+      const realizedPnL = await this.calculateRealizedPnL();
+      
+      // Create a new valuation record
+      const valuation = {
+        id: `valuation-${Date.now()}`,
+        asOf: new Date(),
+        totalValue: portfolioValue.getCents(),
+        totalCostBasis: costBasis.getCents(),
+        realizedPnLToDate: realizedPnL.getCents(),
+        createdAt: new Date()
+      };
+      
+      // Save to the database
+      await valuationRepository.add(valuation);
+      
+      console.log('Valuation snapshot created:', valuation);
+    } catch (error) {
+      console.error('Error creating valuation snapshot:', error);
+      throw error;
+    }
   }
 }
