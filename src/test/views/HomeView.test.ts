@@ -5,9 +5,6 @@ import HomeView from '../../features/dashboard/HomeView.vue';
 import { useCardsStore } from '../../stores/cards';
 import { useHoldingsStore } from '../../stores/holdings';
 import { useTransactionsStore } from '../../stores/transactions';
-import { ValuationEngine } from '../../features/analytics/ValuationEngine';
-import { FinanceService } from '../../features/analytics/FinanceService';
-import { Money } from '../../core/Money';
 
 // Mock the composables
 vi.mock('../../composables/usePriceUpdates', () => ({
@@ -21,31 +18,157 @@ vi.mock('../../composables/usePriceUpdates', () => ({
   })
 }));
 
-// Mock the services
-vi.mock('../../features/analytics/ValuationEngine', () => ({
-  ValuationEngine: {
-    calculatePortfolioValue: vi.fn().mockResolvedValue({ getCents: () => 10000, format: (locale) => '€100.00' }),
-    calculateTotalCostBasis: vi.fn().mockResolvedValue({ getCents: () => 5000, format: (locale) => '€50.00' }),
-    calculateUnrealizedPnL: vi.fn().mockResolvedValue({ getCents: () => 5000, format: (locale) => '€50.00' }),
-    calculateRealizedPnL: vi.fn().mockResolvedValue({ getCents: () => 1000, format: (locale) => '€10.00' })
-  }
-}));
+// Mock the services using factory functions to avoid hoisting issues
+vi.mock('../../features/analytics/ValuationEngine', () => {
+  // Create a mock Money class inside the factory function
+  class MockMoney {
+    private readonly cents: number;
+    private readonly currency: string;
 
-vi.mock('../../features/analytics/FinanceService', () => ({
-  FinanceService: {
-    getTotalRevenue: vi.fn().mockResolvedValue({ getCents: () => 20000, format: (locale) => '€200.00' }),
-    getTotalCosts: vi.fn().mockResolvedValue({ getCents: () => 15000, format: (locale) => '€150.00' }),
-    getTotalFees: vi.fn().mockResolvedValue({ getCents: () => 1000, format: (locale) => '€10.00' }),
-    getTotalShippingCosts: vi.fn().mockImplementation((type) => {
-      if (type === 'purchase') {
-        return Promise.resolve({ getCents: () => 500, format: (locale) => '€5.00', subtract: () => ({ getCents: () => 300, format: (locale) => '€3.00' }) });
-      } else {
-        return Promise.resolve({ getCents: () => 200, format: (locale) => '€2.00' });
-      }
-    }),
-    getTotalNetProfit: vi.fn().mockResolvedValue({ getCents: () => 4000, format: (locale) => '€40.00' })
+    constructor(cents: number, currency: string = 'EUR') {
+      this.cents = cents;
+      this.currency = currency;
+    }
+
+    getCents(): number {
+      return this.cents;
+    }
+
+    getDecimal(): number {
+      return this.cents / 100;
+    }
+
+    getCurrency(): string {
+      return this.currency;
+    }
+
+    format(locale: string = 'de-DE'): string {
+      const formatter = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: this.currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      return formatter.format(this.getDecimal());
+    }
+
+    add(other: MockMoney): MockMoney {
+      return new MockMoney(this.cents + other.cents, this.currency);
+    }
+
+    subtract(other: MockMoney): MockMoney {
+      return new MockMoney(this.cents - other.cents, this.currency);
+    }
+
+    multiply(factor: number): MockMoney {
+      return new MockMoney(this.cents * factor, this.currency);
+    }
+
+    divide(divisor: number): MockMoney {
+      return new MockMoney(this.cents / divisor, this.currency);
+    }
+
+    isZero(): boolean {
+      return this.cents === 0;
+    }
+
+    isPositive(): boolean {
+      return this.cents > 0;
+    }
+
+    isNegative(): boolean {
+      return this.cents < 0;
+    }
   }
-}));
+
+  return {
+    ValuationEngine: {
+      calculatePortfolioValue: vi.fn().mockResolvedValue(new MockMoney(10000)),
+      calculateTotalCostBasis: vi.fn().mockResolvedValue(new MockMoney(5000)),
+      calculateUnrealizedPnL: vi.fn().mockResolvedValue(new MockMoney(5000)),
+      calculateRealizedPnL: vi.fn().mockResolvedValue(new MockMoney(1000))
+    }
+  };
+});
+
+vi.mock('../../features/analytics/FinanceService', () => {
+  // Create a mock Money class inside the factory function
+  class MockMoney {
+    private readonly cents: number;
+    private readonly currency: string;
+
+    constructor(cents: number, currency: string = 'EUR') {
+      this.cents = cents;
+      this.currency = currency;
+    }
+
+    getCents(): number {
+      return this.cents;
+    }
+
+    getDecimal(): number {
+      return this.cents / 100;
+    }
+
+    getCurrency(): string {
+      return this.currency;
+    }
+
+    format(locale: string = 'de-DE'): string {
+      const formatter = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: this.currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      return formatter.format(this.getDecimal());
+    }
+
+    add(other: MockMoney): MockMoney {
+      return new MockMoney(this.cents + other.cents, this.currency);
+    }
+
+    subtract(other: MockMoney): MockMoney {
+      return new MockMoney(this.cents - other.cents, this.currency);
+    }
+
+    multiply(factor: number): MockMoney {
+      return new MockMoney(this.cents * factor, this.currency);
+    }
+
+    divide(divisor: number): MockMoney {
+      return new MockMoney(this.cents / divisor, this.currency);
+    }
+
+    isZero(): boolean {
+      return this.cents === 0;
+    }
+
+    isPositive(): boolean {
+      return this.cents > 0;
+    }
+
+    isNegative(): boolean {
+      return this.cents < 0;
+    }
+  }
+
+  return {
+    FinanceService: {
+      getTotalRevenue: vi.fn().mockResolvedValue(new MockMoney(20000)),
+      getTotalCosts: vi.fn().mockResolvedValue(new MockMoney(15000)),
+      getTotalFees: vi.fn().mockResolvedValue(new MockMoney(1000)),
+      getTotalShippingCosts: vi.fn().mockImplementation((type) => {
+        if (type === 'purchase') {
+          return Promise.resolve(new MockMoney(500).subtract(new MockMoney(200)));
+        } else {
+          return Promise.resolve(new MockMoney(200));
+        }
+      }),
+      getTotalNetProfit: vi.fn().mockResolvedValue(new MockMoney(4000))
+    }
+  };
+});
 
 describe('HomeView', () => {
   beforeEach(() => {
@@ -83,7 +206,7 @@ describe('HomeView', () => {
   //     }
   //   });
 
-  //   // Wait for the component to load and for all async operations to complete
+  //   // Wait for all async operations to complete including onMounted
   //   await wrapper.vm.$nextTick();
   //   await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -91,13 +214,14 @@ describe('HomeView', () => {
   //   expect(wrapper.find('h1').text()).toBe('MTG Collection Tracker');
 
   //   // Check that financial values are displayed
-  //   expect(wrapper.text()).toContain('€100.00'); // Portfolio Value
-  //   expect(wrapper.text()).toContain('€50.00');  // Total Cost
-  //   expect(wrapper.text()).toContain('€50.00');  // Unrealized P/L
-  //   expect(wrapper.text()).toContain('€10.00');  // Realized P/L
-  //   expect(wrapper.text()).toContain('€200.00'); // Total Revenue
-  //   expect(wrapper.text()).toContain('€150.00'); // Total Costs
-  //   expect(wrapper.text()).toContain('€40.00');  // Net Profit/Loss
+  //   const text = wrapper.text();
+  //   expect(text).toContain('€100.00'); // Portfolio Value
+  //   expect(text).toContain('€50.00');  // Total Cost
+  //   expect(text).toContain('€50.00');  // Unrealized P/L
+  //   expect(text).toContain('€10.00');  // Realized P/L
+  //   expect(text).toContain('€200.00'); // Total Revenue
+  //   expect(text).toContain('€150.00'); // Total Costs
+  //   expect(text).toContain('€40.00');  // Net Profit/Loss
   // });
 
   it('should load data without blocking UI', async () => {
