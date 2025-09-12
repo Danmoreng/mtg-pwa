@@ -1,24 +1,18 @@
 <template>
-  <div v-if="currentImport" class="import-status-indicator d-flex align-items-center">
-    <div class="d-flex align-items-center">
-      <div class="me-2">
-        <div class="d-flex align-items-center">
-          <span class="fw-medium">{{ currentImport.name }}</span>
-        </div>
-        <div class="progress mt-1" style="height: 8px; width: 150px;">
-          <div 
-            class="progress-bar"
-            role="progressbar" 
-            :style="{ width: currentImport.progress + '%' }"
-            :aria-valuenow="currentImport.progress" 
-            aria-valuemin="0" 
-            aria-valuemax="100"
-          ></div>
-        </div>
-        <div class="small text-muted">
-          {{ currentImport.processedItems }} / {{ currentImport.totalItems }}
-        </div>
-      </div>
+  <div v-if="currentImport" class="import-status-indicator" style="width: 200px">
+    <div class="d-flex justify-content-between align-items-baseline">
+      <span class="fw-medium small text-truncate" :title="currentImport.name">{{ currentImport.name }}</span>
+      <span class="small text-muted flex-shrink-0 ms-2">{{ currentImport.processedItems }} / {{ currentImport.totalItems }}</span>
+    </div>
+    <div class="progress mt-1">
+      <div
+        class="progress-bar"
+        role="progressbar"
+        :style="{ width: currentImport.progress + '%' }"
+        :aria-valuenow="currentImport.progress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      ></div>
     </div>
   </div>
 
@@ -118,6 +112,6 @@ onUnmounted(() => {
 }
 
 .progress {
-  height: 8px;
+  height: 5px;
 }
 </style>

@@ -1,120 +1,81 @@
 <template>
   <div class="home">
-    <h1>MTG Collection Tracker</h1>
-    
-    <!-- Price Update Information -->
-    <div class="price-update-info card mb-4">
-      <div class="card-body">
-        <h2 class="card-title">Price Updates</h2>
-        <div class="price-update-details">
-          <div class="update-info">
-            <span class="label">Last Update:</span>
-            <span class="value">{{ formatDate(lastUpdate) }}</span>
-          </div>
-          <div class="update-info">
-            <span class="label">Next Update:</span>
-            <span class="value">{{ formatDate(nextUpdate) }}</span>
+    <div class="row">
+      <div class="col-12">
+        <h1 class="mb-4">MTG Collection Tracker</h1>
+      </div>
+      <div class="col-lg-9">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Portfolio Value Over Time</h5>
+            <PortfolioValueChart />
           </div>
         </div>
-        <div class="update-actions">
-          <button @click="refreshPrices" class="btn btn-primary" :disabled="isUpdating">
-            {{ isUpdating ? 'Updating...' : 'Refresh Prices Now' }}
-          </button>
+      </div>
+      <div class="col-lg-3">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Price Updates</h5>
+            <div class="small text-muted mb-1">
+              Last: {{ formatDate(lastUpdate) }} | Next: {{ formatDate(nextUpdate) }}
+            </div>
+            <button @click="refreshPrices" class="btn btn-sm btn-link p-0" :disabled="isUpdating">
+              {{ isUpdating ? 'Updating...' : 'Refresh Now' }}
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Quick Stats</h5>
+            <div class="small">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Portfolio Value:</span>
+                <span class="fw-medium">{{ portfolioValue }}</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Total Cost:</span>
+                <span class="fw-medium">{{ totalCost }}</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Net Profit/Loss:</span>
+                <span class="fw-medium" :class="parseFloat(netProfitValue) >= 0 ? 'text-success' : 'text-danger'">{{ netProfitValue }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    
-    <div class="dashboard-stats row g-4">
+
+    <div class="row g-4">
       <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
+        <div class="card h-100">
           <div class="card-body">
-            <h2 class="card-title">Portfolio Value</h2>
-            <p class="stat-value">{{ portfolioValue }}</p>
+            <h5 class="card-title">Unrealized P/L</h5>
+            <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">{{ unrealizedPL }}</p>
           </div>
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
+        <div class="card h-100">
           <div class="card-body">
-            <h2 class="card-title">Total Cost</h2>
-            <p class="stat-value">{{ totalCost }}</p>
+            <h5 class="card-title">Realized P/L</h5>
+            <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">{{ realizedPL }}</p>
           </div>
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
+        <div class="card h-100">
           <div class="card-body">
-            <h2 class="card-title">Unrealized P/L</h2>
-            <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">
-              {{ unrealizedPL }}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
-          <div class="card-body">
-            <h2 class="card-title">Realized P/L</h2>
-            <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">
-              {{ realizedPL }}
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- NEW FINANCIAL STATS -->
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
-          <div class="card-body">
-            <h2 class="card-title">Total Revenue</h2>
+            <h5 class="card-title">Total Revenue</h5>
             <p class="stat-value text-success">{{ totalRevenue }}</p>
           </div>
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
+        <div class="card h-100">
           <div class="card-body">
-            <h2 class="card-title">Total Costs</h2>
+            <h5 class="card-title">Total Costs</h5>
             <p class="stat-value text-danger">{{ totalCosts }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100 border">
-          <div class="card-body">
-            <h2 class="card-title">Net Profit/Loss</h2>
-            <p class="stat-value" :class="parseFloat(netProfitValue) >= 0 ? 'text-success' : 'text-danger'">
-              {{ netProfitValue }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Detailed breakdown section -->
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="card border">
-          <div class="card-body">
-            <h2 class="card-title">Financial Breakdown</h2>
-            <div class="row">
-              <div class="col-md-3">
-                <h3>Sales Revenue</h3>
-                <p>{{ salesRevenue }}</p>
-              </div>
-              <div class="col-md-3">
-                <h3>Purchase Costs</h3>
-                <p>{{ purchaseCosts }}</p>
-              </div>
-              <div class="col-md-3">
-                <h3>Fees & Commission</h3>
-                <p class="text-danger">{{ totalFees }}</p>
-              </div>
-              <div class="col-md-3">
-                <h3>Shipping Costs</h3>
-                <p class="text-danger">{{ shippingCosts }}</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -130,7 +91,8 @@ import { useTransactionsStore } from '../../stores/transactions';
 import { ValuationEngine } from '../analytics/ValuationEngine';
 import { FinanceService } from '../analytics/FinanceService';
 import { Money } from '../../core/Money';
-import { usePriceUpdates } from '../../composables/usePriceUpdates';
+import PortfolioValueChart from '../../components/PortfolioValueChart.vue';
+import {usePriceUpdates} from "../../composables/usePriceUpdates.ts";
 
 // Get the stores
 const cardsStore = useCardsStore();
@@ -225,43 +187,6 @@ onMounted(async () => {
   padding: var(--space-lg);
 }
 
-.price-update-info {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-}
-
-.price-update-info .card-title {
-  margin-top: 0;
-  margin-bottom: var(--space-md);
-}
-
-.price-update-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-md);
-}
-
-.update-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.update-info .label {
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--space-xs);
-}
-
-.update-info .value {
-  font-size: var(--font-size-lg);
-}
-
-.update-actions {
-  display: flex;
-  justify-content: flex-start;
-}
-
 .dashboard-stats {
   margin: var(--space-xl) 0;
 }
@@ -295,17 +220,5 @@ onMounted(async () => {
   display: flex;
   gap: var(--space-md);
   flex-wrap: wrap;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .price-update-details {
-    flex-direction: column;
-    gap: var(--space-md);
-  }
-  
-  .update-actions {
-    justify-content: center;
-  }
 }
 </style>
