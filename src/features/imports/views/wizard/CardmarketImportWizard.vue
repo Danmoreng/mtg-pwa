@@ -24,6 +24,63 @@
             <h2>Upload CSV Files</h2>
             <p>Please select all Cardmarket CSV export files to import. You can select multiple files at once.</p>
 
+            <!-- Cardmarket CSV Guidance -->
+            <div class="alert alert-info mb-4">
+              <h3 class="alert-heading">Where to Get Cardmarket CSV Files</h3>
+              <p>Cardmarket provides several types of CSV exports. For the best import results, we recommend downloading these files:</p>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <h4>1. Transaction Summary</h4>
+                  <p>Contains financial summary of all your transactions (sales, purchases, fees).</p>
+                  <p><strong>Download from:</strong><br>
+                  Cardmarket → My Account → Transactions → All Transactions → Download CSV</p>
+                  <p class="mb-1"><strong>Direct link:</strong></p>
+                  <a href="https://www.cardmarket.com/de/Magic/Account/Transactions/Details" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                    Go to Transactions Page
+                  </a>
+                </div>
+                
+                <div class="col-md-6">
+                  <h4>2. Sold Articles</h4>
+                  <p>Contains detailed information about individual items you've sold.</p>
+                  <p><strong>Download from:</strong><br>
+                  Cardmarket → My Account → Statistics → Sold Articles → CSV Export</p>
+                  <p class="mb-1"><strong>Direct link:</strong></p>
+                  <a href="https://www.cardmarket.com/de/Magic/Account/Statistics" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                    Go to Statistics Page
+                  </a>
+                </div>
+              </div>
+              
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <h4>3. Purchased Articles</h4>
+                  <p>Contains detailed information about individual items you've bought.</p>
+                  <p><strong>Download from:</strong><br>
+                  Cardmarket → My Account → Statistics → Purchased Articles → CSV Export</p>
+                  <p class="mb-1"><strong>Direct link:</strong></p>
+                  <a href="https://www.cardmarket.com/de/Magic/Account/Statistics" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                    Go to Statistics Page
+                  </a>
+                </div>
+                
+                <div class="col-md-6">
+                  <h4>Optional: Order Details</h4>
+                  <p>Sold Orders and Purchased Orders contain redundant information. Only import if you specifically need order-level details.</p>
+                  <p><strong>Download from:</strong><br>
+                  Cardmarket → My Account → Statistics → Sold/Purchased Orders → CSV Export</p>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <small class="text-muted">
+                  <strong>Tip:</strong> The most important files are Transaction Summary, Sold Articles, and Purchased Articles. 
+                  Order files (Sold Orders, Purchased Orders) contain redundant information but can be imported if needed.
+                </small>
+              </div>
+            </div>
+
             <div class="file-upload-section">
               <div class="mb-3">
                 <label for="csv-files" class="form-label">
