@@ -39,9 +39,16 @@ export function usePriceUpdates() {
     
     isUpdating.value = true;
     try {
-      await AutomaticPriceUpdateService.schedulePriceUpdate();
-      // Create a valuation snapshot after price update
-      await ValuationEngine.createValuationSnapshot();
+      // Check if we need to update prices
+      const needsUpdate = await AutomaticPriceUpdateService.needsPriceUpdate();
+      
+      if (needsUpdate) {
+        // Perform the price update
+        await AutomaticPriceUpdateService.schedulePriceUpdate();
+        // Create a valuation snapshot after price update
+        await ValuationEngine.createValuationSnapshot();
+      }
+      
       await updatePriceInfo();
     } catch (error) {
       console.error('Error scheduling price update:', error);
