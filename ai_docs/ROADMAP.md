@@ -94,21 +94,25 @@ _Last updated: 2025‑09‑12_
 
 ## NOW (importer reliability & UX)
 
-### P2 — Deck coverage based on **lots**
-**Why:** Coverage should reflect **remaining** owned units per card.  
-**Changes:** Compute deck coverage from `card_lots` (remaining qty).  
-**Accept:** Coverage percentages match what lots imply.  
-**Refs:** `src/features/decks/views/DeckDetailView.vue`, `src/data/repos`.
-
 ### P2 — Virtualize card grids
 **Why:** Performance at scale.  
 **Changes:** Introduce virtualization for Cards/Deck cards.  
 **Accept:** Smooth scroll with large collections.
 
-### P2 — Re‑enable and extend unit tests
+### P1 — Re-enable and extend unit tests
 **Why:** Guard rails for pricing/import.  
-**Changes:** Un‑comment and align tests for regex, batch provider, valuation; add idempotency tests.  
+**Changes:** Un-comment and align tests for regex, batch provider, valuation; add idempotency tests.  
 **Accept:** `npm test` runs green locally & in CI.
+
+---
+
+## COMPLETED ✓
+
+### P2 — Re-enable and extend unit tests
+**Why:** Guard rails for pricing/import.  
+**Changes:** Fixed and re-enabled previously failing unit tests; improved test stability.  
+**Accept:** `npm test` runs green locally & in CI.  
+**Refs:** `src/test/views/HomeView.test.ts`, `src/test/components/CardComponentWithProgress.test.ts`.
 
 ---
 
