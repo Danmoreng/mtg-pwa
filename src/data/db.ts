@@ -109,6 +109,7 @@ export interface Deck {
   name: string;
   commander?: string;
   url?: string;
+  faceCardId?: string;
   importedAt: Date;
   createdAt: Date;
   updatedAt: Date;

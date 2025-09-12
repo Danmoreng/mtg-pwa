@@ -25,12 +25,26 @@
         class="col-lg-4 col-md-6"
       >
         <div class="deck-card h-100" @click="viewDeck(deck.id)">
-          <h2>{{ deck.name }}</h2>
-          <p class="deck-info">
-            <span class="platform">{{ deck.platform }}</span>
-            <span class="date">{{ formatDate(deck.importedAt) }}</span>
-          </p>
-          <p class="card-count">{{ getCardCount(deck.id) }} cards</p>
+          <!-- Face card display -->
+          <div v-if="getFaceCard(deck.id)" class="face-card-container">
+            <img 
+              :src="getFaceCard(deck.id).imageUrl || 'https://placehold.co/200x280?text=Card+Image'" 
+              :alt="getFaceCard(deck.id).name"
+              class="face-card-image"
+            />
+          </div>
+          <div v-else class="face-card-placeholder">
+            <span class="placeholder-text">No Face Card</span>
+          </div>
+          
+          <div class="deck-info-container">
+            <h2>{{ deck.name }}</h2>
+            <p class="deck-info">
+              <span class="platform">{{ deck.platform }}</span>
+              <span class="date">{{ formatDate(deck.importedAt) }}</span>
+            </p>
+            <p class="card-count">{{ getCardCount(deck.id) }} cards</p>
+          </div>
         </div>
       </div>
     </div>
@@ -49,6 +63,7 @@ const router = useRouter();
 const decks = ref<any[]>([]);
 const loading = ref(true);
 const cardCounts = ref<Record<string, number>>({});
+const faceCards = ref<Record<string, any>>({});
 
 // Format date
 const formatDate = (date: Date) => {
@@ -58,6 +73,11 @@ const formatDate = (date: Date) => {
 // Get card count for a deck
 const getCardCount = (deckId: string) => {
   return cardCounts.value[deckId] || 0;
+};
+
+// Get face card for a deck
+const getFaceCard = (deckId: string) => {
+  return faceCards.value[deckId];
 };
 
 // View deck details
@@ -72,10 +92,19 @@ const loadDecks = async () => {
     const allDecks = await db.decks.toArray();
     decks.value = allDecks;
     
-    // Get card counts for each deck
+    // Get card counts and face cards for each deck
     for (const deck of allDecks) {
+      // Get card count
       const count = await db.deck_cards.where('deckId').equals(deck.id).count();
       cardCounts.value[deck.id] = count;
+      
+      // Get face card if one is set
+      if (deck.faceCardId) {
+        const faceCard = await db.cards.get(deck.faceCardId);
+        if (faceCard) {
+          faceCards.value[deck.id] = faceCard;
+        }
+      }
     }
   } catch (error) {
     console.error('Error loading decks:', error);
@@ -123,15 +152,53 @@ onMounted(() => {
 .deck-card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
   box-shadow: var(--shadow-md);
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .deck-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.face-card-container {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background-color: var(--color-border);
+  position: relative;
+}
+
+.face-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.face-card-placeholder {
+  width: 100%;
+  height: 200px;
+  background-color: var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-text {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.deck-info-container {
+  padding: var(--space-lg);
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .deck-card h2 {
@@ -156,7 +223,7 @@ onMounted(() => {
 }
 
 .card-count {
-  margin: 0;
+  margin: auto 0 0 0;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
