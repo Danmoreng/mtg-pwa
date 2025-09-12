@@ -80,6 +80,35 @@
         </div>
       </div>
     </div>
+
+    <!-- Detailed breakdown section -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Financial Breakdown</h5>
+            <div class="row">
+              <div class="col-md-3">
+                <h6 class="text-muted">Sales Revenue</h6>
+                <p class="stat-value text-success">{{ salesRevenue }}</p>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-muted">Purchase Costs</h6>
+                <p class="stat-value text-danger">{{ purchaseCosts }}</p>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-muted">Fees & Commission</h6>
+                <p class="stat-value text-danger">{{ totalFees }}</p>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-muted">Shipping Costs</h6>
+                <p class="stat-value text-danger">{{ shippingCosts }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -220,5 +249,16 @@ onMounted(async () => {
   display: flex;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+/* Financial breakdown section */
+.card-title {
+  margin-bottom: var(--space-md);
+}
+
+.text-muted {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-xs);
 }
 </style>

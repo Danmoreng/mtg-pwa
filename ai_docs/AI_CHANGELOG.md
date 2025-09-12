@@ -2,6 +2,19 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 21:30 — feat(dashboard): Reintroduce detailed financial breakdown stats
+- **Author**: AI (Qwen)
+- **Scope**: src/features/dashboard/HomeView.vue
+- **Type**: feat
+- **Summary**: Reintroduced the detailed financial breakdown section with specific stats for sales revenue, purchase costs, fees & commission, and shipping costs.
+- **Details**:
+  - Added a "Financial Breakdown" section with detailed stats that were removed in a previous redesign
+  - Added Sales Revenue, Purchase Costs, Fees & Commission, and Shipping Costs stats
+  - Styled the financial breakdown section appropriately with consistent styling
+  - Maintained the existing financial stats while adding more detailed information
+- **Impact/Risks**: UI improvement with no breaking changes. Adds more comprehensive financial information to the dashboard.
+- **Verification Steps**: The dashboard should now display the detailed financial breakdown section with all the specific financial stats.
+
 ## 2025-09-12 21:00 — fix(dashboard): Implement missing valuation snapshot functionality
 - **Author**: AI (Qwen)
 - **Scope**: src/features/analytics/ValuationEngine.ts, src/composables/usePriceUpdates.ts, src/features/dashboard/HomeView.vue
