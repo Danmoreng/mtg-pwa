@@ -2,6 +2,35 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 23:30 — fix(decks): Fix face card display size and prevent modal click interference
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/views/DeckDetailView.vue
+- **Type**: fix
+- **Summary**: Fixed issues with face card display size being too large and preventing card modal clicks from interfering with face card selection.
+- **Details**:
+  - Reduced face card display size to prevent it from overlaying deck title and other elements
+  - Added proper CSS styling to contain face card display within appropriate bounds
+  - Fixed click event propagation issue that was causing card modal clicks to set face cards
+  - Improved visual indicators for selected face cards
+  - Ensured deck title remains visible and editable
+- **Impact/Risks**: UI improvement with no breaking changes. Fixes layout issues and improves user experience.
+- **Verification Steps**: Face card display should now be appropriately sized and not interfere with deck title. Clicking cards in the modal should not set them as face cards.
+
+## 2025-09-12 23:00 — feat(decks): Add deck editing functionality including title editing and face card selection
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/views/DeckDetailView.vue, src/data/db.ts
+- **Type**: feat
+- **Summary**: Added comprehensive deck editing functionality to the deck detail view, including title editing, face card selection, and deck deletion.
+- **Details**:
+  - Added deck title editing capability with inline edit functionality
+  - Implemented face card selection from deck cards
+  - Added deck deletion functionality with confirmation
+  - Updated deck data model to include faceCardId field
+  - Enhanced UI with visual indicators for face card selection
+  - Added proper error handling and user feedback
+- **Impact/Risks**: New feature with no breaking changes. Adds valuable deck management capabilities.
+- **Verification Steps**: Users can now click on deck titles to edit them, select a face card from their deck cards, and delete decks entirely.
+
 ## 2025-09-12 22:00 — fix(dashboard): Fix valuation snapshot creation to only occur during actual price updates
 - **Author**: AI (Qwen)
 - **Scope**: src/composables/usePriceUpdates.ts, src/features/analytics/ValuationEngine.ts
