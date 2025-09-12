@@ -33,14 +33,25 @@
       <p v-else>You don't have any cards in your collection yet.</p>
     </div>
     
-    <div v-else class="row g-4">
-      <div 
-        v-for="card in sortedCards" 
-        :key="card.id" 
-        class="col-xl-2 col-lg-3 col-md-4 col-sm-6"
-      >
-        <CardComponent :card="card" />
+    <div v-else>
+      <!-- Cards grid with pagination -->
+      <div class="row g-4">
+        <div 
+          v-for="card in paginatedCards" 
+          :key="card.id" 
+          class="col-xl-2 col-lg-3 col-md-4 col-sm-6"
+        >
+          <CardComponent :card="card" />
+        </div>
       </div>
+      
+      <!-- Pagination controls -->
+      <PaginationComponent
+        :current-page="currentPage"
+        :total-items="sortedCards.length"
+        :items-per-page="itemsPerPage"
+        @update:current-page="updateCurrentPage"
+      />
     </div>
   </div>
 </template>
@@ -48,6 +59,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import CardComponent from '../../../components/CardComponent.vue';
+import PaginationComponent from '../../../components/PaginationComponent.vue';
 import { useCardsStore } from '../../../stores/cards';
 
 // Use the cards store
@@ -57,6 +69,8 @@ const cardsStore = useCardsStore();
 const searchQuery = ref('');
 const sortBy = ref('name'); // Default sort by name
 const sortDirection = ref('asc'); // Default ascending
+const currentPage = ref(1);
+const itemsPerPage = ref(24); // 4 rows of 6 cards on large screens
 
 // Filter cards based on search query
 const filteredCards = computed(() => {
@@ -107,6 +121,20 @@ const sortedCards = computed(() => {
   
   return cardsToSort;
 });
+
+// Get paginated cards
+const paginatedCards = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+  const endIndex = startIndex + itemsPerPage.value;
+  return sortedCards.value.slice(startIndex, endIndex);
+});
+
+// Update current page
+const updateCurrentPage = (page: number) => {
+  currentPage.value = page;
+  // Scroll to top when changing pages
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 // Load cards and prices when component mounts
 onMounted(() => {
