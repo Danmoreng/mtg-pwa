@@ -13,6 +13,7 @@ declare module 'vue' {
     ImportStatusIndicator: typeof import('./src/components/ImportStatusIndicator.vue')['default']
     Navigation: typeof import('./src/components/Navigation.vue')['default']
     PaginationComponent: typeof import('./src/components/PaginationComponent.vue')['default']
+    PortfolioValueChart: typeof import('./src/components/PortfolioValueChart.vue')['default']
     PriceHistoryChart: typeof import('./src/components/PriceHistoryChart.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

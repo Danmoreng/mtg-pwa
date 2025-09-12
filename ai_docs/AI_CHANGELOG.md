@@ -2,6 +2,68 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 20:10 — fix(dashboard): Populate portfolio value chart with historical data
+- **Author**: AI (Gemini)
+- **Scope**: src/features/analytics/ValuationEngine.ts, src/composables/usePriceUpdates.ts
+- **Type**: fix
+- **Summary**: Implemented logic to periodically save portfolio valuation snapshots to populate the historical chart.
+- **Details**:
+  - Added a new `createValuationSnapshot` method to `ValuationEngine.ts` to calculate and save the current portfolio value, cost basis, and realized P/L to the `valuations` table.
+  - Integrated calls to `ValuationEngine.createValuationSnapshot` within `usePriceUpdates.ts` (specifically in `forceUpdatePrices` and `checkAndScheduleUpdate`) to ensure snapshots are created after every price update.
+  - This will allow the "Portfolio Value Over Time" chart to display historical data as it accumulates.
+- **Impact/Risks**: Fixes the empty chart issue. Introduces periodic writes to the `valuations` table.
+- **Verification Steps**: After refreshing prices or importing data, the dashboard chart should start showing data points.
+
+## 2025-09-12 20:05 — fix(dashboard): Correct component import for build
+- **Author**: AI (Gemini)
+- **Scope**: src/features/dashboard/HomeView.vue
+- **Type**: fix
+- **Summary**: Fixed a build error caused by an incorrect component reference in the dashboard view.
+- **Details**:
+  - The `PortfolioValueChart` component was imported in the script but was missing from the template, causing a TypeScript error during the build.
+  - Restored the `<PortfolioValueChart />` tag to the template to correctly render the component.
+- **Impact/Risks**: Fixes a critical build error. No functional changes beyond enabling the build to succeed.
+- **Verification Steps**: `npm run build` now completes without errors.
+
+## 2025-09-12 20:00 — feat(dashboard): Redesign dashboard with portfolio chart and unified stats
+- **Author**: AI (Gemini)
+- **Scope**: src/features/dashboard/HomeView.vue, src/components/PortfolioValueChart.vue
+- **Type**: feat
+- **Summary**: Completely redesigned the dashboard to be more insightful and visually appealing.
+- **Details**:
+  - Added a new "Portfolio Value Over Time" chart as the centerpiece of the dashboard.
+  - Created a new `PortfolioValueChart.vue` component to encapsulate the chart logic and data fetching.
+  - Replaced the previous disparate statistic sections with a unified grid of cards for a cohesive look.
+  - Added a "Quick Stats" card to the sidebar for an at-a-glance summary of key metrics.
+  - Restructured the `HomeView.vue` component to be chart-centric and more organized.
+- **Impact/Risks**: Major UI improvement. The new chart relies on historical data from the `valuations` table.
+- **Verification Steps**: The user should verify the new dashboard layout, ensure the chart renders correctly, and confirm all statistics are still accurate.
+
+## 2025-09-12 19:30 — refactor(dashboard): Improve dashboard layout and price update UI
+- **Author**: AI (Gemini)
+- **Scope**: src/features/dashboard/HomeView.vue
+- **Type**: refactor
+- **Summary**: Refactored the dashboard layout to be cleaner and less cluttered.
+- **Details**:
+  - Moved the price update information into a compact card in a right-hand sidebar.
+  - Re-introduced the "Price Updates" title while keeping the text and button sizes small.
+  - Adjusted the main dashboard stats to better fit the new two-column layout.
+  - Removed unused CSS styles.
+- **Impact/Risks**: UI improvement. No functional changes.
+- **Verification Steps**: The user should verify the new dashboard layout and the appearance of the price update card.
+
+## 2025-09-12 19:00 — fix: Compact import status indicator
+- **Author**: AI (Gemini)
+- **Scope**: src/components/ImportStatusIndicator.vue
+- **Type**: fix
+- **Summary**: Refactored the import status indicator to be more compact and prevent the navbar from resizing.
+- **Details**:
+  - Rearranged the layout to be more horizontal, placing the import name and item count on the same line.
+  - Reduced the height of the progress bar.
+  - Set a fixed width for the component to ensure a consistent layout in the navbar.
+- **Impact/Risks**: UI improvement. No functional changes.
+- **Verification Steps**: The user should confirm that the navbar no longer changes height when the import status indicator is visible.
+
 ## 2025-09-12 18:30 — feat: Enhance Cardmarket CSV guidance with comprehensive file type information
 - **Author**: AI (Qwen)
 - **Scope**: src/features/imports/views/wizard/CardmarketImportWizard.vue

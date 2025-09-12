@@ -1,6 +1,5 @@
 import { Money } from '../../core/Money';
-import { cardLotRepository, transactionRepository } from '../../data/repos';
-import { pricePointRepository } from '../../data/repos';
+import {cardLotRepository, pricePointRepository, transactionRepository} from '../../data/repos';
 import type { CardLot } from '../../data/db';
 
 // Valuation engine for calculating portfolio value and P/L
@@ -90,7 +89,7 @@ export class ValuationEngine {
     
     // Filter and sort lots by purchase date (FIFO)
     const activeLots = lots
-      .filter(lot => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity))
+      .filter((lot: any) => !lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity))
       .sort((a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime());
     
     // Calculate cost basis based on quantity
