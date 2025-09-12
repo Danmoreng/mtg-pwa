@@ -2,6 +2,20 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 18:30 — feat: Enhance Cardmarket CSV guidance with comprehensive file type information
+- **Author**: AI (Qwen)
+- **Scope**: src/features/imports/views/wizard/CardmarketImportWizard.vue
+- **Type**: feat
+- **Summary**: Enhanced Cardmarket import wizard guidance to include information about all available CSV file types and clarify which ones are essential.
+- **Details**:
+  - Added guidance for all 5 Cardmarket CSV file types (Transaction Summary, Sold Articles, Purchased Articles, Sold Orders, Purchased Orders)
+  - Clarified which files are essential vs. optional
+  - Included specific instructions for downloading files from Cardmarket Statistics page
+  - Added information about redundant information in order files
+  - Improved UI layout with 4-column guidance for better organization
+- **Impact/Risks**: Improved user experience for Cardmarket imports; no breaking changes.
+- **Verification Steps**: Test import wizard UI for clarity and correctness of instructions.
+
 ## 2025-09-12 14:00 — docs: Update documentation to reflect recent features
 - **Author**: AI (Qwen)
 - **Scope**: README.md, ai_docs/ARCHITECTURE.md, ai_docs/ROADMAP.md
