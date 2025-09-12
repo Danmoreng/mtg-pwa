@@ -25,6 +25,20 @@ A chronological log of AI-proposed changes for the MTG Value Tracker. Times in E
 - **Impact/Risks**: Improved user experience by eliminating unnecessary chart animations.
 - **Verification Steps**: Open card modal and verify price chart appears without animation.
 
+## 2025-09-12 17:00 — feat: Implement pagination for CardsView to improve performance with large collections
+- **Author**: AI (Qwen)
+- **Scope**: src/features/cards/views/CardsView.vue, src/components/PaginationComponent.vue
+- **Type**: feat
+- **Summary**: Implemented pagination for CardsView to improve performance with large collections and created a reusable PaginationComponent.
+- **Details**:
+  - Created reusable PaginationComponent that can be used for any type of paginated list
+  - Implemented pagination for CardsView with 24 cards per page (4 rows of 6 cards)
+  - Added pagination controls with previous/next buttons and page numbers
+  - Added smooth scrolling to top when changing pages
+  - Maintained existing search and sorting functionality
+- **Impact/Risks**: Improved performance for users with large collections; no breaking changes.
+- **Verification Steps**: Test CardsView with large collections; verify pagination controls work correctly.
+
 ## 2025-09-12 16:30 — docs: Update roadmap to remove deck coverage feature and mark unit tests as completed
 - **Author**: AI (Qwen)
 - **Scope**: ai_docs/ROADMAP.md
