@@ -12,6 +12,7 @@ declare module 'vue' {
     CardComponent: typeof import('./src/components/CardComponent.vue')['default']
     ImportStatusIndicator: typeof import('./src/components/ImportStatusIndicator.vue')['default']
     Navigation: typeof import('./src/components/Navigation.vue')['default']
+    PaginationComponent: typeof import('./src/components/PaginationComponent.vue')['default']
     PriceHistoryChart: typeof import('./src/components/PriceHistoryChart.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
