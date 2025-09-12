@@ -21,6 +21,15 @@
             {{ sortDirection === 'asc' ? '↑' : '↓' }}
           </button>
         </div>
+        <div class="page-size-controls">
+          <label for="itemsPerPage" class="form-label me-2">Items per page:</label>
+          <select id="itemsPerPage" v-model="itemsPerPage" class="form-select" style="width: auto;">
+            <option :value="12">12</option>
+            <option :value="24">24</option>
+            <option :value="48">48</option>
+            <option :value="96">96</option>
+          </select>
+        </div>
       </div>
     </div>
     
@@ -57,7 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import CardComponent from '../../../components/CardComponent.vue';
 import PaginationComponent from '../../../components/PaginationComponent.vue';
 import { useCardsStore } from '../../../stores/cards';
@@ -65,12 +75,52 @@ import { useCardsStore } from '../../../stores/cards';
 // Use the cards store
 const cardsStore = useCardsStore();
 
+// Use router and route
+const route = useRoute();
+const router = useRouter();
+
 // Reactive state
 const searchQuery = ref('');
 const sortBy = ref('name'); // Default sort by name
 const sortDirection = ref('asc'); // Default ascending
-const currentPage = ref(1);
-const itemsPerPage = ref(24); // 4 rows of 6 cards on large screens
+
+// Initialize from URL parameters
+const currentPage = ref(parseInt(route.query.page as string) || 1);
+const itemsPerPage = ref(parseInt(route.query.itemsPerPage as string) || 24);
+
+// Watch for URL changes and update reactive state
+watch(() => route.query, (newQuery) => {
+  currentPage.value = parseInt(newQuery.page as string) || 1;
+  itemsPerPage.value = parseInt(newQuery.itemsPerPage as string) || 24;
+});
+
+// Watch for state changes and update URL
+watch([currentPage, itemsPerPage], () => {
+  const query: Record<string, string> = {};
+  
+  if (currentPage.value !== 1) {
+    query.page = currentPage.value.toString();
+  }
+  
+  if (itemsPerPage.value !== 24) {
+    query.itemsPerPage = itemsPerPage.value.toString();
+  }
+  
+  // Add other query parameters if they exist
+  if (searchQuery.value) {
+    query.search = searchQuery.value;
+  }
+  
+  if (sortBy.value !== 'name') {
+    query.sortBy = sortBy.value;
+  }
+  
+  if (sortDirection.value !== 'asc') {
+    query.sortDirection = sortDirection.value;
+  }
+  
+  router.replace({ query });
+});
 
 // Filter cards based on search query
 const filteredCards = computed(() => {
@@ -138,6 +188,19 @@ const updateCurrentPage = (page: number) => {
 
 // Load cards and prices when component mounts
 onMounted(() => {
+  // Initialize from URL parameters
+  if (route.query.search) {
+    searchQuery.value = route.query.search as string;
+  }
+  
+  if (route.query.sortBy) {
+    sortBy.value = route.query.sortBy as string;
+  }
+  
+  if (route.query.sortDirection) {
+    sortDirection.value = route.query.sortDirection as string;
+  }
+  
   // Load cards immediately
   cardsStore.loadCards();
   
@@ -179,6 +242,12 @@ onMounted(() => {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
+}
+
+.page-size-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .loading,

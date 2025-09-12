@@ -25,6 +25,20 @@ A chronological log of AI-proposed changes for the MTG Value Tracker. Times in E
 - **Impact/Risks**: Improved user experience by eliminating unnecessary chart animations.
 - **Verification Steps**: Open card modal and verify price chart appears without animation.
 
+## 2025-09-12 17:30 — feat: Add URL routing and configurable page size for CardsView pagination
+- **Author**: AI (Qwen)
+- **Scope**: src/features/cards/views/CardsView.vue
+- **Type**: feat
+- **Summary**: Enhanced CardsView pagination with URL routing and configurable page size.
+- **Details**:
+  - Added URL query string parameters for page navigation (page, itemsPerPage)
+  - Made page size configurable with dropdown options (12, 24, 48, 96 items per page)
+  - Implemented URL synchronization for pagination state
+  - Added search, sort, and sort direction parameters to URL
+  - Improved responsive design for controls
+- **Impact/Risks**: Enhanced user experience with bookmarkable pagination states; no breaking changes.
+- **Verification Steps**: Test URL parameters persist pagination state; verify page size selector works correctly.
+
 ## 2025-09-12 17:00 — feat: Implement pagination for CardsView to improve performance with large collections
 - **Author**: AI (Qwen)
 - **Scope**: src/features/cards/views/CardsView.vue, src/components/PaginationComponent.vue
