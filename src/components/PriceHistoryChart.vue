@@ -78,7 +78,9 @@ const chartOptions = computed(() => {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: {},
+    animation: {
+      duration: 0
+    },
     scales: {
       y: {
         ticks: {

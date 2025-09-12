@@ -14,6 +14,17 @@ A chronological log of AI-proposed changes for the MTG Value Tracker. Times in E
 - **Impact/Risks**: No code changes; documentation improvements only.
 - **Verification Steps**: Review documentation for accuracy and completeness.
 
+## 2025-09-12 14:30 — fix: Disable chart animations in card modal
+- **Author**: AI (Qwen)
+- **Scope**: src/components/PriceHistoryChart.vue
+- **Type**: fix
+- **Summary**: Disabled chart animations in the card modal price history chart to improve user experience.
+- **Details**:
+  - Set animation.duration to 0 in chart options to prevent chart animation when opening card modal
+  - Fixed TypeScript type issues with animation configuration
+- **Impact/Risks**: Improved user experience by eliminating unnecessary chart animations.
+- **Verification Steps**: Open card modal and verify price chart appears without animation.
+
 ## 2025-09-11 22:00 — fix: Fix failing tests and enable successful build
 - **Author**: AI (Qwen)
 - **Scope**: src/test/AutomaticPriceUpdateService.test.ts, src/test/components/CardComponentWithProgress.test.ts, src/test/views/CardsView.test.ts, src/test/views/HomeView.test.ts
