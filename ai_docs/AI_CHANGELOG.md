@@ -2,6 +2,18 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-12 22:00 — fix(dashboard): Fix valuation snapshot creation to only occur during actual price updates
+- **Author**: AI (Qwen)
+- **Scope**: src/composables/usePriceUpdates.ts, src/features/analytics/ValuationEngine.ts
+- **Type**: fix
+- **Summary**: Fixed the valuation snapshot creation to only occur when actual price updates happen, not on every dashboard load.
+- **Details**:
+  - Modified usePriceUpdates.ts to only call createValuationSnapshot when an actual price update occurs
+  - Added a check in ValuationEngine.ts to prevent duplicate snapshots on the same day
+  - Ensured that valuation snapshots follow the same 24-hour TTL pattern as price updates
+- **Impact/Risks**: Fixes the issue of creating unnecessary valuation snapshots on every dashboard load. No breaking changes.
+- **Verification Steps**: Valuation snapshots should now only be created when actual price updates occur, either automatically or manually.
+
 ## 2025-09-12 21:30 — feat(dashboard): Reintroduce detailed financial breakdown stats
 - **Author**: AI (Qwen)
 - **Scope**: src/features/dashboard/HomeView.vue

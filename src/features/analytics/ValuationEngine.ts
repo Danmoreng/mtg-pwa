@@ -179,6 +179,23 @@ export class ValuationEngine {
   // Create a valuation snapshot for historical tracking
   static async createValuationSnapshot(): Promise<void> {
     try {
+      // Check if we already have a snapshot for today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const existingSnapshots = await valuationRepository.getAll();
+      const todaySnapshot = existingSnapshots.find(snapshot => {
+        const snapshotDate = new Date(snapshot.asOf);
+        snapshotDate.setHours(0, 0, 0, 0);
+        return snapshotDate.getTime() === today.getTime();
+      });
+      
+      // If we already have a snapshot for today, don't create another one
+      if (todaySnapshot) {
+        console.log('Valuation snapshot for today already exists');
+        return;
+      }
+      
       // Calculate current portfolio metrics
       const portfolioValue = await this.calculatePortfolioValue();
       const costBasis = await this.calculateTotalCostBasis();
