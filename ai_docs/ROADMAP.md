@@ -94,18 +94,6 @@ _Last updated: 2025‑09‑12_
 
 ## NOW (importer reliability & UX)
 
-### P2 — Virtualize card grids
-**Why:** Performance at scale.  
-**Changes:** Introduce virtualization for Cards/Deck cards.  
-**Accept:** Smooth scroll with large collections.
-
-### P1 — Re-enable and extend unit tests
-**Why:** Guard rails for pricing/import.  
-**Changes:** Un-comment and align tests for regex, batch provider, valuation; add idempotency tests.  
-**Accept:** `npm test` runs green locally & in CI.
-
----
-
 ## COMPLETED ✓
 
 ### P2 — Re-enable and extend unit tests
@@ -113,6 +101,12 @@ _Last updated: 2025‑09‑12_
 **Changes:** Fixed and re-enabled previously failing unit tests; improved test stability.  
 **Accept:** `npm test` runs green locally & in CI.  
 **Refs:** `src/test/views/HomeView.test.ts`, `src/test/components/CardComponentWithProgress.test.ts`.
+
+### P2 — Implement pagination for card grids
+**Why:** Performance at scale.  
+**Changes:** Introduced pagination for CardsView with URL routing and configurable page sizes.  
+**Accept:** Smooth navigation with large collections; bookmarkable pagination states.  
+**Refs:** `src/features/cards/views/CardsView.vue`, `src/components/PaginationComponent.vue`.
 
 ---
 

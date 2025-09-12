@@ -25,6 +25,18 @@ A chronological log of AI-proposed changes for the MTG Value Tracker. Times in E
 - **Impact/Risks**: Improved user experience by eliminating unnecessary chart animations.
 - **Verification Steps**: Open card modal and verify price chart appears without animation.
 
+## 2025-09-12 17:45 — docs: Update roadmap to mark pagination implementation as completed
+- **Author**: AI (Qwen)
+- **Scope**: ai_docs/ROADMAP.md
+- **Type**: docs
+- **Summary**: Updated roadmap to mark pagination implementation as completed instead of virtualization.
+- **Details**:
+  - Moved pagination task from NOW section to COMPLETED section
+  - Reworded task to reflect implementation of pagination with URL routing instead of virtualization
+  - Removed virtualization task as it was replaced with a better pagination approach
+- **Impact/Risks**: Documentation update only, no code changes.
+- **Verification Steps**: Review roadmap for accuracy.
+
 ## 2025-09-12 17:30 — feat: Add URL routing and configurable page size for CardsView pagination
 - **Author**: AI (Qwen)
 - **Scope**: src/features/cards/views/CardsView.vue
