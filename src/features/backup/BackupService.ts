@@ -9,7 +9,7 @@ export class BackupService {
       const data: any = {};
       
       data.cards = await db.cards.toArray();
-      data.holdings = await db.holdings.toArray();
+      
       data.transactions = await db.transactions.toArray();
       data.scans = await db.scans.toArray();
       data.decks = await db.decks.toArray();
@@ -36,7 +36,7 @@ export class BackupService {
       
       // Clear existing data
       await db.cards.clear();
-      await db.holdings.clear();
+      
       await db.transactions.clear();
       await db.scans.clear();
       await db.decks.clear();
@@ -49,7 +49,7 @@ export class BackupService {
       
       // Import data into each table
       if (data.cards) await db.cards.bulkAdd(data.cards);
-      if (data.holdings) await db.holdings.bulkAdd(data.holdings);
+      
       if (data.transactions) await db.transactions.bulkAdd(data.transactions);
       if (data.scans) await db.scans.bulkAdd(data.scans);
       if (data.decks) await db.decks.bulkAdd(data.decks);

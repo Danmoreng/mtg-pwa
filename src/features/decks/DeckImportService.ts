@@ -1,5 +1,5 @@
 // Deck import service for importing decks from text files
-import {cardRepository, holdingRepository, cardLotRepository} from '../../data/repos';
+import {cardRepository, cardLotRepository} from '../../data/repos';
 import {EntityLinker} from '../linker/EntityLinker';
 import {ScryfallProvider} from '../pricing/ScryfallProvider';
 import db, {type Card} from '../../data/db';
@@ -306,8 +306,8 @@ export class DeckImportService {
                 totalCards += deckCard.quantity;
 
                 // Check if we own this card
-                const holdings = await holdingRepository.getByCardId(deckCard.cardId);
-                const totalOwned = holdings.reduce((sum, holding) => sum + holding.quantity, 0);
+                const lots = await cardLotRepository.getActiveLotsByCardId(deckCard.cardId);
+                const totalOwned = lots.reduce((sum, lot) => sum + lot.quantity, 0);
 
                 // Count owned cards (up to the quantity needed)
                 ownedCards += Math.min(deckCard.quantity, totalOwned);
