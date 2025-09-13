@@ -34,7 +34,7 @@
 
 ## Milestones
 
-### M1 — Inventory truth & importer reliability (IDs‑first)  ◧
+### M1 — Inventory truth & importer reliability (IDs‑first)  ✓
 
 **Goal:** All imports are ID‑first, idempotent; *lots* are the only persisted inventory.
 
@@ -225,7 +225,7 @@
 
 ## Tracking checklist (high‑level)
 
-* [ ] M1 complete and merged
+* [x] M1 complete and merged
 * [ ] M2 perf target met on CI harness
 * [ ] M3 scan→sale reconciliation shipped
 * [ ] M4 manual add/correction GA
