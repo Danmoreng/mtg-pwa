@@ -1,137 +1,234 @@
-# Roadmap — MTG Collection Value Tracker
-_Last updated: 2025‑09‑12_
+# MTG Collection Value Tracker
+
+*Status: **2025‑09‑13***
 
 ## Principles
-- **Lots are source of truth** for ownership, cost basis, P/L.
-- **Prices are cached & persisted**; UI never blocks on live API.
-- **PWA first:** the app should work offline (incl. deep links).
-- **Idempotent imports:** re‑importing must be safe (no dupes).
+
+* **Lots are the source of truth** for ownership, cost basis, and P/L. No direct `holdings` mutations.
+* **Idempotent imports**: re‑imports must not create duplicates; IDs‑first resolution.
+* **Prices are cached & persisted**; UI never blocks on live API.
+* **PWA first**: app works offline (including deep links) and passes Lighthouse PWA checks.
 
 ---
 
-## COMPLETED ✓
+## Status legend
 
-### P0 — Offline SPA navigation
-**Why:** Deep links 404 offline without a navigation fallback.  
-**Changes:** Add `NavigationRoute` to `src/sw.ts`.  
-**Accept:** Refresh `/decks/...` and `/cards` while offline → renders app shell.  
-**Refs:** `src/sw.ts`, `docs/dev-dist/sw.js`.
-
-### P0 — PWA icons & branding
-**Why:** Manifest points to non‑existent icons; index title still default.  
-**Changes:** Place icons in `public/icons` and reference in `vite.config.ts`; update `<title>` and favicon in `index.html`.  
-**Accept:** Lighthouse PWA check passes; app has correct name/icon.  
-**Refs:** `vite.config.ts`, `index.html`.
-
-### P0 — Backup/restore completeness
-**Why:** `card_lots` & `scan_sale_links` missing in backup → data loss risk.  
-**Changes:** Include both tables in export/import.  
-**Accept:** Export → wipe DB → import → portfolio value & holdings identical.  
-**Refs:** `src/features/backup/BackupService.ts`.
-
-### P0 — Unrealized cost basis honors partial disposals
-**Why:** Unrealized basis overcounts if a lot is partially sold.  
-**Changes:** Use `remaining = quantity - disposedQuantity` in `calculateLotCostBasis` and aggregate accordingly.  
-**Accept:** Unit tests show matching basis to remaining units; dashboard totals align.  
-**Refs:** `src/features/analytics/ValuationEngine.ts`.
-
-### P1 — Remove or implement Release Date sort
-**Why:** UI offers `releasedAt` sort but schema lacks it.  
-**Option A:** Hide option.  
-**Option B:** Persist Scryfall `released_at` on card creation & sort by it.  
-**Accept:** Sort menu only shows working choices OR date sort works.  
-**Refs:** `src/features/cards/views/CardsView.vue`, `src/features/pricing/ScryfallProvider.ts`, `src/data/db.ts`.
-
-### P1 — ESLint config unification
-**Why:** Dual configs cause drift.  
-**Changes:** Keep `eslint.config.js` (flat), remove `.eslintrc.json`, port rules.  
-**Accept:** `npm run lint` passes; CI uses a single config.  
-**Refs:** `eslint.config.js`, `.eslintrc.json`.
-
-### P1 — Add historic price graphs to card details
-**Why:** Users need to see price trends over time to make informed decisions.  
-**Changes:** Added PriceHistoryChart component to card modal with historical price data visualization.  
-**Accept:** Card modal shows price history chart with transaction annotations.  
-**Refs:** `src/components/PriceHistoryChart.vue`, `src/components/CardComponent.vue`.
-
-### P2 — Enhance import status tracking and UI
-**Why:** Users need real-time feedback during import operations.  
-**Changes:** Implemented import status store with progress tracking and updated navbar indicator.  
-**Accept:** Import operations show real-time progress in navbar with detailed status information.  
-**Refs:** `src/stores/importStatus.ts`, `src/components/ImportStatusIndicator.vue`.
-
-### P1 — Minor TS import cleanup
-**Why:** Avoid `.ts` SFC imports unless explicitly configured.  
-**Changes:** Drop the `.ts` extension or enable in `tsconfig.app.json`.  
-**Accept:** Build and typecheck pass.  
-**Refs:** `src/features/dashboard/HomeView.vue`.
-
-### P1 — Cardmarket "IDs first", consistent idempotency
-**Why:** Robust linking and safe re‑imports.  
-**Changes:** Prefer Scryfall `/cards/collection` by Cardmarket IDs; unify `externalRef` formats (`cardmarket:{type}:{id}:{line}`); fall back to set+collector only.  
-**Accept:** Re‑import same CSVs → 0 new rows; logs show batch lookups.  
-**Refs:** `src/features/pricing/ScryfallProvider.ts`, `src/features/imports/ImportService.ts`, `src/workers/cardmarketCsv.ts`.
-
-### P2 — Refactor Pinia stores to remove duplication
-**Why:** The `mtg.ts` store duplicates state, getters, and actions from other stores, increasing maintenance overhead and risk of inconsistencies.  
-**Changes:** Remove `mtg.ts` and refactor components to use the individual, domain-specific stores directly.  
-**Accept:** The `mtg.ts` file is deleted; app functionality is unchanged; codebase is smaller and easier to maintain.  
-**Refs:** `src/stores/`.
-
-### P1 — Add historic price graphs to card details
-**Why:** Users need to see price trends over time to make informed decisions.  
-**Changes:** Added PriceHistoryChart component to card modal with historical price data visualization.  
-**Accept:** Card modal shows price history chart with transaction annotations.  
-**Refs:** `src/components/PriceHistoryChart.vue`, `src/components/CardComponent.vue`.
-
-### P2 — Enhance import status tracking and UI
-**Why:** Users need real-time feedback during import operations.  
-**Changes:** Implemented import status store with progress tracking and updated navbar indicator.  
-**Accept:** Import operations show real-time progress in navbar with detailed status information.  
-**Refs:** `src/stores/importStatus.ts`, `src/components/ImportStatusIndicator.vue`.
+* **Planned** ▢  **In progress** ◧  **Done** ✓  **Deferred** ◌
 
 ---
 
-## NOW (importer reliability & UX)
+## Completed ✓
 
-## COMPLETED ✓
-
-### P2 — Re-enable and extend unit tests
-**Why:** Guard rails for pricing/import.  
-**Changes:** Fixed and re-enabled previously failing unit tests; improved test stability.  
-**Accept:** `npm test` runs green locally & in CI.  
-**Refs:** `src/test/views/HomeView.test.ts`, `src/test/components/CardComponentWithProgress.test.ts`.
-
-### P2 — Implement pagination for card grids
-**Why:** Performance at scale.  
-**Changes:** Introduced pagination for CardsView with URL routing and configurable page sizes.  
-**Accept:** Smooth navigation with large collections; bookmarkable pagination states.  
-**Refs:** `src/features/cards/views/CardsView.vue`, `src/components/PaginationComponent.vue`.
+* **P0 — Offline SPA navigation** ✓
+* **P0 — PWA icons & branding** ✓
+* **P0 — Backup/restore completeness** ✓ (includes `card_lots` & `scan_sale_links`)
+* **P0 — Unrealized cost basis honors partial disposals** ✓
+* **P1 — Remove or implement Release Date sort** ✓ *(option chosen in codebase; keep consistent)*
+* **P1 — ESLint config unification** ✓
+* **P1 — Historic price graphs in card details** ✓
+* **P2 — Enhance import status tracking and UI** ✓
+* **P2 — Re‑enable and extend unit tests** ✓
+* **P2 — Pagination for card grids** ✓
 
 ---
 
-## NEXT (enhancements)
+## Milestones
 
-### P1 — Background job scheduler
-**Why:** Better UX for long-running operations.  
-**Changes:** Implement a job queue for price sync/import progress with persisted status.  
-**Accept:** Import and price sync operations show progress and can be resumed after app restart.
+### M1 — Inventory truth & importer reliability (IDs‑first)  ◧
 
-### P2 — Periodic valuation snapshots
-**Why:** Historical tracking of portfolio value.  
-**Changes:** Implement automatic daily snapshots of portfolio valuation.  
-**Accept:** Dashboard shows valuation history charts.
+**Goal:** All imports are ID‑first, idempotent; *lots* are the only persisted inventory.
 
-### P2 — Background Sync registration
-**Why:** Automatic price updates when connectivity returns.  
-**Changes:** Register Background Sync to refresh prices when network returns.  
-**Accept:** Prices update automatically when device comes online.
+**Scope**
+
+* Importer: Product‑ID‑first resolution; strictly ordered fallbacks; multi‑ID parsing.
+* Remove `holdings` mutation; compute holdings from lots everywhere.
+* Locale cleanup (settings‑driven).
+* Tests: importer idempotency; Product‑ID success/fallback paths; holdings=lots parity; `SetCodeResolver` edge cases.
+
+**Acceptance**
+
+* Re‑importing the same CSVs → **0** new rows.
+* When Cardmarket/Product IDs are present, **100%** resolution via IDs.
+* All UI reads **holdings from lots** only.
+
+**Dependencies:** none.
 
 ---
 
-## LATER (nice‑to‑have)
+### M2 — Pricing throughput & snapshots
 
-- **Advanced analytics** with filtering and custom reports
-- **Multi-currency support** for international users
-- **Sharing features** to export deck lists or collection summaries
-- **Mobile app optimizations** including install prompts and mobile-specific UX
+**Goal:** Fast daily pricing with finish‑aware series + automatic snapshots.
+
+**Scope**
+
+* Batch price fetch (`/cards/collection`), finish‑aware price points.
+* Create valuation snapshot immediately after price update.
+* Background/periodic sync in Service Worker with TTL guard and app‑fallback.
+* Tests: price batching; finish‑series correctness; snapshot creation after update.
+
+**Acceptance** *(proposed targets)*
+
+* Update **5k cards** in **≤5 min P50 / ≤10 min P95** on typical desktop.
+* Both `eur` and `eur_foil` series visible where applicable.
+* A **valuation snapshot** is created after each update cycle.
+
+**Dependencies:** M1 (schema/read‑paths stabilized on lots).
+
+---
+
+### M3 — ManaBox scans & reconciliation
+
+**Goal:** Round‑trip physical inventory → sales reconciliation.
+
+**Scope**
+
+* ManaBox worker + Scans view; wire to `ScanMatchingService` (sold vs owned).
+* UI to manually link scans to lots/sales; audit trail via `scan_sale_links`.
+* Tests: greedy FIFO match, including partial quantities.
+
+**Acceptance**
+
+* Import of sample CSV shows **matched/owned** correctly.
+* Manual linking updates lot/scan relations and audit trail.
+
+**Dependencies:** M1 (lots truth), optional M2 (for valuations in the view).
+
+---
+
+### M4 — Manual add & correction
+
+**Goal:** Users can add lots by hand and correct/lock mappings safely.
+
+**Scope**
+
+* **Add Card** dialog (Cards/Holdings): create manual lots (with/without cost).
+* **Correct/Lock** on a lot/scan/transaction: set `override*` or `overrideCardId`; toggle `resolutionLocked`.
+* Linker: respect `resolutionLocked`/overrides and skip auto‑relink.
+* Tests: manual add changes analytics totals; re‑import does not alter locked lots.
+
+**Acceptance**
+
+* Manual lot creation with optional `acquisitionPriceCent = null` shows “unknown cost”.
+* Locked lots are preserved across re‑imports.
+
+**Dependencies:** M1.
+
+---
+
+### M5 — ManaBox group pricing (Purchase Groups)
+
+**Goal:** Group scans/lots into a Booster/Box purchase with a single paid price.
+
+**Scope**
+
+* New table: `purchase_groups` (schema + migration).
+* ManaBox wizard step: create/attach purchase group; set `acquiredAt` and total price.
+* Lots gain `purchaseGroupId` and `isManual` fields; importer attaches accordingly.
+* Tests: group created; lots attached; idempotent behavior preserved.
+
+**Acceptance**
+
+* During import, user can create a purchase group and attach all created lots.
+* Group metadata appears in lot details and analytics.
+
+**Dependencies:** M4 (UI primitives), M1.
+
+---
+
+### M6 — Analytics filters & group ROI
+
+**Goal:** Trustworthy analytics with filters and group‑level ROI.
+
+**Scope**
+
+* Dashboard filters: **Timeframe**, **Set**, **Purchase Group** (Pinia‑persisted; offline‑friendly).
+* Finance/Valuation: handle `acquisitionPriceCent = null` (unknown bucket); filtered aggregations.
+* Metrics: unrealized value/basis/P\&L; realized P\&L by timeframe; **Group ROI** = revenue − group cost.
+* Tests: filter logic; ROI math; UI KPIs and charts.
+
+**Acceptance**
+
+* Users can filter and see matching totals; group view shows ROI and per‑card breakdown.
+
+**Dependencies:** M2 (snapshots); M5 (groups); M1.
+
+---
+
+### M7 — UX polish & quality bars
+
+**Goal:** Smoother browsing and clearly explained charts.
+
+**Scope**
+
+* Price history charts render both finishes if available; clear provider legend.
+* Deck coverage derives from **lots** in all deck screens (no `holdings` dependency).
+* Lighthouse PWA passes on target profiles.
+* (If not already complete) Release‑date sort option aligned with persisted `released_at`.
+
+**Acceptance**
+
+* Lighthouse PWA score passes; analytics totals match hand‑checked calculations.
+
+**Dependencies:** M1, M2, M6.
+
+---
+
+## Cross‑cutting: Data model & migrations (Dexie)
+
+* **`purchase_groups`**: `id`, `kind`, `title`, `acquiredAt`, `totalAcquisitionPriceCent`, `notes`, timestamps.
+* **`card_lots` additions**: `purchaseGroupId?`, `isManual?`, `resolutionLocked?`, `overrideCardId?` or granular overrides, `acquisitionPriceCent` nullable.
+* **Migrations**: additive; backfill defaults; preserve prior financial fields; unit tests around migration up/down where applicable.
+
+---
+
+## Test plan summary (per milestone)
+
+* **M1**: importer idempotency; holdings parity; locale; set‑code edges.
+* **M2**: batch sizing; finish series; snapshot creation; perf harness for 5k cards.
+* **M3**: FIFO/partial matching; manual link round‑trip; audit trail integrity.
+* **M4**: manual add; correction lock; linker guard.
+* **M5**: group creation/attachment; idempotency when re‑importing same scans.
+* **M6**: filters → metrics; null‑cost handling; ROI math.
+* **M7**: double‑finish chart rendering; lighthouse; deck coverage from lots.
+
+---
+
+## KPIs & SLOs
+
+* **Importer correctness**: 0 dupes on same‑file re‑import; 100% ID‑present resolutions use IDs.
+* **Pricing throughput**: 5k cards ≤5 min P50 / ≤10 min P95.
+* **Snapshot freshness**: snapshot within ≤60s of price update completion.
+* **Reconciliation accuracy**: ≥99% auto‑match rate on sample scans; manual links persist.
+* **Analytics trust**: totals within ±0.5% of hand‑checked calculations under test fixtures.
+* **PWA quality**: Lighthouse PWA audit passes on reference device profiles.
+
+---
+
+## Dependencies & sequencing
+
+1. **M1** foundation → unblocks M2, M3, M4.
+2. **M2** → required for M6 (time‑series and snapshots).
+3. **M4** → improves UX and prepares UI for M5 linking.
+4. **M5** → enables **M6** group ROI.
+5. **M7** after M6 for coherent UX polish.
+
+---
+
+## Risks & mitigations
+
+* **API rate limits** on price providers → batch sizes with backoff; TTL guard; offline queue.
+* **Idempotency drift** across importers → shared normalization utilities; golden CSV fixtures in tests.
+* **Null acquisition price semantics** → UI “unknown cost” bucket; exclude from basis sums by default; explicit callouts in analytics.
+* **Linker regressions** → `resolutionLocked` respected at all entry points; add contract tests.
+
+---
+
+## Tracking checklist (high‑level)
+
+* [ ] M1 complete and merged
+* [ ] M2 perf target met on CI harness
+* [ ] M3 scan→sale reconciliation shipped
+* [ ] M4 manual add/correction GA
+* [ ] M5 purchase groups schema + wizard
+* [ ] M6 analytics filters + ROI
+* [ ] M7 polish & Lighthouse pass
