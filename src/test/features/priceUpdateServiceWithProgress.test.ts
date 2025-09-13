@@ -14,7 +14,7 @@ vi.mock('../../data/repos', () => ({
 
 vi.mock('../../features/pricing/ScryfallProvider', () => ({
   ScryfallProvider: {
-    getPriceById: vi.fn()
+    getPricesByIds: vi.fn()
   }
 }));
 
@@ -41,17 +41,17 @@ describe('PriceUpdateService with Progress Tracking', () => {
         { id: 'card-3', name: 'Card 3' }
       ];
       
-      const mockPrices = [
-        new Money(100, 'EUR'),
-        new Money(200, 'EUR'),
-        new Money(300, 'EUR')
+      const mockBatchPrices = [
+        [
+          { 'card-1': { eur: 1.0 } },
+          { 'card-2': { eur: 2.0 } },
+          { 'card-3': { eur: 3.0 } }
+        ]
       ];
 
       (cardRepository.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(cards);
-      (ScryfallProvider.getPriceById as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(mockPrices[0])
-        .mockResolvedValueOnce(mockPrices[1])
-        .mockResolvedValueOnce(mockPrices[2]);
+      (ScryfallProvider.getPricesByIds as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockBatchPrices[0]);
       (db.price_points.put as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       // Progress callback spy
@@ -68,7 +68,7 @@ describe('PriceUpdateService with Progress Tracking', () => {
 
       // Verify other calls
       expect(cardRepository.getAll).toHaveBeenCalled();
-      expect(ScryfallProvider.getPriceById).toHaveBeenCalledTimes(3);
+      expect(ScryfallProvider.getPricesByIds).toHaveBeenCalledTimes(1);
       expect(db.price_points.put).toHaveBeenCalledTimes(3);
     });
 
@@ -81,10 +81,12 @@ describe('PriceUpdateService with Progress Tracking', () => {
       ];
 
       (cardRepository.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(cards);
-      (ScryfallProvider.getPriceById as ReturnType<typeof vi.fn>)
-        .mockRejectedValueOnce(new Error('Network error')) // First card fails
-        .mockResolvedValueOnce(new Money(200, 'EUR')) // Second card succeeds
-        .mockResolvedValueOnce(new Money(300, 'EUR')); // Third card succeeds
+      (ScryfallProvider.getPricesByIds as ReturnType<typeof vi.fn>)
+        .mockRejectedValueOnce(new Error('Network error')) // First batch fails
+        .mockResolvedValueOnce([
+          { 'card-2': { eur: 2.0 } },
+          { 'card-3': { eur: 3.0 } }
+        ]); // Second batch succeeds
       (db.price_points.put as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       // Progress callback spy
@@ -100,7 +102,7 @@ describe('PriceUpdateService with Progress Tracking', () => {
       expect(progressCallback).toHaveBeenNthCalledWith(3, 3, 3);
 
       // Verify that put was called only twice (for successful cards)
-      expect(ScryfallProvider.getPriceById).toHaveBeenCalledTimes(3);
+      expect(ScryfallProvider.getPricesByIds).toHaveBeenCalledTimes(2);
       expect(db.price_points.put).toHaveBeenCalledTimes(2);
     });
 
@@ -111,8 +113,8 @@ describe('PriceUpdateService with Progress Tracking', () => {
       ];
 
       (cardRepository.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(cards);
-      (ScryfallProvider.getPriceById as ReturnType<typeof vi.fn>)
-        .mockResolvedValue(new Money(100, 'EUR'));
+      (ScryfallProvider.getPricesByIds as ReturnType<typeof vi.fn>)
+        .mockResolvedValue([{ 'card-1': { eur: 1.0 } }]);
       (db.price_points.put as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       // Progress callback spy
@@ -126,7 +128,7 @@ describe('PriceUpdateService with Progress Tracking', () => {
 
       // Verify other calls
       expect(cardRepository.getAll).toHaveBeenCalled();
-      expect(ScryfallProvider.getPriceById).toHaveBeenCalledTimes(1);
+      expect(ScryfallProvider.getPricesByIds).toHaveBeenCalledTimes(1);
       expect(db.price_points.put).toHaveBeenCalledTimes(1);
     });
   });
