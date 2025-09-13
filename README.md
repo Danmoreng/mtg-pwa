@@ -5,7 +5,7 @@ A Progressive Web App (PWA) for tracking the value of your Magic: The Gathering 
 ## Features
 
 - Track your MTG card collection value
-- Import data from Cardmarket CSV exports
+- Import data from Cardmarket CSV exports with improved reliability and idempotency
 - Import ManaBox scanned cards
 - Import decks from Moxfield
 - View portfolio statistics including value, cost basis, and profit/loss

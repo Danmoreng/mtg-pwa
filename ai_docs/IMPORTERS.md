@@ -47,6 +47,12 @@ externalRef = "cardmarket:" + OrderId + ":" + lineNumber
 
 This prevents duplicate imports when the same CSV is imported multiple times.
 
+### Card Resolution
+Cardmarket imports now use a Product-ID-first resolution approach:
+1. **Primary**: Resolve cards using Cardmarket Product IDs when available
+2. **Fallback**: Use name/set/collector number resolution when Product IDs are not available
+3. **Enhanced Matching**: Multi-ID parsing for cards with multiple Product IDs
+
 ### Error Handling
 - **Unknown Sets**: Logged and skipped with details
 - **Invalid Prices**: Rows with unparseable prices are skipped
