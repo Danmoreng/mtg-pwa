@@ -9,25 +9,19 @@ import db from '../../data/db';
 vi.mock('../../data/db', () => ({
   default: {
     card_lots: {
-      where: vi.fn().mockImplementation(() => ({
-        equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([])
-        })
-      }))
+      where: vi.fn().mockReturnThis(),
+      equals: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([]),
     },
     transactions: {
-      where: vi.fn().mockImplementation(() => ({
-        equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([])
-        })
-      }))
+      where: vi.fn().mockReturnThis(),
+      equals: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([]),
     },
     price_points: {
-      where: vi.fn().mockImplementation(() => ({
-        equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([])
-        })
-      }))
+      where: vi.fn().mockReturnThis(),
+      equals: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([]),
     }
   }
 }));
@@ -174,29 +168,21 @@ describe('CardComponent with Progress Tracking', () => {
   });
 
   it('should load card details in background when modal opens', async () => {
-    // Mock the database calls BEFORE mounting the component
     const mockLots = [{ id: 'lot-1', cardId: 'test-card', quantity: 1 }];
     const mockTransactions = [{ id: 'tx-1', cardId: 'test-card', kind: 'BUY' }];
     const mockPricePoints = [];
-    
-    // Mock the database methods
-    db.card_lots.where.mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue(mockLots)
-      })
-    });
-    
-    db.transactions.where.mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue(mockTransactions)
-      })
-    });
-    
-    db.price_points.where.mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue(mockPricePoints)
-      })
-    });
+
+    vi.spyOn(db.card_lots, 'where').mockReturnThis();
+    vi.spyOn(db.card_lots, 'equals').mockReturnThis();
+    vi.spyOn(db.card_lots, 'toArray').mockResolvedValue(mockLots);
+
+    vi.spyOn(db.transactions, 'where').mockReturnThis();
+    vi.spyOn(db.transactions, 'equals').mockReturnThis();
+    vi.spyOn(db.transactions, 'toArray').mockResolvedValue(mockTransactions);
+
+    vi.spyOn(db.price_points, 'where').mockReturnThis();
+    vi.spyOn(db.price_points, 'equals').mockReturnThis();
+    vi.spyOn(db.price_points, 'toArray').mockResolvedValue(mockPricePoints);
 
     const wrapper = mount(CardComponent, {
       props: {
@@ -211,16 +197,10 @@ describe('CardComponent with Progress Tracking', () => {
       }
     });
 
-    // Wait for the component to load
     await wrapper.vm.$nextTick();
-
-    // Click on the card to open the modal
     await wrapper.find('.card-item').trigger('click');
-
-    // Wait for next tick to allow setTimeout to execute
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    // Check that the lots and transactions were loaded
     expect(db.card_lots.where).toHaveBeenCalledWith('cardId');
     expect(db.transactions.where).toHaveBeenCalledWith('cardId');
   });

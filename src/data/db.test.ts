@@ -5,7 +5,7 @@ describe('Database', () => {
   beforeEach(async () => {
     // Clear the database before each test
     await db.cards.clear();
-    await db.holdings.clear();
+    await db.card_lots.clear();
     await db.transactions.clear();
     await db.scans.clear();
     await db.decks.clear();
@@ -20,7 +20,7 @@ describe('Database', () => {
     // Check that all tables exist by trying to count records
     const tables = [
       'cards',
-      'holdings',
+      'card_lots',
       'transactions',
       'scans',
       'decks',
@@ -55,6 +55,30 @@ describe('Database', () => {
     const retrieved = await db.cards.get('test-card-id');
     
     expect(retrieved).toEqual(card);
+  });
+
+  it('should add and retrieve a card lot', async () => {
+    const now = new Date();
+    const cardLot = {
+      id: 'test-lot-id',
+      cardId: 'test-card-id',
+      quantity: 1,
+      unitCost: 100,
+      source: 'test',
+      condition: 'NM',
+      language: 'en',
+      foil: false,
+      finish: 'nonfoil',
+      currency: 'EUR',
+      purchasedAt: now,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await db.card_lots.add(cardLot);
+    const retrieved = await db.card_lots.get('test-lot-id');
+    
+    expect(retrieved).toEqual(cardLot);
   });
 
   it('should add and retrieve a transaction', async () => {
