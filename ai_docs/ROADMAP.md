@@ -55,24 +55,49 @@
 
 ---
 
-### M2 — Pricing throughput & snapshots
+#### M2 — Pricing throughput, history & snapshots
 
-**Goal:** Fast daily pricing with finish‑aware series + automatic snapshots.
+**Goal:** Fast daily pricing with **finish-aware time series**, **historical backfill**, provider precedence, and **automatic valuation snapshots**.
 
 **Scope**
 
-* Batch price fetch (`/cards/collection`), finish‑aware price points.
-* Create valuation snapshot immediately after price update.
-* Background/periodic sync in Service Worker with TTL guard and app‑fallback.
-* Tests: price batching; finish‑series correctness; snapshot creation after update.
+* **Schema & migrations**
 
-**Acceptance** *(proposed targets)*
+    * Update `price_points` to use a provider/finish/date key: `id = ${cardId}:${provider}:${finish}:${date}`.
+    * Add optional `provider_id_map` (e.g., Cardmarket product ID, MTGJSON UUID) if not already persisted on `card`.
+* **Historical backfill (one-time)**
 
-* Update **5k cards** in **≤5 min P50 / ≤10 min P95** on typical desktop.
-* Both `eur` and `eur_foil` series visible where applicable.
-* A **valuation snapshot** is created after each update cycle.
+    * Pull **last 90 days** of Cardmarket prices per printing via **MTGJSON** (foil/nonfoil separated) and upsert into `price_points`.
+* **Daily extension (ongoing)**
 
-**Dependencies:** M1 (schema/read‑paths stabilized on lots).
+    * New **PriceGuideSyncWorker**: ingest **Cardmarket Price Guide** daily snapshot for owned/favorited printings; write one row per `(cardId, finish, date)`.
+    * **Precedence rules:** prefer **Price Guide** for a given date; else **MTGJSON** if within \~90 days; use **Scryfall** only for “today”.
+    * **TTL + scheduling:** Service Worker Periodic Sync when supported; app-level fallback timer otherwise.
+* **Finish-aware series** for current-day updates (Scryfall `/cards/collection` batching).
+* **Valuation snapshots**
+
+    * Create a snapshot immediately after the daily price update (or manual run).
+    * Enable point-in-time valuations by joining lots to that day’s `price_points`.
+* **Charts & UI**
+
+    * Card detail charts toggle **finish** and (optional) **provider**; can overlay avg7/avg30 if present from Price Guide.
+* **Tests**
+
+    * Mapping: Cardmarket product ID ↔ printing; finish mapping.
+    * Upserts idempotent by `(cardId, provider, finish, date)`.
+    * Precedence honored when multiple providers have the same date.
+    * Batch sizing/backoff for Scryfall; snapshot created after successful update.
+    * Point-in-time valuation correctness (spot checks vs fixtures).
+
+**Acceptance** *(targets)*
+
+* **Backfill coverage:** ≥95% of owned printings have ≥90 consecutive daily points after the one-time backfill.
+* **Daily sync reliability:** ≥97% success rate (last 30 days) with automatic retry/backoff.
+* **Throughput:** Update **5k cards** in **≤5 min P50 / ≤10 min P95** on a typical desktop.
+* **Snapshots:** A valuation snapshot is created within **≤60s** of price update completion.
+* **Finish visibility:** Both `eur` and `eur_foil` series render when applicable; provider toggle behaves as specified.
+
+**Dependencies:** M1 (schema/read-paths stabilized on lots).
 
 ---
 
@@ -201,6 +226,8 @@
 * **Reconciliation accuracy**: ≥99% auto‑match rate on sample scans; manual links persist.
 * **Analytics trust**: totals within ±0.5% of hand‑checked calculations under test fixtures.
 * **PWA quality**: Lighthouse PWA audit passes on reference device profiles.
+* **Historical data completeness:** ≥95% of owned printings have ≥90 days of continuous history after backfill; ≥90% have continuous daily data over any rolling 30-day window.
+* **Provider correctness:** For dates where both MTGJSON and Price Guide exist, chart/tooling uses Price Guide; audit shows 100% precedence compliance in tests.
 
 ---
 
