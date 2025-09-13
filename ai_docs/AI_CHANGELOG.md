@@ -2,6 +2,72 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-13 17:30 — fix(decks): Separate face card image from remove button to prevent overlap
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/views/DeckDetailView.vue
+- **Type**: fix
+- **Summary**: Fixed an issue where the remove face card button was positioned behind the face card image and was not clickable.
+- **Details**:
+  - Restructured face card display to separate the image from the remove button
+  - Moved the remove button outside the card preview container
+  - Added proper spacing and styling to ensure button is visible and clickable
+  - Maintained consistent styling with the rest of the UI
+- **Impact/Risks**: UI improvement with no breaking changes. Fixes usability issue with face card management.
+- **Verification Steps**: When a face card is selected, the "Remove Face Card" button should be clearly visible and clickable without any overlap from the card image.
+
+## 2025-09-13 17:00 — feat(decks): Restyle deck header to prevent face card overlap and improve layout
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/views/DeckDetailView.vue
+- **Type**: feat
+- **Summary**: Restyled the deck header section to prevent face card display from overlapping with other elements and improved overall layout.
+- **Details**:
+  - Restructured deck header with flex layout to properly separate deck information from face card section
+  - Removed absolute positioning that was causing overlap issues
+  - Improved responsive design with proper wrapping and spacing
+  - Maintained all existing functionality including deck renaming
+  - Enhanced visual hierarchy and readability
+- **Impact/Risks**: UI improvement with no breaking changes. Improves user experience with deck management.
+- **Verification Steps**: Deck title, metadata, and actions should be clearly visible without overlapping the face card display. Face card section should be properly positioned to the right. Deck renaming functionality should work as expected.
+
+## 2025-09-13 16:00 — fix(decks): Prevent CardComponent modal from opening in face card selection mode
+- **Author**: AI (Qwen)
+- **Scope**: src/components/CardComponent.vue, src/features/decks/views/DeckDetailView.vue
+- **Type**: fix
+- **Summary**: Fixed an issue where the CardComponent modal would still open when clicking cards in face card selection mode.
+- **Details**:
+  - Added a disableModal prop to CardComponent to prevent modal from opening
+  - Updated DeckDetailView to pass disableModal prop when in face card selection mode
+  - This ensures that when users are selecting a face card, the card modal does not open
+  - Provides a cleaner user experience during face card selection
+- **Impact/Risks**: UI improvement with no breaking changes. Enhances user experience during face card selection.
+- **Verification Steps**: Enter face card selection mode and click on cards. The card modal should not open. Exit selection mode and click on cards. The card modal should open as usual.
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/views/DeckDetailView.vue
+- **Type**: feat
+- **Summary**: Added a toggle mode for face card selection that allows users to directly click cards to set them as face cards without opening the modal.
+- **Details**:
+  - Added a toggle button for face card selection mode
+  - When in selection mode, users can directly click any card to set it as the face card
+  - Card modal does not open when in face card selection mode
+  - Visual indicators show when selection mode is active
+  - Selection mode automatically turns off after selecting a face card
+  - Added a cancel button to exit selection mode without selecting a card
+- **Impact/Risks**: UI enhancement with no breaking changes. Improves user experience for setting face cards.
+- **Verification Steps**: Click "Select Face Card" button to enter selection mode. Cards should show a tooltip when hovered. Click any card to set it as the face card. Selection mode should automatically turn off. Click "Select Face Card" again and then "Cancel Selection" to exit without selecting.
+
+## 2025-09-13 14:00 — fix(decks): Prevent card clicks from setting face cards unintentionally
+- **Author**: AI (Qwen)
+- **Scope**: src/features/decks/views/DeckDetailView.vue
+- **Type**: fix
+- **Summary**: Fixed an issue where clicking on cards in the deck view would unintentionally set them as the face card.
+- **Details**:
+  - Completely removed the click handler from cards in the main deck grid
+  - Cards in the main grid now only open the card modal for viewing details
+  - Face card selection is still available through the dedicated "Select Face Card" button and modal
+  - This properly separates card viewing from face card selection functionality
+- **Impact/Risks**: UI improvement with no breaking changes. Fixes user experience issue with deck card selection.
+- **Verification Steps**: Clicking cards in the deck view should open the card modal without changing the face card. Face cards can still be selected using the dedicated "Select Face Card" button.
+
 ## 2025-09-12 23:30 — fix(decks): Fix face card display size and prevent modal click interference
 - **Author**: AI (Qwen)
 - **Scope**: src/features/decks/views/DeckDetailView.vue

@@ -9,56 +9,72 @@
         <router-link to="/decks" class="back-link">
           ← Back to Decks
         </router-link>
-        <div class="deck-title-container">
-          <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="editable-title">
-            {{ deck.name }}
-            <span class="edit-icon">✏️</span>
-          </h1>
-          <div v-else class="title-edit-form">
-            <input 
-              v-model="editedTitle" 
-              @keyup.enter="saveTitle" 
-              @blur="saveTitle"
-              @keyup.esc="cancelEditingTitle"
-              ref="titleInput"
-              class="title-input"
-            />
-            <div class="title-edit-buttons">
-              <button @click="saveTitle" class="btn btn-sm btn-primary">Save</button>
-              <button @click="cancelEditingTitle" class="btn btn-sm btn-secondary">Cancel</button>
+        <div class="deck-header-content">
+          <div class="deck-info-section">
+            <div class="deck-title-container">
+              <h1 v-if="!isEditingTitle" @click="startEditingTitle" class="editable-title">
+                {{ deck.name }}
+                <span class="edit-icon">✏️</span>
+              </h1>
+              <div v-else class="title-edit-form">
+                <input 
+                  v-model="editedTitle" 
+                  @keyup.enter="saveTitle" 
+                  @blur="saveTitle"
+                  @keyup.esc="cancelEditingTitle"
+                  ref="titleInput"
+                  class="title-input"
+                />
+                <div class="title-edit-buttons">
+                  <button @click="saveTitle" class="btn btn-sm btn-primary">Save</button>
+                  <button @click="cancelEditingTitle" class="btn btn-sm btn-secondary">Cancel</button>
+                </div>
+              </div>
+            </div>
+            <p class="deck-meta">
+              <span class="platform">{{ deck.platform }}</span>
+              <span class="date">Imported: {{ formatDate(deck.importedAt) }}</span>
+            </p>
+            <div class="deck-actions">
+              <button @click="deleteDeck" class="btn btn-sm btn-danger">Delete Deck</button>
             </div>
           </div>
-        </div>
-        <p class="deck-meta">
-          <span class="platform">{{ deck.platform }}</span>
-          <span class="date">Imported: {{ formatDate(deck.importedAt) }}</span>
-        </p>
-        <div class="deck-actions">
-          <button @click="deleteDeck" class="btn btn-sm btn-danger">Delete Deck</button>
-        </div>
-      </div>
-      
-      <!-- Face card selection -->
-      <div class="face-card-section">
-        <h3>Deck Face Card</h3>
-        <div v-if="faceCard" class="face-card-display">
-          <div class="card-preview">
-            <img 
-              :src="faceCard.imageUrl || 'https://placehold.co/200x280?text=Card+Image'" 
-              :alt="faceCard.name"
-              class="card-image"
-            />
-            <div class="card-info">
-              <h4>{{ faceCard.name }}</h4>
-              <p>{{ faceCard.set }} ({{ faceCard.setCode }})</p>
-              <button @click="clearFaceCard" class="btn btn-sm btn-secondary">Remove Face Card</button>
+          <!-- Face card selection -->
+          <div class="face-card-section">
+            <h3>Deck Face Card</h3>
+            <div v-if="faceCard" class="face-card-display">
+              <div class="card-preview">
+                <img 
+                  :src="faceCard.imageUrl"
+                  :alt="faceCard.name"
+                  class="card-image"
+                />
+                <div class="card-info">
+                  <h4>{{ faceCard.name }}</h4>
+                  <p>{{ faceCard.set }} ({{ faceCard.setCode }})</p>
+                </div>
+              </div>
+              <button @click="clearFaceCard" class="btn btn-sm btn-secondary my-5 remove-face-card-btn">Remove Face Card</button>
             </div>
+            <div v-else class="no-face-card">
+              <p>No face card selected.</p>
+            </div>
+            <button 
+              v-if="!isSelectingFaceCard" 
+              @click="toggleFaceCardSelection" 
+              class="btn btn-primary"
+            >
+              Select Face Card
+            </button>
+            <button 
+              v-else 
+              @click="toggleFaceCardSelection" 
+              class="btn btn-secondary"
+            >
+              Cancel Selection
+            </button>
           </div>
         </div>
-        <div v-else class="no-face-card">
-          <p>No face card selected.</p>
-        </div>
-        <button @click="openFaceCardSelector" class="btn btn-primary">Select Face Card</button>
       </div>
       
       <div class="cards-section">
@@ -71,13 +87,16 @@
             v-for="deckCard in deckCards" 
             :key="deckCard.id"
             class="card-selector"
-            :class="{ 'selected-as-face': deckCard.cardId === deck.faceCardId }"
+            :class="{ 
+              'selected-as-face': deckCard.cardId === deck.faceCardId,
+              'face-card-selection-mode': isSelectingFaceCard
+            }"
+            @click="isSelectingFaceCard ? handleFaceCardSelection(deckCard.cardId) : null"
           >
-            <div @click.stop="selectFaceCard(deckCard.cardId)">
-              <CardComponent
-                :card="getCardDetails(deckCard.cardId)"
-              />
-            </div>
+            <CardComponent
+              :card="getCardDetails(deckCard.cardId)"
+              :disable-modal="isSelectingFaceCard"
+            />
           </div>
         </div>
       </div>
@@ -162,6 +181,7 @@ const editedTitle = ref('');
 const titleInput = ref<HTMLInputElement | null>(null);
 const showFaceCardSelector = ref(false);
 const faceCardSelectorSearch = ref('');
+const isSelectingFaceCard = ref(false);
 
 // Computed property for face card
 const faceCard = ref<any>(null);
@@ -247,6 +267,16 @@ const selectFaceCard = async (cardId: string) => {
   }
 };
 
+// Handle face card selection in toggle mode
+const handleFaceCardSelection = async (cardId: string) => {
+  if (!isSelectingFaceCard.value) return;
+  
+  await selectFaceCard(cardId);
+  
+  // Turn off selection mode after selecting a face card
+  isSelectingFaceCard.value = false;
+};
+
 // Clear face card
 const clearFaceCard = async () => {
   if (!deck.value) return;
@@ -264,16 +294,15 @@ const clearFaceCard = async () => {
   }
 };
 
-// Open face card selector modal
-const openFaceCardSelector = () => {
-  showFaceCardSelector.value = true;
-  faceCardSelectorSearch.value = '';
-};
-
 // Close face card selector modal
 const closeFaceCardSelector = () => {
   showFaceCardSelector.value = false;
   faceCardSelectorSearch.value = '';
+};
+
+// Toggle face card selection mode
+const toggleFaceCardSelection = () => {
+  isSelectingFaceCard.value = !isSelectingFaceCard.value;
 };
 
 // Filter deck cards based on search term
@@ -394,6 +423,7 @@ onMounted(() => {
   cursor: pointer;
   display: inline-block;
   position: relative;
+  word-break: break-word;
 }
 
 .editable-title:hover .edit-icon {
@@ -477,24 +507,34 @@ onMounted(() => {
   z-index: 10;
 }
 
+.deck-header-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xl);
+  align-items: flex-start;
+}
+
+.deck-info-section {
+  flex: 1;
+  min-width: 300px;
+}
+
 .face-card-section {
   margin-bottom: var(--space-xl);
   position: relative;
   z-index: 1;
-  clear: both;
+  flex: 0 0 auto;
   max-width: 250px;
-  margin-left: auto;
 }
 
 .cards-section h2,
 .face-card-section h3 {
-  margin: var(--space-xl) 0 var(--space-md);
+  margin: 0 0 var(--space-md);
   font-size: var(--font-size-xl);
 }
 
 .face-card-display {
-  max-width: 150px;
-  margin-bottom: var(--space-lg);
+  width: 150px;
 }
 
 .card-preview {
@@ -505,6 +545,7 @@ onMounted(() => {
   overflow: hidden;
   background: var(--color-surface);
   width: 150px;
+  margin-bottom: var(--space-sm);
 }
 
 .card-preview .card-image {
@@ -528,6 +569,10 @@ onMounted(() => {
   margin: 0 0 var(--space-sm);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+.remove-face-card-btn {
+  width: 100%;
 }
 
 .empty-state {
@@ -654,6 +699,38 @@ onMounted(() => {
 .card-selector.selected {
   border-color: var(--color-success);
   box-shadow: 0 0 0 2px var(--color-success);
+}
+
+.card-selector.face-card-selection-mode {
+  cursor: pointer;
+  position: relative;
+}
+
+.card-selector.face-card-selection-mode::before {
+  content: "Click to set as face card";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s;
+  text-align: center;
+  width: 80%;
+  font-size: var(--font-size-sm);
+}
+
+.card-selector.face-card-selection-mode:hover::before {
+  opacity: 1;
+}
+
+.card-selector.face-card-selection-mode:hover {
+  border-color: var(--color-warning);
+  box-shadow: 0 0 0 2px var(--color-warning);
 }
 
 .card-selector.selected-as-face::after {
