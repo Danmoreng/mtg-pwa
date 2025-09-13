@@ -3,9 +3,13 @@ import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import db from '../../data/db';
 import { cardRepository } from '../../data/repos';
 import { pricePointRepository } from '../../data/repos';
+import { Money } from '../../core/Money';
 
 export class PriceUpdateService {
-  // Sync prices for all cards in the collection
+  // Batch size for price fetching
+  private static readonly BATCH_SIZE = 75; // Scryfall recommends batches of 75 or less
+
+  // Sync prices for all cards in the collection using batch fetching
   static async syncPrices(progressCallback?: (processed: number, total: number) => void): Promise<void> {
     try {
       const now = new Date();
@@ -14,39 +18,83 @@ export class PriceUpdateService {
       const cards = await cardRepository.getAll();
       const totalCards = cards.length;
       
-      // Update prices for each card
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
+      // Keep track of processed cards for progress reporting
+      let processedCards = 0;
+      
+      // Process cards in batches to improve performance
+      for (let i = 0; i < cards.length; i += this.BATCH_SIZE) {
+        // Get the current batch
+        const batch = cards.slice(i, i + this.BATCH_SIZE);
+        const batchIds = batch.map(card => card.id);
+        
         try {
-          // Get price from Scryfall
-          const price = await ScryfallProvider.getPriceById(card.id);
+          // Get prices for the batch from Scryfall
+          const priceResults = await ScryfallProvider.getPricesByIds(batchIds);
           
-          if (price) {
-            // Create price point ID with date
-            const dateStr = now.toISOString().split('T')[0];
-            const pricePointId = `${card.id}:scryfall:${dateStr}`;
-            
-            // Create price point
-            const pricePoint = {
-              id: pricePointId,
-              cardId: card.id,
-              provider: 'scryfall',
-              currency: price.getCurrency(),
-              price: price.getCents(),
-              asOf: now,
-              createdAt: now
-            };
-            
-            // Save price point (use put to update if exists)
-            await db.price_points.put(pricePoint);
+          // Process each price result
+          for (const priceResult of priceResults) {
+            for (const [cardId, prices] of Object.entries(priceResult)) {
+              // Process regular (non-foil) price
+              if (prices.eur !== undefined) {
+                const price = Money.parse(prices.eur.toString(), 'EUR');
+                
+                // Create price point ID with date
+                const dateStr = now.toISOString().split('T')[0];
+                const pricePointId = `${cardId}:scryfall:${dateStr}`;
+                
+                // Create price point
+                const pricePoint = {
+                  id: pricePointId,
+                  cardId: cardId,
+                  provider: 'scryfall',
+                  currency: price.getCurrency(),
+                  price: price.getCents(),
+                  asOf: now,
+                  createdAt: now
+                };
+                
+                // Save price point (use put to update if exists)
+                await db.price_points.put(pricePoint);
+              }
+              
+              // Process foil price if available
+              if (prices.eur_foil !== undefined) {
+                const price = Money.parse(prices.eur_foil.toString(), 'EUR');
+                
+                // Create price point ID with date and foil indicator
+                const dateStr = now.toISOString().split('T')[0];
+                const pricePointId = `${cardId}:scryfall:${dateStr}:foil`;
+                
+                // Create price point
+                const pricePoint = {
+                  id: pricePointId,
+                  cardId: cardId,
+                  provider: 'scryfall',
+                  currency: price.getCurrency(),
+                  price: price.getCents(),
+                  asOf: now,
+                  createdAt: now
+                };
+                
+                // Save price point (use put to update if exists)
+                await db.price_points.put(pricePoint);
+              }
+              
+              // Update processed cards count and report progress
+              processedCards++;
+              if (progressCallback) {
+                progressCallback(processedCards, totalCards);
+              }
+            }
           }
         } catch (error) {
-          console.error(`Error syncing price for card ${card.id}:`, error);
-        }
-        
-        // Report progress if callback provided
-        if (progressCallback) {
-          progressCallback(i + 1, totalCards);
+          console.error(`Error syncing prices for batch starting at index ${i}:`, error);
+          // Continue with the next batch even if one fails
+          // Still update progress for the cards in this batch
+          processedCards += batch.length;
+          if (progressCallback) {
+            progressCallback(processedCards, totalCards);
+          }
         }
       }
     } catch (error) {

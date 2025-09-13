@@ -1,0 +1,309 @@
+"C:\Program Files\nodejs\npm.cmd" test
+
+> mtg-pwa@0.1.0 test
+> vitest
+
+
+ DEV  v2.1.9 C:/Users/sebastian/WebstormProjects/mtg-pwa
+
+stderr | src/test/AutomaticPriceUpdateService.test.ts > AutomaticPriceUpdateService > needsPriceUpdate > should return true when there is an error checking the last update time
+Error checking if price update is needed: Error: Database error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\AutomaticPriceUpdateService.test.ts:83:77
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stdout | src/test/AutomaticPriceUpdateService.test.ts > AutomaticPriceUpdateService > updatePrices > should update prices and record the update time
+Prices updated successfully at 2025-09-13T16:36:41.549Z
+
+stderr | src/test/AutomaticPriceUpdateService.test.ts > AutomaticPriceUpdateService > updatePrices > should throw an error when price update fails
+Error updating prices: Error: Network error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\AutomaticPriceUpdateService.test.ts:106:85
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stdout | src/test/AutomaticPriceUpdateService.test.ts > AutomaticPriceUpdateService > updatePrices > should create import status and track progress during price updates
+Prices updated successfully at 2025-09-13T16:36:41.570Z
+
+stderr | src/test/AutomaticPriceUpdateService.test.ts > AutomaticPriceUpdateService > updatePrices > should mark import as failed when price update throws an error
+Error updating prices: Error: Network error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\AutomaticPriceUpdateService.test.ts:162:85
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stderr | src/test/AutomaticPriceUpdateService.test.ts > AutomaticPriceUpdateService > getLastUpdateTime > should return null when there is an error getting the last update time
+Error getting last update time: Error: Database error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\AutomaticPriceUpdateService.test.ts:207:77
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stderr | src/test/features/priceUpdateServiceBatch.test.ts > PriceUpdateService with Batch Processing > syncPrices > should continue processing even when batch price fetch fails
+Error syncing prices for batch starting at index 0: Error: Network error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\features\priceUpdateServiceBatch.test.ts:115:32
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stderr | src/test/components/CardComponentWithProgress.test.ts > CardComponent with Progress Tracking > should load card details in background when modal opens
+Error loading card details: TypeError: Cannot read properties of undefined (reading 'equals')
+    at loadCardDetails (C:\Users\sebastian\WebstormProjects\mtg-pwa\src\components\CardComponent.vue:276:64)
+    at Timeout._onTimeout (C:\Users\sebastian\WebstormProjects\mtg-pwa\src\components\CardComponent.vue:255:5)
+    at listOnTimeout (node:internal/timers:588:17)
+    at processTimers (node:internal/timers:523:7)
+
+stderr | src/test/components/CardComponentWithProgress.test.ts
+Error loading card details: TypeError: Cannot read properties of undefined (reading 'equals')
+    at loadCardDetails (C:\Users\sebastian\WebstormProjects\mtg-pwa\src\components\CardComponent.vue:276:64)
+    at Timeout._onTimeout (C:\Users\sebastian\WebstormProjects\mtg-pwa\src\components\CardComponent.vue:255:5)
+    at listOnTimeout (node:internal/timers:588:17)
+    at processTimers (node:internal/timers:523:7)
+
+stderr | src/test/features/scryfallProvider.test.ts > ScryfallProvider > getPricesByIds > should fall back to individual lookups when batch request fails
+Scryfall API error for batch price fetching: 400 Bad Request
+Could not read error response body
+
+stderr | src/test/features/scryfallProvider.test.ts > ScryfallProvider > getPricesByIds > should handle errors in individual lookups during fallback
+Scryfall API error for batch price fetching: 400 Bad Request
+Could not read error response body
+Error fetching price for card card-1: Error: Network error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\features\scryfallProvider.test.ts:136:32
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stderr | src/test/features/priceUpdateServiceWithProgress.test.ts > PriceUpdateService with Progress Tracking > syncPrices > should continue processing even when individual card price fetch fails
+Error syncing prices for batch starting at index 0: Error: Network error
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\src\test\features\priceUpdateServiceWithProgress.test.ts:85:32
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+{"product_ids":["12345"],"resolved_via":"cardmarket_id","cardmarket_id":"12345","final_uri":"/cards/cardmarket/12345"}
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+Refreshing Scryfall sets cache (no cache or old cache)
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+Set code unresolved: Alpha
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+Using cached Scryfall sets data
+
+stdout | src/test/features/importService.test.ts > ImportService > should be idempotent when importing articles
+{"product_ids":["12345"],"resolved_via":"cardmarket_id","cardmarket_id":"12345","final_uri":"/cards/cardmarket/12345"}
+
+stdout | src/test/features/importService.test.ts > ImportService > should use product ID to resolve card
+{"product_ids":["12345"],"resolved_via":"cardmarket_id","cardmarket_id":"12345","final_uri":"/cards/cardmarket/12345"}
+
+stdout | src/test/features/importService.test.ts > ImportService > should use product ID to resolve card
+Refreshing Scryfall sets cache (no cache or old cache)
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should use product ID to resolve card
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should use product ID to resolve card
+Set code unresolved: Alpha
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should use product ID to resolve card
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should use product ID to resolve card
+Using cached Scryfall sets data
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Refreshing Scryfall sets cache (no cache or old cache)
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Set code unresolved: Alpha
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Using cached Scryfall sets data
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+{"product_ids":[],"resolved_via":"set+cn","set_code":null,"collector_number":"","final_uri":""}
+Using cached Scryfall sets data
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Set code unresolved: Alpha
+Fetching Scryfall sets data...
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Fetched 994 Scryfall sets
+
+stdout | src/test/features/importService.test.ts > ImportService > should fallback to name/set resolution if product ID fails
+Using cached Scryfall sets data
+
+stderr | src/test/features/scryfallProviderBatch.test.ts > ScryfallProvider Batch Lookup > should fall back to individual lookups when batch fails
+Scryfall API error for batch cardmarket_ids: 400 Bad Request
+Could not read error response body
+
+stderr | src/test/views/HomeView.test.ts > HomeView > should render
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\jsdom\lib\jsdom\browser\not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\jsdom\lib\jsdom\living\nodes\HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\jsdom\lib\jsdom\living\generated\HTMLCanvasElement.js:131:58)
+    at DomPlatform.acquireContext (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/chart.js/src/platform/platform.dom.js:271:59)
+    at new Chart (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/chart.js/src/core/core.controller.js:139:35)
+    at renderChart (file:///C:/Users/sebastian/WebstormProjects/mtg-pwa/node_modules/vue-chartjs/src/chart.ts:40:24)
+    at C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\@vue\runtime-core\dist\runtime-core.cjs.js:2861:40
+    at callWithErrorHandling (C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\@vue\runtime-core\dist\runtime-core.cjs.js:200:19)
+    at callWithAsyncErrorHandling (C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\@vue\runtime-core\dist\runtime-core.cjs.js:207:17)
+    at hook.__weh.hook.__weh (C:\Users\sebastian\WebstormProjects\mtg-pwa\node_modules\@vue\runtime-core\dist\runtime-core.cjs.js:2841:19) undefined
+Failed to create chart: can't acquire context from the given item
+
+ ✓ src/core/Money.test.ts (6)
+ ✓ src/data/db.test.ts (5)
+ ✓ src/stores/cards.test.ts (2)
+ ✓ src/stores/importStatus.test.ts (9)
+ ✓ src/test/AutomaticPriceUpdateService.test.ts (13)
+ ✓ src/test/components/CardComponent.test.ts (1)
+ ✓ src/test/components/CardComponentWithProgress.test.ts (7) 398ms
+ ✓ src/test/features/cardLot.test.ts (5)
+ ✓ src/test/features/deckImportRegex.test.ts (3)
+ ✓ src/test/features/deckImportService.test.ts (1)
+ ✓ src/test/features/importService.test.ts (5) 2051ms
+ ✓ src/test/features/priceUpdateService.test.ts (1)
+ ❯ src/test/features/priceUpdateServiceBatch.test.ts (4)
+   ❯ PriceUpdateService with Batch Processing (4)
+     ❯ syncPrices (4)
+       ✓ should process cards in batches and call progress callback correctly
+       × should continue processing even when batch price fetch fails
+       ✓ should not call progress callback when not provided
+       ✓ should handle cards with no price data gracefully
+ ❯ src/test/features/priceUpdateServiceWithProgress.test.ts (3)
+   ❯ PriceUpdateService with Progress Tracking (3)
+     ❯ syncPrices (3)
+       ✓ should call progress callback with correct values during price sync
+       × should continue processing even when individual card price fetch fails
+       ✓ should not call progress callback when not provided
+ ✓ src/test/features/scryfallProvider.test.ts (6)
+ ✓ src/test/features/scryfallProviderBatch.test.ts (3) 473ms
+ ✓ src/test/features/valuationEngine.test.ts (6)
+ ✓ src/test/utils/collectorNumberParser.test.ts (7)
+ ✓ src/test/views/CardsView.test.ts (6)
+ ✓ src/test/views/HomeView.test.ts (1)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/test/features/priceUpdateServiceBatch.test.ts > PriceUpdateService with Batch Processing > syncPrices > should continue processing even when batch price fetch fails
+AssertionError: expected "spy" to be called 3 times, but got 1 times
+ ❯ src/test/features/priceUpdateServiceBatch.test.ts:126:32
+    124|
+    125|       // Verify progress callback was called for all cards
+    126|       expect(progressCallback).toHaveBeenCalledTimes(3);
+       |                                ^
+    127|       expect(progressCallback).toHaveBeenNthCalledWith(1, 1, 3);
+    128|       expect(progressCallback).toHaveBeenNthCalledWith(2, 2, 3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/test/features/priceUpdateServiceWithProgress.test.ts > PriceUpdateService with Progress Tracking > syncPrices > should continue processing even when individual card price fetch fails
+AssertionError: expected "spy" to be called 3 times, but got 1 times
+ ❯ src/test/features/priceUpdateServiceWithProgress.test.ts:99:32
+     97|
+     98|       // Verify progress callback was called for all cards
+     99|       expect(progressCallback).toHaveBeenCalledTimes(3);
+       |                                ^
+    100|       expect(progressCallback).toHaveBeenNthCalledWith(1, 1, 3);
+    101|       expect(progressCallback).toHaveBeenNthCalledWith(2, 2, 3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+TypeError: Cannot read properties of null (reading 'ownerDocument')
+ ❯ getComputedStyle node_modules/chart.js/src/helpers/helpers.dom.ts:46:11
+ ❯ getMaximumSize node_modules/chart.js/src/helpers/helpers.dom.ts:169:17
+ ❯ DomPlatform.getMaximumSize node_modules/chart.js/src/platform/platform.dom.js:379:12
+ ❯ Chart._resize node_modules/chart.js/src/core/core.controller.js:281:35
+ ❯ detached node_modules/chart.js/src/core/core.controller.js:1039:12
+ ❯ Chart.bindResponsiveEvents node_modules/chart.js/src/core/core.controller.js:1047:7
+ ❯ Chart.bindEvents node_modules/chart.js/src/core/core.controller.js:967:12
+ ❯ Chart._checkEventBindings node_modules/chart.js/src/core/core.controller.js:562:12
+ ❯ Chart.update node_modules/chart.js/src/core/core.controller.js:483:10
+ ❯ update node_modules/vue-chartjs/src/chart.ts:65:13
+
+This error originated in "src/test/views/HomeView.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "src/test/views/HomeView.test.ts". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ Test Files  2 failed | 18 passed (20)
+      Tests  2 failed | 92 passed (94)
+     Errors  1 error
+   Start at  18:36:38
+   Duration  10.45s (transform 1.87s, setup 7.29s, collect 4.78s, tests 4.79s, environment 31.33s, prepare 3.97s)
+
+ FAIL  Tests failed. Watching for file changes...
+       press h to show help, press q to quit
+
+

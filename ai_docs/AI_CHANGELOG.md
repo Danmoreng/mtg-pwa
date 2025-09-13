@@ -2,6 +2,21 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-13 18:45 — feat(pricing): Implement batch price fetching for improved performance
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/pricing/PriceUpdateService.ts, src/test/features/scryfallProvider.test.ts, src/test/features/priceUpdateServiceBatch.test.ts, src/test/features/priceUpdateServiceWithProgress.test.ts
+- **Type**: feat
+- **Summary**: Implemented batch price fetching using Scryfall's collection endpoint to significantly improve pricing throughput.
+- **Details**:
+    - Added `getPricesByIds` method to ScryfallProvider for batch price fetching
+    - Updated PriceUpdateService to use batch fetching with configurable batch size (75 cards per batch)
+    - Implemented finish-aware price points to handle foil/non-foil prices separately
+    - Added progress tracking that reports progress per card rather than per batch
+    - Added comprehensive tests for batch price fetching functionality
+    - Added fallback to individual lookups when batch requests fail
+- **Impact/Risks**: Significant performance improvement for price updates; no breaking changes to existing functionality.
+- **Verification Steps**: `npm run build` and `npm run test` pass successfully; price updates should be much faster for large collections.
+
 ## 2025-09-13 18:30 — docs: Update documentation to reflect Milestone 1 completion
 - **Author**: AI (Qwen)
 - **Scope**: ai_docs/ARCHITECTURE.md, ai_docs/IMPORTERS.md, README.md

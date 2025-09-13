@@ -245,6 +245,99 @@ export class ScryfallProvider {
     }
   }
   
+  // Get prices for multiple cards by Scryfall IDs using batch collection endpoint
+  static async getPricesByIds(scryfallIds: string[]): Promise<{[id: string]: { eur?: number; eur_foil?: number }}[]> {
+    try {
+      // If no IDs provided, return empty array
+      if (!scryfallIds || scryfallIds.length === 0) {
+        return [];
+      }
+      
+      // If only one ID, use the dedicated endpoint for simplicity
+      if (scryfallIds.length === 1) {
+        const price = await this.getPriceById(scryfallIds[0]);
+        return price ? [{ [scryfallIds[0]]: { eur: price.getCents() / 100 } }] : [];
+      }
+      
+      // Enforce rate limiting
+      await this.enforceRateLimit();
+      
+      // Use batch collection endpoint for multiple IDs
+      const response = await fetch(`${this.BASE_URL}/cards/collection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          identifiers: scryfallIds.map(id => ({ id }))
+        })
+      });
+      
+      if (!response.ok) {
+        console.error(`Scryfall API error for batch price fetching: ${response.status} ${response.statusText}`);
+        try {
+          const errorText = await response.text();
+          console.error(`Scryfall API error details: ${errorText}`);
+        } catch (e) {
+          console.error('Could not read error response body');
+        }
+        // Fall back to individual lookups
+        return await this.getPricesByIdsIndividually(scryfallIds);
+      }
+      
+      // Parse the response
+      const data = await response.json();
+      
+      // Extract prices from the response
+      const prices: {[id: string]: { eur?: number; eur_foil?: number }}[] = [];
+      if (data.data && Array.isArray(data.data)) {
+        for (const card of data.data) {
+          if (card.id && card.prices) {
+            prices.push({
+              [card.id]: {
+                eur: card.prices.eur ? parseFloat(card.prices.eur) : undefined,
+                eur_foil: card.prices.eur_foil ? parseFloat(card.prices.eur_foil) : undefined
+              }
+            });
+          }
+        }
+      }
+      
+      return prices;
+    } catch (error) {
+      console.error('Error fetching prices by Scryfall IDs from Scryfall:', error);
+      // Fall back to individual lookups
+      return await this.getPricesByIdsIndividually(scryfallIds);
+    }
+  }
+  
+  // Fallback method for individual price lookups
+  private static async getPricesByIdsIndividually(scryfallIds: string[]): Promise<{[id: string]: { eur?: number; eur_foil?: number }}[]> {
+    const prices: {[id: string]: { eur?: number; eur_foil?: number }}[] = [];
+    
+    // Process each Scryfall ID individually
+    for (const scryfallId of scryfallIds) {
+      try {
+        const response = await fetch(`${this.BASE_URL}/cards/${scryfallId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.prices) {
+            prices.push({
+              [scryfallId]: {
+                eur: data.prices.eur ? parseFloat(data.prices.eur) : undefined,
+                eur_foil: data.prices.eur_foil ? parseFloat(data.prices.eur_foil) : undefined
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`Error fetching price for card ${scryfallId}:`, error);
+      }
+    }
+    
+    return prices;
+  }
+  
   // Fallback method for individual Cardmarket ID lookups
   private static async getByCardmarketIdsIndividually(cardmarketIds: string[]): Promise<any[]> {
     const cards = [];
