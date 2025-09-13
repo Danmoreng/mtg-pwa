@@ -27,9 +27,11 @@ async function syncPrices(): Promise<void> {
           const pricePoint = {
             id: pricePointId,
             cardId: card.id,
-            provider: 'scryfall',
-            currency: price.getCurrency(),
-            price: price.getCents(),
+            source: 'scryfall' as const,
+            finish: 'nonfoil' as const,
+            date: dateStr,
+            currency: 'EUR' as const,
+            priceCent: price.getCents(),
             asOf: new Date(),
             createdAt: now
           };

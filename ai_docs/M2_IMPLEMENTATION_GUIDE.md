@@ -1,306 +1,322 @@
-# Milestone 2 Implementation Guide: Pricing Throughput, History & Snapshots
+## Milestone 2 Implementation Guide (v3)
 
-## Overview
-This guide outlines the implementation plan for completing Milestone 2 of the MTG Collection Value Tracker. The goal is to achieve fast daily pricing with finish-aware time series, historical backfill, provider precedence, and automatic valuation snapshots.
+### Overview
 
-## Current Status
-✅ **Partially Implemented**:
-- Batch price fetching using Scryfall's collection endpoint
-- Finish-aware price points (regular/foil separation)
-- Basic valuation snapshots after price updates
+Fast daily pricing with **finish-aware time series**, **historical backfill**, **source precedence**, and **automatic valuation snapshots**. Works offline, is idempotent, and scales.
 
-❌ **Missing Components**:
-- Schema updates for provider/finish/date key format
-- Historical backfill from MTGJSON (90 days)
-- Daily Cardmarket Price Guide ingestion
-- Provider precedence rules
-- Enhanced charts with finish/provider toggles
-- Service Worker Periodic Sync
+**Note**: Based on product owner feedback, we've simplified the architecture to have a single type of price (euro) with different sources rather than multiple providers with switching capabilities.
 
-## Implementation Roadmap
+---
 
-### Phase 1: Schema Updates & Data Model
+### Current Status
 
-#### 1.1 Update Price Points Schema
-**File**: `src/data/db.ts`
-**Changes**:
-- Update `price_points` table schema to use new key format: `${cardId}:${provider}:${finish}:${date}`
-- Add finish-aware fields: `finish`, `avg1dCent`, `avg7dCent`, `avg30dCent`
-- Add provider field to distinguish data sources
-- Add `sourceRev` field for tracking data source versions
+✅ **Partially Implemented**
+
+* Scryfall collection batching.
+* Finish-aware price points.
+* Basic valuation snapshots.
+* Simplified source-based pricing model.
+
+❌ **Missing**
+
+* Schema + migration for source/finish/date key.
+* MTGJSON historical backfill (upload).
+* Daily Cardmarket Price Guide ingestion.
+* Source precedence enforcement.
+* Chart finish toggles with avg overlays.
+* Periodic scheduling with TTL.
+
+---
+
+## Roadmap
+
+### Phase 1 — Schema & Migration
+
+**1.1 PricePoint interface**
 
 ```ts
 export interface PricePoint {
-  id: string; // `${cardId}:${provider}:${finish}:${date}`
+  id: string; // `${cardId}:${source}:${finish}:${date}`
   cardId: string;
-  provider: 'scryfall' | 'mtgjson.cardmarket' | 'cardmarket.priceguide';
+  source: 'scryfall' | 'mtgjson' | 'cardmarket'; // Simplified sources instead of providers
   finish: 'nonfoil' | 'foil' | 'etched';
-  date: string; // 'YYYY-MM-DD'
+  date: string;        // 'YYYY-MM-DD' (time-series key)
   currency: 'EUR';
-  priceCent: number; // integer cents
+  priceCent: number;   // integer cents
   avg1dCent?: number;
   avg7dCent?: number;
   avg30dCent?: number;
-  sourceRev?: string; // e.g., priceguide file build date / MTGJSON version
-  asOf: Date;
+  sourceRev?: string;  // file build/version
+  asOf: Date;          // when we recorded the point
   createdAt: Date;
 }
 ```
 
-#### 1.2 Add Provider ID Mapping (if needed)
-**File**: `src/data/db.ts`
-**Changes**:
-- Add optional `provider_id_map` table if Cardmarket product IDs aren't already on cards
-- Or ensure Cardmarket product IDs are persisted on the `card` entity
+**1.2 Dexie schema (v8) & indexes**
 
-### Phase 2: Historical Backfill (MTGJSON)
+* Add both `"[cardId+date]"` and `"[cardId+source+finish+date]"`.
+* Keep `"[cardId+asOf]"` only for troubleshooting.
 
-#### 2.1 Create MTGJSON Backfill Service
-**File**: `src/features/pricing/MTGJSONBackfillService.ts`
-**Features**:
-- Download MTGJSON AllPrices.json or use MTGGraphQL
-- Filter for owned/ever-owned printings
-- Extract last 90 days of Cardmarket history per printing
-- Upsert into `price_points` with `provider='mtgjson.cardmarket'`
-
-#### 2.2 Add Backfill Worker
-**File**: `src/workers/MTGJSONBackfillWorker.ts`
-**Features**:
-- Worker to handle the backfill process in background
-- Progress tracking and error handling
-- One-time execution triggered on first M2 implementation
-
-### Phase 3: Daily Price Guide Ingestion
-
-#### 3.1 Create PriceGuideSyncWorker
-**File**: `src/workers/PriceGuideSyncWorker.ts`
-**Features**:
-- Download Cardmarket daily price guide (CSV/JSON)
-- Filter for relevant Cardmarket product IDs (owned/favorited)
-- Map to local card IDs
-- Upsert into `price_points` with `provider='cardmarket.priceguide'`
-- Store average prices (avg1d, avg7d, avg30d) when available
-
-#### 3.2 Add Scheduling Mechanism
-**File**: `src/features/pricing/PriceGuideScheduler.ts`
-**Features**:
-- Service Worker Periodic Sync when supported
-- App-level fallback timer with 24h TTL
-- Respect user's offline status and network conditions
-
-### Phase 4: Provider Precedence & Data Integration
-
-#### 4.1 Implement Provider Precedence Logic
-**File**: `src/features/pricing/PriceQueryService.ts`
-**Features**:
-- Query logic that respects provider precedence:
-  1. Cardmarket Price Guide (highest priority)
-  2. MTGJSON Cardmarket (within ~90 days)
-  3. Scryfall (today only)
-- Handle cases where multiple providers have data for the same date
-
-#### 4.2 Update Price Update Service
-**File**: `src/features/pricing/PriceUpdateService.ts`
-**Changes**:
-- Integrate new provider precedence rules
-- Update batch fetching to handle provider-specific logic
-- Maintain backward compatibility
-
-### Phase 5: Enhanced UI & Charts
-
-#### 5.1 Update Card Detail Charts
-**File**: `src/components/PriceHistoryChart.vue`
-**Features**:
-- Toggle between finishes (nonfoil/foil/etched)
-- Toggle between providers (Cardmarket Price Guide, MTGJSON, Scryfall)
-- Overlay average lines (avg7/avg30) when available from Price Guide
-- Improved legend and tooltips
-
-#### 5.2 Add Chart Controls
-**File**: `src/components/CardDetail.vue`
-**Features**:
-- Provider selection dropdown
-- Finish toggle buttons
-- Date range selector
-- Export functionality for price data
-
-### Phase 6: Testing & Validation
-
-#### 6.1 Add Comprehensive Tests
-**Files**: 
-- `src/test/features/pricePointPrecedence.test.ts`
-- `src/test/workers/priceGuideSyncWorker.test.ts`
-- `src/test/features/mtgjsonBackfill.test.ts`
-
-**Test Areas**:
-- Provider ID mapping correctness
-- Finish mapping accuracy
-- Provider precedence enforcement
-- Upsert idempotency
-- Point-in-time valuation correctness
-- Chart rendering with different providers/finishes
-
-#### 6.2 Performance Testing
-**File**: `src/test/performance/priceUpdatePerformance.test.ts`
-**Features**:
-- Test 5k card update performance (≤5 min P50 / ≤10 min P95)
-- Validate batch sizing and backoff mechanisms
-- Measure memory usage and UI responsiveness
-
-### Phase 7: Documentation & Rollout
-
-#### 7.1 Update Documentation
-**Files**:
-- `ai_docs/ARCHITECTURE.md` - Update pricing pipeline section
-- `ai_docs/IMPORTERS.md` - Add pricing data sources section
-- `README.md` - Update features list
-
-#### 7.2 Migration Guide
-**File**: `ai_docs/MIGRATION_M2.md`
-**Content**:
-- Schema migration steps
-- Backfill process explanation
-- New UI features walkthrough
-- Provider precedence documentation
-
-## Technical Implementation Details
-
-### Data Model Changes
-
-#### Updated PricePoint Interface
 ```ts
-export interface PricePoint {
-  id: string; // Format: `${cardId}:${provider}:${finish}:${date}`
-  cardId: string;
-  provider: 'scryfall' | 'mtgjson.cardmarket' | 'cardmarket.priceguide';
-  finish: 'nonfoil' | 'foil' | 'etched';
-  date: string; // ISO date format: 'YYYY-MM-DD'
-  currency: 'EUR';
-  priceCent: number; // Price in integer cents
-  avg1dCent?: number; // 1-day average in cents
-  avg7dCent?: number; // 7-day average in cents
-  avg30dCent?: number; // 30-day average in cents
-  sourceRev?: string; // Source version/build identifier
-  asOf: Date; // When this price point was recorded
-  createdAt: Date; // When this record was created
-}
-```
+this.version(8).stores({
+  // ...other tables...
+  price_points: `
+    id, cardId, source, finish, date, currency, priceCent, asOf, createdAt,
+    [cardId+date],
+    [cardId+asOf],
+    [source+asOf],
+    [cardId+source+finish+date]
+  `
+}).upgrade(async tx => {
+  const t = tx.table('price_points');
+  const rows = await t.toArray();
+  for (const r of rows) {
+    // price → priceCent (convert decimals to cents when needed)
+    if (r.priceCent == null && r.price != null) {
+      const isDecimal = typeof r.price === 'number' && r.price < 1000;
+      r.priceCent = isDecimal ? Math.round(r.price * 100) : r.price;
+      delete r.price;
+    }
 
-#### Database Schema Update
-```ts
-// Version X - Enhanced price points schema
-this.version(X).stores({
-  price_points: 'id, cardId, provider, finish, date, asOf, createdAt, [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]'
+    // derive finish/date/source/id from old shapes
+    let finish: 'nonfoil'|'foil'|'etched' = r.finish ?? 'nonfoil';
+    let date = r.date ?? (r.asOf ? new Date(r.asOf).toISOString().slice(0,10) : undefined);
+    const parts = String(r.id ?? '').split(':'); // legacy ids
+    const maybeFinish = parts[2];
+    const maybeDate = parts[3] ?? parts[2];
+    if (maybeFinish === 'foil' || maybeFinish === 'etched') finish = maybeFinish;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(maybeDate)) date = maybeDate;
+
+    // Convert provider to source (simplified model)
+    let source: 'scryfall' | 'mtgjson' | 'cardmarket' = 'scryfall';
+    if (r.provider) {
+      if (r.provider === 'mtgjson.cardmarket') {
+        source = 'mtgjson';
+      } else if (r.provider === 'cardmarket.priceguide') {
+        source = 'cardmarket';
+      } else {
+        source = 'scryfall';
+      }
+    }
+    
+    r.finish = finish;
+    r.source = source;
+    r.date = date ?? new Date().toISOString().slice(0,10);
+    r.currency = r.currency ?? 'EUR';
+    r.createdAt = r.createdAt ?? new Date();
+    r.asOf = r.asOf ?? new Date();
+    r.id = `${r.cardId}:${source}:${finish}:${r.date}`;
+
+    await t.put(r);
+  }
 });
 ```
 
-### Provider Precedence Logic
+> If Cardmarket product IDs aren’t on `card`, add a small `provider_id_map` or persist them on `card` now.
+
+---
+
+### Phase 2 — Historical Backfill (MTGJSON upload)
+
+**UX**
+
+* Wizard step: “Backfill historical prices (upload MTGJSON AllPricesToday.json(.gz)).”
+* Show file size, progress, matched IDs, points written, skipped.
+
+**Worker approach**
+
+* Decompress `.gz` in worker (`fflate`).
+* Parse once and **only iterate owned/ever-owned IDs** (keeps memory sane).
+* Extract **last 90 days** of `paper.cardmarket.retail` by `normal/foil/etched`.
+* `bulkPut` to `price_points` with `provider='mtgjson.cardmarket'`.
+
+**Feature flag**
+
+* Gate behind `VITE_ENABLE_MTGJSON_UPLOAD`.
+
+> For very large libraries or Safari memory limits, switch to a streaming parser later.
+
+---
+
+### Phase 3 — Daily Cardmarket Price Guide
+
+**Ingestion**
+
+* Either: download the **daily price guide** (preferred, single file), or support a **user upload** similarly to MTGJSON.
+* Filter to relevant product IDs; map to `cardId`.
+* Upsert `price_points` with `provider='cardmarket.priceguide'`; fill `avg7dCent`/`avg30dCent` when present.
+
+**Scheduling**
+
+* `PriceGuideScheduler.syncIfNecessary()` checks `settings['last_priceguide_sync_timestamp']` and 24h TTL.
+* Use **SW Periodic Sync** when available; fallback to an app-timer.
+
+**Feature flag**
+
+* Gate behind `VITE_ENABLE_PRICEGUIDE_SYNC`.
+
+---
+
+### Phase 4 — Provider Precedence & Queries
+
+**Precedence**
+
+1. `cardmarket.priceguide` (by date)
+2. `mtgjson.cardmarket` (past \~90 days)
+3. `scryfall` (today only)
+
+**Query rules**
+
+* Sort by **precedence**, then **`date` desc**, then **`asOf`** as tie-breaker.
+* For **point-in-time**: query `where('[cardId+provider+finish+date]')` for the specific `date`.
+
+**Implementation tips**
+
+* Add an overload `getLatestPriceForCard(cardId, preferredFinish?)` to prefer lot finish.
+
+---
+
+### Phase 5 — UI & Charts
+
+**Controls**
+
+* Finish toggle (nonfoil/foil/etched) + Provider toggle (Price Guide / MTGJSON / Scryfall).
+* Date range (optional).
+* Auto-select the **first provider/finish** that has data for the card.
+
+**Charts**
+
+* Use `date` for labels.
+* Keep datasets aligned; output **`null`** where avg values are missing.
+* Consider Chart.js **decimation** plugin for big series.
+
+---
+
+### Phase 6 — Valuation & Snapshots
+
+* When valuing a lot, **prefer lot.finish**; fallback to any finish if none found.
+* After each successful pricing update/backfill, create a **valuation snapshot**.
+* Analytics pages use **provider precedence** and `date` to build point-in-time values.
+
+---
+
+### Phase 7 — Tests & Perf
+
+**Unit**
+
+* Provider ID mapping, finish mapping, precedence.
+* Idempotent upserts keyed by `(cardId, provider, finish, date)`.
+* Price for date (index query) and latest price with precedence.
+* Lot valuation prefers finish.
+
+**Integration**
+
+* MTGJSON upload worker with tiny fixture.
+* Price Guide ingestion with synthetic file.
+* Chart renders with toggles, avg overlay alignment.
+
+**Performance**
+
+* 5k cards update ≤5m P50 / ≤10m P95.
+* Upload backfill stays < device memory thresholds; measure worker time.
+
+**CI**
+
+* Add a perf smoke test and a migration test (v7 → v8).
+
+---
+
+## Technical details (snippets)
+
+**Price query (date-aware + precedence)**
 
 ```ts
-// PriceQueryService.ts
-export class PriceQueryService {
-  static async getPriceForDate(cardId: string, date: Date): Promise<PricePoint | null> {
-    const dateString = date.toISOString().split('T')[0];
-    
-    // 1. Try Cardmarket Price Guide first (highest precedence)
-    let pricePoint = await db.price_points
-      .where('[cardId+provider+finish+date]')
-      .equals([cardId, 'cardmarket.priceguide', 'any', dateString])
-      .first();
-    
-    if (pricePoint) return pricePoint;
-    
-    // 2. Try MTGJSON Cardmarket (within 90 days)
-    const ninetyDaysAgo = new Date(date.getTime() - (90 * 24 * 60 * 60 * 1000));
-    pricePoint = await db.price_points
-      .where('[cardId+provider+finish+date]')
-      .equals([cardId, 'mtgjson.cardmarket', 'any', dateString])
-      .filter(pp => new Date(pp.asOf) >= ninetyDaysAgo)
-      .first();
-    
-    if (pricePoint) return pricePoint;
-    
-    // 3. Fall back to Scryfall for today only
-    const today = new Date().toISOString().split('T')[0];
-    if (dateString === today) {
-      pricePoint = await db.price_points
-        .where('[cardId+provider+finish+date]')
-        .equals([cardId, 'scryfall', 'any', dateString])
-        .first();
-    }
-    
-    return pricePoint || null;
-  }
+import Dexie from 'dexie';
+import db from '@/data/db';
+import { Money } from '@/core/Money';
+
+const PRECEDENCE = ['cardmarket.priceguide', 'mtgjson.cardmarket', 'scryfall'] as const;
+
+function sortByPrecedence(a:any,b:any){
+  const pa = PRECEDENCE.indexOf(a.provider as any); const pb = PRECEDENCE.indexOf(b.provider as any);
+  if (pa !== pb) return pa - pb;
+  const d = a.date.localeCompare(b.date); if (d !== 0) return -d; // newest first
+  return new Date(b.asOf).getTime() - new Date(a.asOf).getTime();
+}
+
+export async function getPriceForDate(cardId: string, date: string) {
+  const pts = await db.price_points
+    .where('[cardId+provider+finish+date]')
+    .between([cardId, Dexie.minKey, Dexie.minKey, date],
+             [cardId, Dexie.maxKey, Dexie.maxKey, date])
+    .toArray();
+  if (!pts.length) return null;
+  pts.sort(sortByPrecedence);
+  const p = pts[0];
+  return { money: new Money(p.priceCent, p.currency), provider: p.provider, finish: p.finish };
 }
 ```
 
-### Finish Mapping
+**Chart alignment**
 
 ```ts
-// utils/finishMapper.ts
-export function mapFinish(sourceFinish: string): 'nonfoil' | 'foil' | 'etched' {
-  const normalized = sourceFinish.toLowerCase();
-  
-  if (normalized.includes('foil') || normalized.includes('foil')) {
-    return 'foil';
-  } else if (normalized.includes('etched') || normalized.includes('etched')) {
-    return 'etched';
-  } else {
-    return 'nonfoil';
-  }
+const labels = series.map(p => p.date);
+const price = series.map(p => toEur(p.priceCent));
+const avg7  = series.map(p => p.avg7dCent  != null ? toEur(p.avg7dCent)  : null);
+const avg30 = series.map(p => p.avg30dCent != null ? toEur(p.avg30dCent) : null);
+```
+
+**Scheduler TTL**
+
+```ts
+const key = 'last_priceguide_sync_timestamp';
+const last = await settingRepository.get(key);
+if (!last || (Date.now() - new Date(last).getTime())/36e5 >= 24) {
+  await PriceGuideSyncWorker.syncPriceGuide();
+  await settingRepository.set(key, new Date().toISOString());
 }
 ```
 
-## Acceptance Criteria Validation
+---
 
-### Performance Targets
-- [ ] Backfill coverage: ≥95% of owned printings have ≥90 consecutive daily points
-- [ ] Daily sync reliability: ≥97% success rate (last 30 days)
-- [ ] Throughput: Update 5k cards in ≤5 min P50 / ≤10 min P95
-- [ ] Snapshots: Valuation snapshot created within ≤60s of price update completion
-- [ ] Finish visibility: Both EUR and EUR foil series render when applicable
+## Acceptance Criteria
 
-### Data Quality
-- [ ] Provider precedence honored when multiple providers have the same date
-- [ ] Point-in-time valuations use correct provider/date combinations
-- [ ] Historical data completeness maintained (≥95% coverage)
+**Performance**
 
-### UI/UX
-- [ ] Card detail charts toggle finish and provider
-- [ ] Average lines (avg7/avg30) overlay when available from Price Guide
-- [ ] Dashboard filters work with historical data joins
+* Backfill: ≥95% of owned printings get ≥90 daily points after upload.
+* Daily sync success ≥97% (30-day rolling).
+* 5k cards ≤5m P50 / ≤10m P95.
+* Snapshot ≤60s after update completion.
 
-## Risk Mitigation
+**Data quality**
 
-### API Rate Limits
-- Implement batch sizes with backoff strategies
-- Add TTL guards to prevent excessive API calls
-- Implement offline queue for deferred processing
+* Precedence honored for same-date overlaps.
+* Lot valuation prefers matching finish.
 
-### Data Consistency
-- Ensure upserts are idempotent by (cardId, provider, finish, date)
-- Add validation for mapping between providers and local cards
-- Implement graceful degradation when external data sources are unavailable
+**UX**
 
-### User Experience
-- Provide clear progress indicators during backfill and sync operations
-- Handle offline scenarios gracefully with local caching
-- Ensure UI remains responsive during background operations
+* Chart toggles (finish/provider) and avg overlays.
+* Clear progress + cancel during upload/sync.
+* Offline-friendly; no UI blocking on live APIs.
 
-## Dependencies
-- [x] M1 completion (lots as source of truth)
-- [ ] Dexie schema migration capabilities
-- [ ] Worker infrastructure for background processing
-- [ ] Charting library support for multiple series and overlays
+---
 
-## Next Steps
-1. Begin with schema updates and migration
-2. Implement MTGJSON backfill service
-3. Create PriceGuideSyncWorker
-4. Add provider precedence logic
-5. Enhance UI components
-6. Add comprehensive tests
-7. Validate performance targets
-8. Update documentation
+## Risks & Mitigations
 
-This implementation will provide a robust, performant pricing system that meets all M2 acceptance criteria while maintaining compatibility with the existing architecture.
+* **Large files / memory** → .gz upload, owned-IDs filtering, optional streaming parse, worker only.
+* **Upstream format drift** → parse through adapters + schema validation; feature flags; fallback to Scryfall-today.
+* **DB growth** → daily rows: `Ncards × finishes`. Consider optional compaction (e.g., keep daily for 180d, weekly beyond).
+* **Periodic sync availability** → SW Periodic Sync where supported; app-timer with TTL everywhere.
+
+---
+
+## Next Steps (sequenced)
+
+1. Apply schema + **migration** (v8) and indexes.
+2. Implement **MTGJSON upload** worker + wizard step (flagged).
+3. Implement **Price Guide ingestion** + scheduler + TTL (flagged).
+4. Wire **provider precedence** (queries, valuation).
+5. Upgrade **charts** (finish/provider toggles, aligned averages).
+6. Tests (unit + integration + perf) and fix paths/aliases.
+7. Docs: ARCHITECTURE, IMPORTERS, MIGRATION\_M2.
+8. Canary rollout with flags → enable by default after validation.

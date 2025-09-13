@@ -1,22 +1,18 @@
 import { Money } from '../../core/Money';
-import {cardLotRepository, pricePointRepository, transactionRepository, valuationRepository} from '../../data/repos';
+import {cardLotRepository, transactionRepository, valuationRepository} from '../../data/repos';
 import type { CardLot } from '../../data/db';
+import { PriceQueryService } from '../pricing/PriceQueryService';
 
 // Valuation engine for calculating portfolio value and P/L
 export class ValuationEngine {
   // Calculate the current value of a card lot
   static async calculateLotValue(lot: CardLot): Promise<Money> {
-    // Get the latest price for the card from the database
+    // Use the new PriceQueryService to get the latest price respecting provider precedence
     if (lot.cardId) {
-      const pricePoints = await pricePointRepository.getByCardId(lot.cardId);
+      const latestPrice = await PriceQueryService.getLatestPriceForCard(lot.cardId);
       
-      // Find the most recent price point
-      if (pricePoints.length > 0) {
-        // Sort by date descending to get the most recent price
-        pricePoints.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
-        const latestPricePoint = pricePoints[0];
-        
-        const price = new Money(latestPricePoint.price, latestPricePoint.currency);
+      if (latestPrice) {
+        const price = latestPrice.price;
         // Only value the remaining quantity that hasn't been disposed
         const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
         return price.multiply(remainingQuantity);

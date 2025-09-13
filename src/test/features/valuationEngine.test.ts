@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ValuationEngine } from '../../features/analytics/ValuationEngine';
 import { Money } from '../../core/Money';
 import { cardLotRepository, pricePointRepository } from '../../data/repos';
+import { PriceQueryService } from '../../features/pricing/PriceQueryService';
 
 // Mock the repositories
 vi.mock('../../data/repos', () => ({
@@ -15,9 +16,19 @@ vi.mock('../../data/repos', () => ({
   transactionRepository: {
     getByKind: vi.fn(),
     getBuyTransactionsByCardId: vi.fn()
+  },
+  valuationRepository: {
+    getAll: vi.fn(),
+    add: vi.fn()
   }
 }));
 
+// Mock the PriceQueryService
+vi.mock('../../features/pricing/PriceQueryService', () => ({
+  PriceQueryService: {
+    getLatestPriceForCard: vi.fn()
+  }
+}));
 
 describe('ValuationEngine', () => {
   beforeEach(() => {
@@ -34,13 +45,11 @@ describe('ValuationEngine', () => {
       };
 
       // Mock price points
-      vi.mocked(pricePointRepository.getByCardId).mockResolvedValue([
-        {
-          price: 1500, // 15.00 EUR in cents
-          currency: 'EUR',
-          asOf: new Date()
-        }
-      ]);
+      vi.mocked(PriceQueryService.getLatestPriceForCard).mockResolvedValue({
+        price: new Money(1500, 'EUR'), // 15.00 EUR in cents
+        asOf: new Date(),
+        provider: 'scryfall'
+      });
 
       const value = await ValuationEngine.calculateLotValue(lot);
       expect(value).toBeInstanceOf(Money);
@@ -55,7 +64,7 @@ describe('ValuationEngine', () => {
       };
 
       // Mock no price points
-      vi.mocked(pricePointRepository.getByCardId).mockResolvedValue([]);
+      vi.mocked(PriceQueryService.getLatestPriceForCard).mockResolvedValue(null);
 
       const value = await ValuationEngine.calculateLotValue(lot);
       expect(value).toBeInstanceOf(Money);
@@ -95,25 +104,21 @@ describe('ValuationEngine', () => {
       ]);
 
       // Mock price points
-      vi.mocked(pricePointRepository.getByCardId).mockImplementation((cardId: string) => {
+      vi.mocked(PriceQueryService.getLatestPriceForCard).mockImplementation((cardId: string) => {
         if (cardId === 'test-card-1') {
-          return Promise.resolve([
-            {
-              price: 1500, // 15.00 EUR in cents
-              currency: 'EUR',
-              asOf: new Date()
-            }
-          ]);
+          return Promise.resolve({
+            price: new Money(1500, 'EUR'), // 15.00 EUR in cents
+            asOf: new Date(),
+            provider: 'scryfall'
+          });
         } else if (cardId === 'test-card-2') {
-          return Promise.resolve([
-            {
-              price: 2000, // 20.00 EUR in cents
-              currency: 'EUR',
-              asOf: new Date()
-            }
-          ]);
+          return Promise.resolve({
+            price: new Money(2000, 'EUR'), // 20.00 EUR in cents
+            asOf: new Date(),
+            provider: 'scryfall'
+          });
         }
-        return Promise.resolve([]);
+        return Promise.resolve(null);
       });
 
       const portfolioValue = await ValuationEngine.calculatePortfolioValue();

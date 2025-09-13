@@ -116,14 +116,19 @@ export interface DeckCard {
 }
 
 export interface PricePoint {
-  id: string; // cardId+provider+asOf
+  id: string; // Format: `${cardId}:${source}:${finish}:${date}`
   cardId: string;
-  provider: string;
-  currency: string;
-  price: number; // in cents
-  asOf: Date;
-  source?: string;
-  createdAt: Date;
+  source: 'scryfall' | 'mtgjson' | 'cardmarket'; // Simplified source instead of provider
+  finish: 'nonfoil' | 'foil' | 'etched';
+  date: string; // ISO date format: 'YYYY-MM-DD'
+  currency: 'EUR';
+  priceCent: number; // Price in integer cents
+  avg1dCent?: number; // 1-day average in cents
+  avg7dCent?: number; // 7-day average in cents
+  avg30dCent?: number; // 30-day average in cents
+  sourceRev?: string; // Source version/build identifier
+  asOf: Date; // When this price point was recorded
+  createdAt: Date; // When this record was created
 }
 
 export interface Valuation {
@@ -345,6 +350,62 @@ class MtgTrackerDb extends Dexie {
     // Version 7 - Remove holdings table
     this.version(7).stores({
       holdings: null
+    });
+
+    // Version 8 - Enhanced price points schema for M2
+    this.version(8).stores({
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, createdAt, updatedAt',
+      card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
+      transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
+      scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
+      decks: 'id, platform, name, importedAt, createdAt, updatedAt',
+      deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
+      price_points: 'id, cardId, source, finish, date, currency, priceCent, asOf, createdAt, [cardId+asOf], [source+asOf], [cardId+source+finish+date]',
+      valuations: 'id, asOf, createdAt, [asOf+createdAt]',
+      settings: 'k, createdAt, updatedAt',
+      scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
+    }).upgrade(async tx => {
+      const t = tx.table('price_points');
+      const rows = await t.toArray();
+      for (const r of rows) {
+        // price → priceCent (convert decimals to cents when needed)
+        if (r.priceCent == null && r.price != null) {
+          const isDecimal = typeof r.price === 'number' && r.price < 1000;
+          r.priceCent = isDecimal ? Math.round(r.price * 100) : r.price;
+          delete r.price;
+        }
+
+        // derive finish/date/source/id from old shapes
+        let finish: 'nonfoil'|'foil'|'etched' = r.finish ?? 'nonfoil';
+        let date = r.date ?? (r.asOf ? new Date(r.asOf).toISOString().slice(0,10) : undefined);
+        const parts = String(r.id ?? '').split(':'); // legacy ids
+        const maybeFinish = parts[2];
+        const maybeDate = parts[3] ?? parts[2];
+        if (maybeFinish === 'foil' || maybeFinish === 'etched') finish = maybeFinish;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(maybeDate)) date = maybeDate;
+
+        // Convert provider to source
+        let source: 'scryfall' | 'mtgjson' | 'cardmarket' = 'scryfall';
+        if (r.provider) {
+          if (r.provider === 'mtgjson.cardmarket') {
+            source = 'mtgjson';
+          } else if (r.provider === 'cardmarket.priceguide') {
+            source = 'cardmarket';
+          } else {
+            source = 'scryfall';
+          }
+        }
+        
+        r.finish = finish;
+        r.source = source;
+        r.date = date ?? new Date().toISOString().slice(0,10);
+        r.currency = r.currency ?? 'EUR';
+        r.createdAt = r.createdAt ?? new Date();
+        r.asOf = r.asOf ?? new Date();
+        r.id = `${r.cardId}:${source}:${finish}:${r.date}`;
+
+        await t.put(r);
+      }
     });
   }
 }

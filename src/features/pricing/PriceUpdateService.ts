@@ -2,8 +2,9 @@
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import db from '../../data/db';
 import { cardRepository } from '../../data/repos';
-import { pricePointRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
+import { PriceQueryService } from '../pricing/PriceQueryService';
+import { ValuationEngine } from '../../features/analytics/ValuationEngine';
 
 export class PriceUpdateService {
   // Batch size for price fetching
@@ -13,6 +14,7 @@ export class PriceUpdateService {
   static async syncPrices(progressCallback?: (processed: number, total: number) => void): Promise<void> {
     try {
       const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
       
       // Get all cards with Scryfall IDs
       const cards = await cardRepository.getAll();
@@ -34,21 +36,22 @@ export class PriceUpdateService {
           // Process each price result
           for (const priceResult of priceResults) {
             for (const [cardId, prices] of Object.entries(priceResult)) {
-              // Process regular (non-foil) price
+              // Process regular (nonfoil) price
               if (prices.eur !== undefined) {
                 const price = Money.parse(prices.eur.toString(), 'EUR');
                 
-                // Create price point ID with date
-                const dateStr = now.toISOString().split('T')[0];
-                const pricePointId = `${cardId}:scryfall:${dateStr}`;
+                // Create price point ID with new format
+                const pricePointId = `${cardId}:scryfall:${finish}:${dateStr}`;
                 
                 // Create price point
                 const pricePoint = {
                   id: pricePointId,
                   cardId: cardId,
-                  provider: 'scryfall',
-                  currency: price.getCurrency(),
-                  price: price.getCents(),
+                  source: 'scryfall' as const,
+                  finish: finish as 'nonfoil' | 'foil',
+                  date: dateStr,
+                  currency: 'EUR' as const,
+                  priceCent: price.getCents(),
                   asOf: now,
                   createdAt: now
                 };
@@ -61,17 +64,18 @@ export class PriceUpdateService {
               if (prices.eur_foil !== undefined) {
                 const price = Money.parse(prices.eur_foil.toString(), 'EUR');
                 
-                // Create price point ID with date and foil indicator
-                const dateStr = now.toISOString().split('T')[0];
-                const pricePointId = `${cardId}:scryfall:${dateStr}:foil`;
+                // Create price point ID with new format
+                const pricePointId = `${cardId}:scryfall:foil:${dateStr}`;
                 
                 // Create price point
                 const pricePoint = {
                   id: pricePointId,
                   cardId: cardId,
-                  provider: 'scryfall',
-                  currency: price.getCurrency(),
-                  price: price.getCents(),
+                  source: 'scryfall' as const,
+                  finish: 'foil' as const,
+                  date: dateStr,
+                  currency: 'EUR' as const,
+                  priceCent: price.getCents(),
                   asOf: now,
                   createdAt: now
                 };
@@ -97,6 +101,14 @@ export class PriceUpdateService {
           }
         }
       }
+      
+      // Create a valuation snapshot after successful price update
+      try {
+        await ValuationEngine.createValuationSnapshot();
+        console.log('Valuation snapshot created after price update');
+      } catch (error) {
+        console.error('Error creating valuation snapshot after price update:', error);
+      }
     } catch (error) {
       console.error('Error syncing prices:', error);
       throw error;
@@ -107,6 +119,7 @@ export class PriceUpdateService {
   static async syncPriceForCard(cardId: string): Promise<void> {
     try {
       const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
       
       // Get the card
       const card = await cardRepository.getById(cardId);
@@ -115,27 +128,60 @@ export class PriceUpdateService {
         return;
       }
       
-      // Get price from Scryfall
-      const price = await ScryfallProvider.getPriceById(card.id);
+      // Get prices from Scryfall
+      const priceResults = await ScryfallProvider.getPricesByIds([card.id]);
       
-      if (price) {
-        // Create price point ID with date
-        const dateStr = now.toISOString().split('T')[0];
-        const pricePointId = `${card.id}:scryfall:${dateStr}`;
+      if (priceResults.length > 0) {
+        const priceResult = priceResults[0];
+        const prices = priceResult[card.id];
         
-        // Create price point
-        const pricePoint = {
-          id: pricePointId,
-          cardId: card.id,
-          provider: 'scryfall',
-          currency: price.getCurrency(),
-          price: price.getCents(),
-          asOf: now,
-          createdAt: now
-        };
+        // Process regular (nonfoil) price
+        if (prices.eur !== undefined) {
+          const price = Money.parse(prices.eur.toString(), 'EUR');
+          
+          // Create price point ID with new format
+          const pricePointId = `${card.id}:scryfall:nonfoil:${dateStr}`;
+          
+          // Create price point
+          const pricePoint = {
+            id: pricePointId,
+            cardId: card.id,
+            provider: 'scryfall' as const,
+            finish: 'nonfoil' as const,
+            date: dateStr,
+            currency: 'EUR' as const,
+            priceCent: price.getCents(),
+            asOf: now,
+            createdAt: now
+          };
+          
+          // Save price point (use put to update if exists)
+          await db.price_points.put(pricePoint);
+        }
         
-        // Save price point (use put to update if exists)
-        await db.price_points.put(pricePoint);
+        // Process foil price if available
+        if (prices.eur_foil !== undefined) {
+          const price = Money.parse(prices.eur_foil.toString(), 'EUR');
+          
+          // Create price point ID with new format
+          const pricePointId = `${card.id}:scryfall:foil:${dateStr}`;
+          
+          // Create price point
+          const pricePoint = {
+            id: pricePointId,
+            cardId: card.id,
+            provider: 'scryfall' as const,
+            finish: 'foil' as const,
+            date: dateStr,
+            currency: 'EUR' as const,
+            priceCent: price.getCents(),
+            asOf: now,
+            createdAt: now
+          };
+          
+          // Save price point (use put to update if exists)
+          await db.price_points.put(pricePoint);
+        }
       }
     } catch (error) {
       console.error(`Error syncing price for card ${cardId}:`, error);
@@ -170,21 +216,17 @@ export class PriceUpdateService {
   // Check if we need to update prices for a specific card
   static async needsPriceUpdateForCard(cardId: string): Promise<boolean> {
     try {
-      // Get the most recent price point for this card
-      const pricePoints = await pricePointRepository.getByCardId(cardId);
+      // Use the new PriceQueryService to get the latest price respecting precedence
+      const latestPrice = await PriceQueryService.getLatestPriceForCard(cardId);
       
-      if (pricePoints.length === 0) {
+      if (!latestPrice) {
         // No price points exist for this card, so we need to update
         return true;
       }
       
-      // Sort by date descending to get the most recent price
-      pricePoints.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
-      const latestPricePoint = pricePoints[0];
-      
       // Check if it's been more than 24 hours since the last update
       const now = new Date();
-      const lastUpdate = new Date(latestPricePoint.asOf);
+      const lastUpdate = new Date(latestPrice.asOf);
       const hoursSinceLastUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
       
       return hoursSinceLastUpdate >= 24;
@@ -195,22 +237,20 @@ export class PriceUpdateService {
     }
   }
 
-  // Get the latest price for a card
-  static async getLatestPriceForCard(cardId: string): Promise<{ price: number; asOf: Date } | null> {
+  // Get the latest price for a card respecting provider precedence
+  static async getLatestPriceForCard(cardId: string): Promise<{ price: number; asOf: Date; provider: string } | null> {
     try {
-      const pricePoints = await pricePointRepository.getByCardId(cardId);
+      // Use the new PriceQueryService to get the latest price respecting precedence
+      const latestPrice = await PriceQueryService.getLatestPriceForCard(cardId);
       
-      if (pricePoints.length === 0) {
+      if (!latestPrice) {
         return null;
       }
       
-      // Sort by date descending to get the most recent price
-      pricePoints.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
-      const latestPricePoint = pricePoints[0];
-      
       return {
-        price: latestPricePoint.price,
-        asOf: latestPricePoint.asOf
+        price: latestPrice.price.getCents(),
+        asOf: latestPrice.asOf,
+        provider: latestPrice.provider
       };
     } catch (error) {
       console.error(`Error getting latest price for card ${cardId}:`, error);

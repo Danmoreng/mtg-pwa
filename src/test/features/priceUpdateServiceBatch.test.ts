@@ -86,9 +86,11 @@ describe('PriceUpdateService with Batch Processing', () => {
         cardId: 'card-1',
         provider: 'scryfall',
         currency: 'EUR',
-        price: 150, // 1.5 EUR in cents
+        priceCent: 150, // 1.5 EUR in cents
         asOf: expect.any(Date),
-        createdAt: expect.any(Date)
+        createdAt: expect.any(Date),
+        date: expect.any(String),
+        finish: 'nonfoil'
       });
       
       expect(db.price_points.put).toHaveBeenNthCalledWith(2, {
@@ -96,7 +98,7 @@ describe('PriceUpdateService with Batch Processing', () => {
         cardId: 'card-1',
         provider: 'scryfall',
         currency: 'EUR',
-        price: 300, // 3.0 EUR in cents (foil)
+        priceCent: 300, // 3.0 EUR in cents (foil)
         asOf: expect.any(Date),
         createdAt: expect.any(Date)
       });
