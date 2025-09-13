@@ -1,7 +1,8 @@
+
+
 import db, { 
   type Card, 
   type CardLot,
-  type Holding, 
   type Transaction, 
   type Scan, 
   type Deck, 
@@ -74,32 +75,7 @@ export const cardLotRepository = {
   }
 };
 
-// Holding repository
-export const holdingRepository = {
-  async add(holding: Holding): Promise<string> {
-    return await db.holdings.add(holding);
-  },
 
-  async getById(id: string): Promise<Holding | undefined> {
-    return await db.holdings.get(id);
-  },
-
-  async getAll(): Promise<Holding[]> {
-    return await db.holdings.toArray();
-  },
-
-  async getByCardId(cardId: string): Promise<Holding[]> {
-    return await db.holdings.where('cardId').equals(cardId).toArray();
-  },
-
-  async update(id: string, holding: Partial<Holding>): Promise<number> {
-    return await db.holdings.update(id, holding);
-  },
-
-  async delete(id: string): Promise<void> {
-    await db.holdings.delete(id);
-  }
-};
 
 // Transaction repository
 export const transactionRepository = {

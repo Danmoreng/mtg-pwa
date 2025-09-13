@@ -53,19 +53,7 @@ export interface CardLot {
   updatedAt: Date;
 }
 
-export interface Holding {
-  id: string;
-  cardId: string;
-  acquisitionId?: string;
-  quantity: number;
-  unitCost: number; // in cents
-  source: string;
-  condition: string;
-  language: string;
-  foil: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+
 
 export interface Transaction {
   id: string;
@@ -168,7 +156,7 @@ export interface ScanSaleLink {
 class MtgTrackerDb extends Dexie {
   cards!: EntityTable<Card, 'id'>;
   card_lots!: EntityTable<CardLot, 'id'>;
-  holdings!: EntityTable<Holding, 'id'>;
+  
   transactions!: EntityTable<Transaction, 'id'>;
   scans!: EntityTable<Scan, 'id'>;
   decks!: EntityTable<Deck, 'id'>;
@@ -184,7 +172,6 @@ class MtgTrackerDb extends Dexie {
     // Version 1 - Initial schema
     this.version(1).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish',
-      holdings: 'id, cardId, acquisitionId, source, createdAt',
       transactions: 'id, kind, cardId, source, externalRef, happenedAt',
       scans: 'id, cardFingerprint, cardId, source, scannedAt',
       decks: 'id, platform, name, importedAt',
@@ -197,7 +184,6 @@ class MtgTrackerDb extends Dexie {
     // Version 2 - Enhanced schema with better indexing and new tables
     this.version(2).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
-      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
       transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
       scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
       decks: 'id, platform, name, importedAt, createdAt, updatedAt',
@@ -216,11 +202,7 @@ class MtgTrackerDb extends Dexie {
         card.updatedAt = card.updatedAt || now;
       });
       
-      // Update holdings
-      await tx.table('holdings').toCollection().modify(holding => {
-        holding.createdAt = holding.createdAt || now;
-        holding.updatedAt = holding.updatedAt || now;
-      });
+      
       
       // Update transactions
       await tx.table('transactions').toCollection().modify(transaction => {
@@ -265,7 +247,6 @@ class MtgTrackerDb extends Dexie {
     // Version 3 - Enhanced schema for historical pricing
     this.version(3).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
-      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
       transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
       scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
       decks: 'id, platform, name, importedAt, createdAt, updatedAt',
@@ -280,7 +261,6 @@ class MtgTrackerDb extends Dexie {
     this.version(4).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
       card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, [cardId+purchasedAt], [acquisitionId+cardId]',
-      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
       transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
       scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
       decks: 'id, platform, name, importedAt, createdAt, updatedAt',
@@ -334,7 +314,6 @@ class MtgTrackerDb extends Dexie {
     this.version(5).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
       card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
-      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
       transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
       scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
       decks: 'id, platform, name, importedAt, createdAt, updatedAt',
@@ -349,7 +328,6 @@ class MtgTrackerDb extends Dexie {
     this.version(6).stores({
       cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, createdAt, updatedAt',
       card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
-      holdings: 'id, cardId, acquisitionId, source, createdAt, updatedAt',
       transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
       scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
       decks: 'id, platform, name, importedAt, createdAt, updatedAt',
@@ -362,6 +340,11 @@ class MtgTrackerDb extends Dexie {
       await tx.table('cards').toCollection().modify(card => {
         card.layout = card.layout || 'normal';
       });
+    });
+
+    // Version 7 - Remove holdings table
+    this.version(7).stores({
+      holdings: null
     });
   }
 }
