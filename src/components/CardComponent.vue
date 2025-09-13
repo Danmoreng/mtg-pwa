@@ -1,5 +1,5 @@
 <template>
-  <div class="card h-100 card-item" @click="openModal">
+  <div class="card h-100 card-item" @click="!props.disableModal && openModal()">
     <div class="card-image-container position-relative overflow-hidden rounded" style="padding-bottom: 140%;">
       <div v-if="card.imageUrl" class="card-img-top position-absolute top-0 start-0 w-100 h-100" :style="{ backgroundImage: `url(${card.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }"></div>
       <div v-else class="placeholder-image card-img-top position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
@@ -198,6 +198,7 @@ defineOptions({
 // Props
 const props = defineProps<{
   card: any;
+  disableModal?: boolean;
 }>();
 
 // Use the cards store
