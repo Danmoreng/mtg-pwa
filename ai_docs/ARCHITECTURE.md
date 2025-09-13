@@ -1,6 +1,6 @@
 # Architecture (Authoritative)
 
-_Status updated: 2025-09-12_
+_Status updated: 2025-09-13_
 
 ## Overview
 Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-first design; all card data, pricing history, and user state live on-device. Background work handled via Web Workers.
@@ -34,10 +34,13 @@ All monetary values are stored as integer cents (EUR) to avoid float drift.
 
 ### Core Entities
 - **cards** — Scryfall-identified print (id, oracleId, setCode, number, lang, finish, imageUrl, timestamps)  
+- **card_lots** — Inventory lots with financial tracking (id, cardId, quantity, unitCost, acquisitionPriceCent, totalAcquisitionCostCent, salePriceCent, totalSaleRevenueCent, source, acquiredAt, disposedAt, externalRef, timestamps)  
 - **price_points** — Historical price snapshots per cardId/provider/asOf  
 - **transactions** — BUY/SELL with fees/shipping, `externalRef` idempotency key, timestamps  
 - **decks**, **deck_cards** — Imported Moxfield decks and their cards  
 - **settings** — Key/value app configuration  
+- **valuations** — Daily portfolio valuation snapshots  
+- **scan_sale_links** — Links between scans and sales for reconciliation  
 
 ### Inventory Layer (lots)
 - **card_lots**  
@@ -46,9 +49,10 @@ All monetary values are stored as integer cents (EUR) to avoid float drift.
   - `quantity`  
   - `disposedQuantity` (derived)  
   - `unitCost` (cents)  
-  - `currency` (\"EUR\")  
+  - `currency` ("EUR")  
   - `source` (e.g., cardmarket, deck-import)  
   - `acquiredAt`, `createdAt`, `updatedAt`  
+  - Enhanced financial tracking fields (acquisitionPriceCent, acquisitionFeesCent, acquisitionShippingCent, totalAcquisitionCostCent, salePriceCent, saleFeesCent, saleShippingCent, totalSaleRevenueCent)
 
 - **scan_sale_links**  
   - `id`  
@@ -57,8 +61,8 @@ All monetary values are stored as integer cents (EUR) to avoid float drift.
   - `assignedUnits` (int)  
   - `createdAt`, `updatedAt`  
 
-### Transitional Entity
-- **holdings** — derived from lots; retained for backward compatibility  
+### Derived Store
+- **holdings** — computed from lots; no longer persisted in database  
 
 ### Scans
 - **scans** — ManaBox exports, normalized fingerprint; may resolve to `cardId` post-linking  
@@ -81,11 +85,13 @@ Provider: Scryfall. Multi-layer caching:
 ## Import Infrastructure
 - **Cardmarket Import Wizard** (UI): multi-step (Upload → Map → Preview → Conflicts → Summary)  
 - **CSV parser worker**: tolerant column mapping, date/price normalization, idempotent writes via `externalRef`  
-- **Scryfall integration**: Product-ID-first lookups via `/cards/collection`  
-- **Deduplication**: Link transactions/imports to existing lots  
+- **Scryfall integration**: Product-ID-first lookups via `/cards/collection` with fallback to name/set resolution  
+- **Deduplication**: Link transactions/imports to existing lots using external references  
+- **Idempotency**: All imports are idempotent with external references preventing duplicate data  
 
 ## Deck Ownership
 - Computed from lots (remaining units); UI highlights coverage  
+- All deck operations now use lots as the source of truth  
 
 ## PWA / Offline Strategy
 - **App shell caching** for instant loads  
@@ -98,11 +104,12 @@ Provider: Scryfall. Multi-layer caching:
 - Cards store centralizes price data with getters/selectors  
 
 ## Current Capabilities
-- Database v3+ with pricing indices; v4 adds lots + provenance  
+- Database v7 with lots as source of truth; holdings derived from lots  
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
-- Cardmarket Import Wizard  
+- Cardmarket Import Wizard with ID-first resolution  
 - Unified CardComponent with modal details and price history charts  
-- Deck import from Moxfield; ownership from lots  
+- Deck import from Moxfield; ownership computed from lots  
 - Real-time import progress tracking  
 - Interactive card image flipping for transform cards  
+- Idempotent imports with external references for deduplication  

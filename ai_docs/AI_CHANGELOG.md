@@ -2,6 +2,20 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-13 18:30 — docs: Update documentation to reflect Milestone 1 completion
+- **Author**: AI (Qwen)
+- **Scope**: ai_docs/ARCHITECTURE.md, ai_docs/IMPORTERS.md, README.md
+- **Type**: docs
+- **Summary**: Updated project documentation to reflect the completion of Milestone 1 and the new inventory architecture.
+- **Details**:
+  - Updated ARCHITECTURE.md to reflect that holdings are now derived from lots and no longer persisted
+  - Updated IMPORTERS.md to document the new Product-ID-first card resolution approach
+  - Updated README.md to highlight improved import reliability
+  - Removed references to the transitional holdings table
+  - Updated database version information and capabilities list
+- **Impact/Risks**: Documentation improvements only; no code changes.
+- **Verification Steps**: Review documentation for accuracy and completeness.
+
 ## 2025-09-13 18:00 — feat(inventory): Implement Milestone 1
 - **Author**: AI (Gemini)
 - **Scope**: src/data/db.ts, src/data/repos.ts, src/features/backup/BackupService.ts, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/stores/holdings.ts, src/test/features/importService.test.ts, ai_docs/ROADMAP.md
