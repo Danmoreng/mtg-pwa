@@ -2,6 +2,8 @@
 import { PriceUpdateService } from './PriceUpdateService';
 import { settingRepository } from '../../data/repos';
 import { useImportStatusStore } from '../../stores/importStatus';
+import { ValuationEngine } from '../analytics/ValuationEngine';
+import { PriceGuideScheduler } from './PriceGuideScheduler';
 
 export class AutomaticPriceUpdateService {
   // Check if we need to update prices based on TTL (24 hours)
@@ -73,6 +75,12 @@ export class AutomaticPriceUpdateService {
       // Record the update time
       const now = new Date().toISOString();
       await settingRepository.set('last_price_update_timestamp', now);
+      
+      // Create a valuation snapshot after price updates
+      await ValuationEngine.createValuationSnapshot();
+      
+      // Schedule Price Guide sync
+      await PriceGuideScheduler.syncIfNecessary();
       
       // Mark import as completed
       importStatusStore.completeImport(importId);

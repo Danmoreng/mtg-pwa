@@ -189,6 +189,7 @@ import {Money} from '../core/Money';
 import {useCardsStore} from '../stores';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 import PriceHistoryChart from './PriceHistoryChart.vue';
+import { PriceQueryService } from '../features/pricing/PriceQueryService';
 
 // Enable attribute inheritance
 defineOptions({
@@ -276,13 +277,10 @@ const loadCardDetails = async () => {
     const allPricePoints = await db.price_points.where('cardId').equals(props.card.id).toArray();
     pricePoints.value = allPricePoints;
 
-    // Find the most recent price point
-    if (allPricePoints.length > 0) {
-      // Sort by date descending to get the most recent price
-      allPricePoints.sort((a: any, b: any) => b.asOf.getTime() - a.asOf.getTime());
-      const latestPricePoint = allPricePoints[0];
-
-      currentPrice.value = new Money(latestPricePoint.price, latestPricePoint.currency);
+    // Find the most recent price point using the new PriceQueryService
+    const latestPrice = await PriceQueryService.getLatestPriceForCard(props.card.id);
+    if (latestPrice) {
+      currentPrice.value = latestPrice.price;
     }
 
     // Load lots for this card

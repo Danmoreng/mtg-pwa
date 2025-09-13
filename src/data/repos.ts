@@ -254,6 +254,25 @@ export const pricePointRepository = {
     return await db.price_points.where('cardId').equals(cardId).toArray();
   },
 
+  async getByCardIdAndDate(cardId: string, date: string): Promise<PricePoint[]> {
+    return await db.price_points
+      .where('[cardId+date]')
+      .equals([cardId, date])
+      .toArray();
+  },
+
+  async getByCardIdAndSourceAndFinishAndDate(
+    cardId: string,
+    source: string,
+    finish: string,
+    date: string
+  ): Promise<PricePoint[]> {
+    return await db.price_points
+      .where('[cardId+source+finish+date]')
+      .equals([cardId, source, finish, date])
+      .toArray();
+  },
+
   async update(id: string, pricePoint: Partial<PricePoint>): Promise<number> {
     return await db.price_points.update(id, pricePoint);
   },

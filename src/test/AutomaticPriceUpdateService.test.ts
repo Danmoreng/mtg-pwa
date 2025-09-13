@@ -8,6 +8,10 @@ vi.mock('../data/repos', () => ({
   settingRepository: {
     get: vi.fn(),
     set: vi.fn()
+  },
+  valuationRepository: {
+    getAll: vi.fn(),
+    add: vi.fn()
   }
 }));
 

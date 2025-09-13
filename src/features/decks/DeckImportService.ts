@@ -166,9 +166,11 @@ export class DeckImportService {
                                         const pricePoint = {
                                             id: pricePointId,
                                             cardId: cardId,
-                                            provider: 'scryfall',
-                                            currency: price.getCurrency(),
-                                            price: price.getCents(),
+                                            provider: 'scryfall' as const,
+                                            finish: 'nonfoil' as const,
+                                            date: now.toISOString().split('T')[0],
+                                            currency: 'EUR' as const,
+                                            priceCent: price.getCents(),
                                             asOf: now,
                                             createdAt: now
                                         };

@@ -382,7 +382,17 @@ export class ImportService {
       if (!existingPricePoint) {
         const price = await ScryfallProvider.getPriceById(cardId);
         if (price) {
-          const pricePoint = { id: pricePointId, cardId: cardId, provider: 'scryfall', currency: price.getCurrency(), price: price.getCents(), asOf: now, createdAt: now };
+          const pricePoint = { 
+            id: pricePointId, 
+            cardId: cardId, 
+            provider: 'scryfall' as const, 
+            finish: 'nonfoil' as const,
+            date: now.toISOString().split('T')[0],
+            currency: 'EUR' as const, 
+            priceCent: price.getCents(), 
+            asOf: now, 
+            createdAt: now 
+          };
           await db.price_points.put(pricePoint);
         }
       }
