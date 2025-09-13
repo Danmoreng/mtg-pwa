@@ -2,6 +2,21 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-13 18:00 — feat(inventory): Implement Milestone 1
+- **Author**: AI (Gemini)
+- **Scope**: src/data/db.ts, src/data/repos.ts, src/features/backup/BackupService.ts, src/features/decks/DeckImportService.ts, src/features/imports/ImportService.ts, src/stores/holdings.ts, src/test/features/importService.test.ts, ai_docs/ROADMAP.md
+- **Type**: feat
+- **Summary**: Implemented Milestone 1 of the roadmap, making `card_lots` the source of truth for inventory.
+- **Details**:
+  - Removed the `holdings` table from the database.
+  - Refactored the `holdings` store to be a derived store that computes holdings from the `card_lots` table.
+  - Updated `DeckImportService` and `BackupService` to no longer use the `holdings` table.
+  - Refactored `ImportService` to improve idempotency and card resolution logic.
+  - Added a test for importer idempotency.
+  - Marked Milestone 1 as complete in the `ROADMAP.md`.
+- **Impact/Risks**: The `holdings` table has been removed from the database. This is a breaking change for any code that directly accesses the `holdings` table. The `holdings` store now provides a derived view of the inventory.
+- **Verification Steps**: `npm run build` and `npm run test` pass successfully.
+
 ## 2025-09-13 17:30 — fix(decks): Separate face card image from remove button to prevent overlap
 - **Author**: AI (Qwen)
 - **Scope**: src/features/decks/views/DeckDetailView.vue
