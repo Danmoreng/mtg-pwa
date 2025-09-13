@@ -1,49 +1,55 @@
 <template>
-  <div class="decks-view">
-    <div class="header">
-      <h1>Decks</h1>
+  <div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <h1 class="h3 mb-0">Decks</h1>
       <router-link to="/import/deck" class="btn btn-primary">
         Import Deck
       </router-link>
     </div>
-    
-    <div v-if="loading" class="loading">
-      Loading decks...
+
+    <!-- Loading -->
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border" role="status" aria-hidden="true"></div>
+      <div class="mt-2">Loading decks…</div>
     </div>
-    
-    <div v-else-if="decks.length === 0" class="empty-state">
-      <p>You haven't imported any decks yet.</p>
+
+    <!-- Empty state -->
+    <div v-else-if="decks.length === 0" class="text-center py-5">
+      <p class="text-muted mb-3">You haven't imported any decks yet.</p>
       <router-link to="/import/deck" class="btn btn-primary">
         Import Your First Deck
       </router-link>
     </div>
-    
-    <div v-else class="row g-4">
-      <div 
-        v-for="deck in decks" 
-        :key="deck.id" 
-        class="col-lg-4 col-md-6"
-      >
-        <div class="deck-card h-100" @click="viewDeck(deck.id)">
-          <!-- Face card display -->
-          <div v-if="getFaceCard(deck.id)" class="face-card-container">
-            <img 
-              :src="getFaceCard(deck.id).imageUrl || 'https://placehold.co/200x280?text=Card+Image'" 
-              :alt="getFaceCard(deck.id).name"
-              class="face-card-image"
+
+    <!-- Deck grid -->
+    <div v-else class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      <div v-for="deck in decks" :key="deck.id" class="col">
+        <div class="card h-100 shadow-sm border-0 overflow-hidden position-relative">
+          <!-- Face card area: exact card ratio, no bars -->
+          <div class="card-aspect position-relative overflow-hidden">
+            <img
+                :src="(getFaceCard(deck.id)?.imageUrl) || placeholder"
+                :alt="getFaceCard(deck.id)?.name || 'Face card'"
+                class="w-100 h-100 d-block img-fit-cover"
             />
           </div>
-          <div v-else class="face-card-placeholder">
-            <span class="placeholder-text">No Face Card</span>
-          </div>
-          
-          <div class="deck-info-container">
-            <h2>{{ deck.name }}</h2>
-            <p class="deck-info">
-              <span class="platform">{{ deck.platform }}</span>
-              <span class="date">{{ formatDate(deck.importedAt) }}</span>
-            </p>
-            <p class="card-count">{{ getCardCount(deck.id) }} cards</p>
+
+          <!-- Body -->
+          <div class="card-body">
+            <h2 class="h5 mb-1 text-truncate" :title="deck.name">{{ deck.name }}</h2>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span v-if="deck.platform" class="badge bg-info text-dark text-uppercase">
+                {{ deck.platform }}
+              </span>
+              <small class="text-muted">{{ formatDate(deck.importedAt) }}</small>
+            </div>
+            <div class="fw-semibold">{{ getCardCount(deck.id) }} cards</div>
+            <router-link
+                class="stretched-link"
+                :to="`/decks/${deck.id}`"
+                aria-label="Open deck"
+            />
           </div>
         </div>
       </div>
@@ -53,178 +59,63 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import db from '../../../data/db';
 
-// Router
-const router = useRouter();
+type Deck = {
+  id: string;
+  name: string;
+  platform?: string;
+  importedAt?: string | Date;
+  faceCardId?: string;
+};
 
-// Reactive state
-const decks = ref<any[]>([]);
+type Card = { id: string; name: string; imageUrl?: string };
+
+const decks = ref<Deck[]>([]);
 const loading = ref(true);
 const cardCounts = ref<Record<string, number>>({});
-const faceCards = ref<Record<string, any>>({});
+const faceCards = ref<Record<string, Card>>({});
 
-// Format date
-const formatDate = (date: Date) => {
-  return new Date(date).toLocaleDateString();
-};
+// 63:88 ≈ 0.716 — matches MTG card art, prevents top/bottom bars
+const placeholder = 'https://placehold.co/315x440?text=Card+Image';
 
-// Get card count for a deck
-const getCardCount = (deckId: string) => {
-  return cardCounts.value[deckId] || 0;
-};
+const formatDate = (d?: string | Date) => (d ? new Date(d).toLocaleDateString() : '—');
+const getCardCount = (deckId: string) => cardCounts.value[deckId] ?? 0;
+const getFaceCard = (deckId: string) => faceCards.value[deckId];
 
-// Get face card for a deck
-const getFaceCard = (deckId: string) => {
-  return faceCards.value[deckId];
-};
-
-// View deck details
-const viewDeck = (deckId: string) => {
-  router.push(`/decks/${deckId}`);
-};
-
-// Load decks
 const loadDecks = async () => {
   try {
-    // Get all decks
-    const allDecks = await db.decks.toArray();
+    const allDecks = (await db.decks.toArray()) as Deck[];
     decks.value = allDecks;
-    
-    // Get card counts and face cards for each deck
-    for (const deck of allDecks) {
-      // Get card count
-      const count = await db.deck_cards.where('deckId').equals(deck.id).count();
-      cardCounts.value[deck.id] = count;
-      
-      // Get face card if one is set
-      if (deck.faceCardId) {
-        const faceCard = await db.cards.get(deck.faceCardId);
-        if (faceCard) {
-          faceCards.value[deck.id] = faceCard;
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error loading decks:', error);
+
+    const countPromises = allDecks.map(async d => {
+      const c = await db.deck_cards.where('deckId').equals(d.id).count();
+      return [d.id, c] as const;
+    });
+
+    const facePromises = allDecks.map(async d => {
+      if (!d.faceCardId) return [d.id, null] as const;
+      const fc = await db.cards.get(d.faceCardId);
+      return [d.id, fc ? ({ id: fc.id, name: fc.name, imageUrl: fc.imageUrl } as Card) : null] as const;
+    });
+
+    (await Promise.all(countPromises)).forEach(([id, c]) => (cardCounts.value[id] = c));
+    (await Promise.all(facePromises)).forEach(([id, card]) => {
+      if (card) faceCards.value[id] = card;
+      else delete faceCards.value[id];
+    });
+  } catch (err) {
+    console.error('Error loading decks:', err);
   } finally {
     loading.value = false;
   }
 };
 
-// Load decks when component mounts
-onMounted(() => {
-  loadDecks();
-});
+onMounted(loadDecks);
 </script>
 
 <style scoped>
-.decks-view {
-  padding: var(--space-lg);
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-xl);
-}
-
-.header h1 {
-  margin: 0;
-}
-
-.loading,
-.empty-state {
-  text-align: center;
-  padding: var(--space-xl);
-}
-
-.empty-state p {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-lg);
-}
-
-.deck-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.deck-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.face-card-container {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background-color: var(--color-border);
-  position: relative;
-}
-
-.face-card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.face-card-placeholder {
-  width: 100%;
-  height: 200px;
-  background-color: var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-text {
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
-.deck-info-container {
-  padding: var(--space-lg);
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.deck-card h2 {
-  margin: 0 0 var(--space-sm);
-  font-size: var(--font-size-xl);
-}
-
-.deck-info {
-  display: flex;
-  justify-content: space-between;
-  margin: 0 0 var(--space-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.platform {
-  background: var(--color-primary-light);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-md);
-  text-transform: uppercase;
-  font-weight: var(--font-weight-bold);
-}
-
-.card-count {
-  margin: auto 0 0 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-}
+/* Ensures the image area matches real card proportions and fully fills */
+.card-aspect { aspect-ratio: 63 / 88; }
+.img-fit-cover { object-fit: cover; }
 </style>
