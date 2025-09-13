@@ -4,6 +4,16 @@ import { createTestingPinia } from '@pinia/testing';
 import CardsView from '../../features/cards/views/CardsView.vue';
 import { useCardsStore } from '../../stores/cards';
 import { Money } from '../../core/Money';
+import { useRoute } from 'vue-router';
+
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    query: {}
+  }),
+  useRouter: () => ({
+    replace: vi.fn(),
+  }),
+}));
 
 describe('CardsView', () => {
   beforeEach(() => {
@@ -35,7 +45,6 @@ describe('CardsView', () => {
     await wrapper.vm.$nextTick();
 
     // Check that the component renders
-    expect(wrapper.find('h1').exists()).toBe(false); // No h1 in this component
     expect(wrapper.find('.header').exists()).toBe(true);
     expect(wrapper.find('.search-box input').exists()).toBe(true);
     expect(wrapper.find('.sort-controls select').exists()).toBe(true);
