@@ -2,6 +2,37 @@
 
 This document describes the specifications for all supported importers in the MTG Collection Value Tracker.
 
+## MTGJSON Importer
+
+### Supported Formats
+The importer supports the MTGJSON `AllPrices.json.gz` format:
+
+- `AllPrices.json.gz` - Full historical pricing data (large file)
+- `AllPricesToday.json` - Latest pricing data only (smaller file)
+
+### Data Processing
+The importer processes only pricing data for cards in the user's collection:
+
+1. Extracts Cardmarket pricing data from the MTGJSON file
+2. Filters to only include cards present in the user's collection
+3. Processes pricing history for the last 90 days
+4. Maps MTGJSON finish types to application finish types:
+   - `normal` → `nonfoil`
+   - `foil` → `foil`
+   - `etched` → `etched`
+
+### File Size Limits
+- Maximum decompressed file size: 1.5GB
+- Files exceeding this limit will be rejected with an error message
+
+### Idempotency
+The importer uses idempotent database operations, so re-importing the same file will not create duplicate records.
+
+### Error Handling
+- **Large Files**: Files that are too large are rejected with a clear error message
+- **Memory Issues**: Out-of-memory errors are caught and users are advised to use smaller files
+- **Parsing Errors**: JSON parsing errors are caught and reported to the user
+
 ## Cardmarket CSV Importer
 
 ### Supported Formats

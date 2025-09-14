@@ -1,8 +1,8 @@
 import {expose} from 'threads/worker';
-import {type Card, cardRepository} from '../../data/repos';
 import {mapFinish} from '../../utils/finishMapper';
-import {type PricePoint, pricePointRepository} from '../../data/repos';
-import {fflate, strFromU8} from 'fflate';
+import {pricePointRepository} from '../../data/repos';
+import {gunzipSync, decompressSync, strFromU8} from 'fflate';
+import type {PricePoint} from '../../data/db';
 
 const MTGJSON_UPLOAD_WORKER = {
   async upload(file: File, wantedIds: string[]): Promise<number> {
@@ -14,8 +14,15 @@ const MTGJSON_UPLOAD_WORKER = {
       console.log('[MTGJSONUploadWorker] File buffer read.');
 
       console.log('[MTGJSONUploadWorker] Decompressing file...');
-      const decompressed = fflate.decompressSync(new Uint8Array(buffer));
+      const u8 = new Uint8Array(buffer);
+      const isGzip = u8[0] === 0x1f && u8[1] === 0x8b;
+      const decompressed = isGzip ? gunzipSync(u8) : decompressSync(u8);
       console.log(`[MTGJSONUploadWorker] Decompression complete, size: ${decompressed.length} bytes`);
+
+      // Add file size guard to prevent memory blow-up
+      if (decompressed.byteLength > 1_500_000_000) { // ~1.5 GB
+        throw new Error('The expanded MTGJSON file is too large to process in-browser. Please use the smaller "today" file or enable streaming parse.');
+      }
 
       console.log('[MTGJSONUploadWorker] Parsing JSON...');
       const json = JSON.parse(strFromU8(decompressed));
@@ -29,52 +36,62 @@ const MTGJSON_UPLOAD_WORKER = {
       let processedCardCount = 0;
       const batchSize = 1000; // Process in batches to avoid memory issues
 
-      for (const cardId of wantedIds) {
-        const cardData = json.data[cardId];
-        if (!cardData) continue;
+      // Process cards in smaller batches to reduce memory usage
+      const batchSizeForIds = 50; // Process 50 card IDs at a time
+      
+      for (let i = 0; i < wantedIds.length; i += batchSizeForIds) {
+        const batch = wantedIds.slice(i, i + batchSizeForIds);
+        
+        for (const cardId of batch) {
+          const cardData = json.data[cardId];
+          if (!cardData) continue;
 
-        const paperData = cardData.paper;
-        if (!paperData) continue;
+          const paperData = cardData.paper;
+          if (!paperData) continue;
 
-        const cardmarketData = paperData.cardmarket;
-        if (!cardmarketData) continue;
+          const cardmarketData = paperData.cardmarket;
+          if (!cardmarketData) continue;
 
-        const retailData = cardmarketData.retail;
-        if (!retailData) continue;
+          const retailData = cardmarketData.retail;
+          if (!retailData) continue;
 
-        processedCardCount++;
+          processedCardCount++;
 
-        for (const finish of Object.keys(retailData)) {
-          const mappedFinish = mapFinish(finish);
-          const priceHistory = retailData[finish];
+          for (const finish of Object.keys(retailData)) {
+            const mappedFinish = mapFinish(finish);
+            const priceHistory = retailData[finish];
 
-          for (const dateStr of Object.keys(priceHistory)) {
-            const date = new Date(dateStr);
-            if (date < ninetyDaysAgo) continue;
+            for (const dateStr of Object.keys(priceHistory)) {
+              const date = new Date(dateStr);
+              if (date < ninetyDaysAgo) continue;
 
-            const price = priceHistory[dateStr];
-            const pricePoint: PricePoint = {
-              id: `${cardId}:mtgjson.cardmarket:${mappedFinish}:${dateStr}`,
-              cardId: cardId,
-              provider: 'mtgjson.cardmarket' as const,
-              finish: mappedFinish,
-              date: dateStr,
-              currency: 'EUR',
-              priceCent: Math.round(price * 100),
-              asOf: now,
-              createdAt: now,
-            };
-            pricePoints.push(pricePoint);
+              const price = priceHistory[dateStr];
+              const pricePoint: PricePoint = {
+                id: `${cardId}:mtgjson.cardmarket:${mappedFinish}:${dateStr}`,
+                cardId: cardId,
+                provider: 'mtgjson.cardmarket' as const,
+                finish: mappedFinish,
+                date: dateStr,
+                currency: 'EUR',
+                priceCent: Math.round(price * 100),
+                asOf: now,
+                createdAt: now,
+              };
+              pricePoints.push(pricePoint);
+            }
+          }
+
+          // Batch insert to avoid memory issues with large datasets
+          if (pricePoints.length >= batchSize) {
+            console.log(`[MTGJSONUploadWorker] Bulk inserting ${pricePoints.length} price points into the database...`);
+            await pricePointRepository.bulkPut(pricePoints);
+            console.log('[MTGJSONUploadWorker] Batch insert complete.');
+            pricePoints.length = 0; // Clear the array
           }
         }
-
-        // Batch insert to avoid memory issues with large datasets
-        if (pricePoints.length >= batchSize) {
-          console.log(`[MTGJSONUploadWorker] Bulk inserting ${pricePoints.length} price points into the database...`);
-          await pricePointRepository.bulkPut(pricePoints);
-          console.log('[MTGJSONUploadWorker] Batch insert complete.');
-          pricePoints.length = 0; // Clear the array
-        }
+        
+        // Allow browser to process other tasks between batches
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       console.log(`[MTGJSONUploadWorker] Found price points for ${processedCardCount} cards.`);

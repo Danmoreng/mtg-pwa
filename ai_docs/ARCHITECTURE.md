@@ -85,6 +85,8 @@ Provider: Scryfall. Multi-layer caching:
 ## Import Infrastructure
 - **Cardmarket Import Wizard** (UI): multi-step (Upload → Map → Preview → Conflicts → Summary)  
 - **CSV parser worker**: tolerant column mapping, date/price normalization, idempotent writes via `externalRef`  
+- **MTGJSON Import Wizard** (UI): file upload for AllPrices.json.gz with progress tracking
+- **MTGJSON upload worker**: decompresses and parses large JSON files, extracts pricing data for owned cards
 - **Scryfall integration**: Product-ID-first lookups via `/cards/collection` with fallback to name/set resolution  
 - **Deduplication**: Link transactions/imports to existing lots using external references  
 - **Idempotency**: All imports are idempotent with external references preventing duplicate data  
@@ -108,6 +110,7 @@ Provider: Scryfall. Multi-layer caching:
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
 - Cardmarket Import Wizard with ID-first resolution  
+- MTGJSON Import Wizard for historical pricing data  
 - Unified CardComponent with modal details and price history charts  
 - Deck import from Moxfield; ownership computed from lots  
 - Real-time import progress tracking  

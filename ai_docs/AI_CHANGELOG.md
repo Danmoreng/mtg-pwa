@@ -1,6 +1,19 @@
 # AI Change Log
 
-A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
+A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
+
+## 2025-09-14 17:00 — docs: Add MTGJSON importer documentation
+- **Author**: AI (Qwen)
+- **Scope**: ai_docs/MTGJSON_IMPORTER.md, ai_docs/IMPORTERS.md, ai_docs/ARCHITECTURE.md
+- **Type**: docs
+- **Summary**: Added comprehensive documentation for the MTGJSON importer and updated related documentation files.
+- **Details**:
+  - Created MTGJSON_IMPORTER.md with detailed specifications for the MTGJSON importer
+  - Updated IMPORTERS.md to include MTGJSON importer specifications
+  - Updated ARCHITECTURE.md to reference the MTGJSON import infrastructure
+- **Impact/Risks**: Documentation improvements only; no code changes.
+- **Verification Steps**: Review documentation for accuracy and completeness.
+- **Linked Task/Issue**: MTGJSON importer documentation
 
 ## 2025-09-14 00:00 — feat: Implement M2 Action Plan
 - **Author**: AI (Gemini)
@@ -19,17 +32,31 @@ A chronological log of AI-proposed changes for the MTG Value Tracker. Times in E
 - **Verification Steps**: `npm run test`; open the app, enable the feature flags in the `.env` file, and test the new import wizards.
 - **Linked Task/Issue**: M2
 
-## 2025-09-14 15:30 — fix(pricing): Correct price update logic and remove stubbed feature
-- **Author**: AI (Gemini)
-- **Scope**: src/features/pricing/AutomaticPriceUpdateService.ts
+## 2025-09-14 16:00 — fix(pricing): improve memory efficiency for large MTGJSON files
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/MTGJSONUploadWorker.ts, src/features/imports/views/wizard/MtgjsonImportWizard.vue
 - **Type**: fix
-- **Summary**: Fixed a TypeError during price updates and removed a call to a stubbed, non-functional feature.
+- **Summary**: Improved memory efficiency when processing large MTGJSON files and enhanced error messaging.
 - **Details**:
-    - Initially fixed a `TypeError` by replacing a call to the non-existent method `PriceGuideScheduler.syncIfNecessary()` with `PriceGuideScheduler.run()`.
-    - Subsequently removed the call to `PriceGuideScheduler.run()` entirely, as it triggered a stubbed feature (Cardmarket Price Guide sync) that was not implemented and produced console warnings.
-- **Impact/Risks**: Low risk. Fixes a runtime error and prevents a noisy, non-functional feature from running.
-- **Verification Steps**: The price update process should complete without runtime errors or warnings about `cardmarketId`.
-- **Linked Task/Issue**: -
+  - Implemented batched processing of card IDs to reduce memory usage
+- **Impact/Risks**: Fixes out of memory errors when processing large MTGJSON files
+- **Verification Steps**: `npm run build`; try uploading large MTGJSON file, verify proper processing without memory errors
+- **Linked Task/Issue**: Bug fix
+
+## 2025-09-14 15:00 — fix(pricing): fix worker termination and improve large file handling
+- **Author**: AI (Qwen)
+- **Scope**: src/features/pricing/MTGJSONUploadService.ts, src/features/pricing/MTGJSONUploadWorker.ts, src/features/imports/views/wizard/MtgjsonImportWizard.vue
+- **Type**: fix
+- **Summary**: Fixed worker termination error and improved handling of large MTGJSON files.
+- **Details**:
+  - Fixed incorrect worker termination method (was using Worker.terminate, now using Thread.terminate)
+  - Increased file size limit from 1GB to 1.5GB to accommodate larger MTGJSON files
+  - Added better error handling for worker termination
+  - Improved UI warnings for large file uploads in MtgjsonImportWizard
+  - Added note about using smaller "AllPricesToday.json" file as an alternative
+- **Impact/Risks**: Fixes critical errors in MTGJSON import process; allows processing of larger files
+- **Verification Steps**: `npm run build`; try uploading large MTGJSON file, verify proper error handling and termination
+- **Linked Task/Issue**: Bug fix
 
 ## 2025-09-14 16:00 — chore(pricing): Add logging to MTGJSON importer
 - **Author**: AI (Gemini)

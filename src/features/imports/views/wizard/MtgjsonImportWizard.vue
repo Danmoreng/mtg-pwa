@@ -6,7 +6,8 @@
 
     <div class="alert alert-info">
       <h3 class="alert-heading">Where to get the file</h3>
-      <p>You can download the `AllPrices.json.gz` file from the <a href="https://mtgjson.com/downloads/all-files/" target="_blank" rel="noopener noreferrer">MTGJSON website</a>.</p>
+      <p>You can download the <code>AllPrices.json.gz</code> file from the <a href="https://mtgjson.com/downloads/all-files/" target="_blank" rel="noopener noreferrer">MTGJSON website</a>.</p>
+      <p><strong>Note:</strong> The full file is very large (~1.2GB when decompressed). If you encounter memory issues, consider using the smaller "AllPricesToday.json" file instead, which contains only the latest prices.</p>
     </div>
 
     <div class="card">
@@ -33,6 +34,9 @@
                 <span class="file-size">- {{ formatFileSize(uploadedFile.size) }}</span>
               </li>
             </ul>
+            <div v-if="uploadedFile.size > 100 * 1024 * 1024" class="alert alert-warning mt-2">
+              <strong>Warning:</strong> This file is quite large ({{ formatFileSize(uploadedFile.size) }}). Processing may take a while and could potentially fail due to memory constraints. Consider using the smaller "AllPricesToday.json" file if available.
+            </div>
           </div>
         </div>
 
@@ -47,6 +51,9 @@
         <div v-if="errors.length > 0" class="error-messages">
           <div v-for="error in errors" :key="error" class="error-message">
             {{ error }}
+            <div v-if="error.includes('Out of Memory') || error.includes('too large')" class="mt-2">
+              <strong>Solution:</strong> The MTGJSON file is too large to process in your browser. Please download the smaller "AllPricesToday.json" file from MTGJSON instead, which contains only the latest prices and is much smaller.
+            </div>
           </div>
         </div>
 

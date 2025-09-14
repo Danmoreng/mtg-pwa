@@ -141,5 +141,218 @@ You proposed prompting the user to **download MTGJSON AllPrices** and let the ap
 It **doesn’t**—not end‑to‑end. You have a **service/worker stub** with syntax errors and missing worker files; the real ingestion path is described in docs (upload a **user‑provided** AllPrices JSON(‑GZ) and write last 90 days to `price_points`), but it’s not implemented in runtime code yet. Adopt the documented upload worker & wizard step and you’ll meet the milestone requirement of history longer than the time the user has used the app. &#x20;
 
 ---
+Thanks—I've dug through your repo and can explain both **why the MTGJSON upload stalls** and what’s still missing from your **M2 action plan**. I’ll start with the blocker that’s causing the “worker starts, then nothing… until a timeout” behavior, then list the other (latent) issues you’ll hit next, and finally give you a concise M2 implementation checklist.
 
-If you want, I can turn this plan into PR‑ready patches (schema + migration, `MTGJSONUploadWorker`, Price Guide upload + TTL, precedence queries, chart toggles, and tests) following the exact file paths above.
+---
+
+## Why the MTGJSON upload “does nothing” and times out
+
+### 1) The worker fails to load before it can expose its API (handshake timeout)
+
+In `src/features/pricing/MTGJSONUploadWorker.ts` the gzip library is imported incorrectly:
+
+```ts
+// current (buggy)
+import { fflate, strFromU8 } from 'fflate';
+// ...
+const decompressed = fflate.decompressSync(input);
+```
+
+The `fflate` package does **not** export a named `fflate` symbol in ESM; as a result the worker throws at module init and never calls `expose`, so `threads.spawn` sits there until its timeout.&#x20;
+
+**Fix (pick one):**
+
+```ts
+// Option A — use named functions
+import { gunzipSync, decompressSync, strFromU8 } from 'fflate';
+
+// later:
+const u8 = new Uint8Array(arrayBuffer);
+const isGzip = u8[0] === 0x1f && u8[1] === 0x8b;    // gzip header
+const out = isGzip ? gunzipSync(u8) : decompressSync(u8);
+const json = JSON.parse(strFromU8(out));
+```
+
+or
+
+```ts
+// Option B — namespace import
+import * as fflate from 'fflate';
+
+// later:
+const out = fflate.decompressSync(new Uint8Array(arrayBuffer));
+const json = JSON.parse(fflate.strFromU8(out));
+```
+
+The rest of the worker remains the same, but now it will actually load and your `spawn(new MTGJSONUploadWorker())` call in `MTGJSONUploadService.ts` will handshake correctly.&#x20;
+
+---
+
+### 2) After that fix, you’ll likely hit a second fatal: memory blow‑up on `AllPrices.json.gz`
+
+Your worker **fully decompresses** and then `JSON.parse`s the *entire* MTGJSON file:
+
+```ts
+const decompressed = fflate.decompressSync(input);
+const json = JSON.parse(strFromU8(decompressed));
+```
+
+`AllPrices.json.gz` (\~120 MB) expands to **multiple GB** of JSON text. Doing that in a browser worker commonly OOMs or gets the worker terminated silently. That explains the “nothing more happens” symptom on larger files. (This happens here, in the same worker.)&#x20;
+
+**Short‑term mitigations (pick one to get unblocked today):**
+
+* Use the **smaller** MTGJSON dump (e.g., the “today” variant) for a smoke test until streaming is implemented. The current worker logic already filters down to **only your owned IDs**, but it still needs the full JSON in memory first.
+* Add a **hard size guard** (e.g., if `decompressed.length > 1e9` → show a friendly error) so the UI fails fast instead of hanging.
+
+**Proper fix (next iteration):** switch to **streaming parse**: ungzip in chunks and feed a streaming JSON parser (e.g., `clarinet`), writing price points batch‑wise. Your `ai_docs` already sketches the streaming variant and UX, including progress messages.&#x20;
+
+---
+
+### 3) You call a repository method that doesn’t exist (`bulkPut`)
+
+Both your MTGJSON worker **and** the Price Guide worker call:
+
+```ts
+await pricePointRepository.bulkPut(pricePoints);
+```
+
+…but `pricePointRepository` has **no** `bulkPut` in `src/data/repos.ts`. Add it so both workers can upsert in one go: &#x20;
+
+```ts
+// src/data/repos.ts
+export const pricePointRepository = {
+  // ...existing methods...
+  async bulkPut(points: PricePoint[]): Promise<void> {
+    await db.price_points.bulkPut(points);
+  },
+};
+```
+
+Your Dexie schema already supports the right compound index for idempotent upserts:
+`[cardId+provider+finish+date]` at v8.&#x20;
+
+---
+
+### 4) (Double‑check) MTGJSON `retail` shape
+
+Your current loop assumes `retail` is **finish → date → price**:
+
+```ts
+for (const finish of Object.keys(retailData)) {
+  const priceHistory = retailData[finish];
+  for (const dateStr of Object.keys(priceHistory)) { /* ... */ }
+}
+```
+
+If the input you upload actually uses **date → finish → price**, you won’t extract anything. Your own docs show the **date‑first** shape in the streaming skeleton (dates as keys, finishes inside). If that’s the file you upload, flip the loops like in the doc: date first, then iterate `['normal','foil','etched']`.&#x20;
+
+> TL;DR: **fix the `fflate` import first** (that’s the reason for the timeout right now). Then expect a memory wall on the full `AllPrices.json.gz` unless you switch to the streaming approach or a smaller file. Also add `bulkPut` to the repo, or the worker will crash when it goes to write.
+
+---
+
+## M2\_ACTION\_PLAN status — what’s implemented vs. missing
+
+Here’s a quick audit against your own plan.
+
+### ✅ Already in place
+
+* **Dexie v8 schema for price points** with finish + provider and helpful indexes (e.g., `[cardId+date]`, `[cardId+provider+finish+date]`).&#x20;
+* **“provider” terminology** adopted in the runtime (good choice; consistent with precedence), e.g., `PricePoint.provider` and precedence order. &#x20;
+* **MTGJSON Upload UI step and service** exist and are wired (`MtgjsonImportWizard.vue` → `MTGJSONUploadService` → worker). &#x20;
+
+### 🟡 Partially implemented (needs fixes)
+
+* **MTGJSON ingestion path**: in place but currently blocked by the `fflate` import bug, potential memory blow‑up, and missing `bulkPut`. (See fixes above.)  &#x20;
+* **Provider precedence querying**: implemented in `PriceQueryService` (price selection), but broader use (e.g., valuation snapshots) isn’t shown here.&#x20;
+
+### ❌ Missing / will not work as-is
+
+* **Cardmarket Price Guide upload path** has several gaps:
+
+    * Service spawns worker via `new Worker('./PriceGuideUploadWorker')` (threads path string). With Vite you should mirror the MTGJSON pattern: import `'?worker'` and pass a constructed worker to `spawn`.&#x20;
+    * It relies on `card.cardmarketId`, but your `Card` type and DB **do not** store that field; the mapping will be empty and nothing will be written. Either add a provider‑ID map to `cards`, or resolve Cardmarket IDs → Scryfall IDs on the fly via your Scryfall provider. &#x20;
+    * Still needs `pricePointRepository.bulkPut` (same as above).&#x20;
+* **Docs drift (“provider” vs “source”)**: `ai_docs/M2_IMPLEMENTATION_GUIDE.md` still talks about a `source` field and indexes using `source`, while runtime code uses `provider`. Keeping **provider** is fine—just align the docs to the codebase to avoid confusion.&#x20;
+
+---
+
+## Suggested minimal patches (copy‑paste)
+
+1. **Fix the worker import (unblocks the timeout)**
+
+```ts
+// src/features/pricing/MTGJSONUploadWorker.ts
+- import { fflate, strFromU8 } from 'fflate';
++ import { gunzipSync, decompressSync, strFromU8 } from 'fflate';
+
+// ...
+- const u8 = new Uint8Array(arrayBuffer);
+- const decompressed = fflate.decompressSync(u8);
++ const u8 = new Uint8Array(arrayBuffer);
++ const isGzip = u8[0] === 0x1f && u8[1] === 0x8b;
++ const decompressed = isGzip ? gunzipSync(u8) : decompressSync(u8);
+const json = JSON.parse(strFromU8(decompressed));
+```
+
+(That file is where you currently import `fflate` wrong and parse the whole file.)&#x20;
+
+2. **Add `bulkPut` to the price point repository**
+
+```ts
+// src/data/repos.ts
+export const pricePointRepository = {
+  // ...existing methods...
+  async bulkPut(points: PricePoint[]): Promise<void> {
+    await db.price_points.bulkPut(points);
+  },
+};
+```
+
+The schema at v8 supports idempotent upserts keyed by `[cardId+provider+finish+date]`.&#x20;
+
+3. **(Optional quick win) Guard against huge files for now**
+
+```ts
+// src/features/pricing/MTGJSONUploadWorker.ts (after decompression)
+if (decompressed.byteLength > 1_000_000_000) { // ~1 GB
+  throw new Error('The expanded MTGJSON file is too large to process in-browser. Please use the smaller "today" file or enable streaming parse.');
+}
+```
+
+4. **(When you touch Price Guide)** fix the spawn and the mapping
+
+```ts
+// src/features/pricing/PriceGuideUploadService.ts
+- import {spawn, Worker} from 'threads';
++ import { spawn } from 'threads';
++ import PriceGuideWorkerCtor from './PriceGuideUploadWorker?worker';
+
+export class PriceGuideUploadService {
+  static async upload(file: File, onProgress: (written: number) => void): Promise<void> {
+-   const worker = await spawn(new Worker('./PriceGuideUploadWorker'), { timeout: 300000 });
++   const worker = await spawn(new PriceGuideWorkerCtor(), { timeout: 300000 });
+    worker.upload(file).then(onProgress);
+  }
+}
+```
+
+…and either (A) add `cardmarketId` (or a small `provider_id_map`) onto `cards`, or (B) have the worker resolve Cardmarket product IDs → Scryfall IDs via your Scryfall provider. Right now it looks up `card.cardmarketId`, which does not exist in your DB type. &#x20;
+
+---
+
+## Verification steps (you can run these immediately)
+
+1. Apply the **fflate import** fix and add `bulkPut`.
+2. Reload the app and open your MTGJSON upload step (`MtgjsonImportWizard.vue` drives this).&#x20;
+3. Try with a **smaller** MTGJSON file first to confirm end‑to‑end writes (the wizard shows the completion toast and your cards will gain recent price points). The service calls the worker and reports “written” at the end.&#x20;
+4. If you must use the 120 MB **AllPrices.json.gz**, expect a hang until you implement streaming parse (or at least add the size guard to fail fast).
+
+---
+
+## Bottom line
+
+* The **immediate cause** of “worker starts then times out” is the **incorrect `fflate` import** in `MTGJSONUploadWorker.ts`. Fixing this will make the worker load and your upload finish (with smaller files).&#x20;
+* The next blockers are **memory pressure** on `AllPrices.json.gz` and the **missing `bulkPut`** repository method. Address both to make MTGJSON backfill reliable. &#x20;
+* The **M2 plan** is **partially implemented**: schema/precedence are there, the MTGJSON and Price Guide flows exist in skeleton, but the MTGJSON path needs the fixes above and the Price Guide path needs spawn and ID mapping adjustments to produce data.  &#x20;
+
+If you want, I can draft a **streaming** MTGJSON worker (ungzip chunks + `clarinet` + batched `bulkPut`) that preserves progress updates and avoids OOM, reusing the file structure you already have in the docs.&#x20;
