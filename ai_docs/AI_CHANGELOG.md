@@ -2,6 +2,48 @@
 
 A chronological log of AI-proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-14 00:00 — feat: Implement M2 Action Plan
+- **Author**: AI (Gemini)
+- **Scope**: src/data/db.ts, src/features/pricing/*, src/features/imports/views/wizard/*, src/app/router.ts, src/components/Navigation.vue, .env, src/test/features/*
+- **Type**: feat
+- **Summary**: Implemented Milestone 2 Action Plan for pricing history and MTGJSON integration.
+- **Details**:
+    - Standardized on the `provider` field in the `price_points` table and finalized the Dexie v8 schema.
+    - Implemented a manual upload feature for MTGJSON `AllPrices.json.gz` files to backfill price history for the last 90 days.
+    - Implemented a manual upload feature for Cardmarket Price Guide CSV files.
+    - Fixed a bug in the `PriceUpdateService` where the `finish` variable was not defined for foil cards.
+    - Unified the `PriceQueryService` to use correct provider precedence and indexes.
+    - Fixed a bug in the `PriceHistoryChart` component that caused incorrect rendering of average price overlays.
+    - Added unit tests for the MTGJSON upload worker and the `PriceQueryService` precedence logic.
+- **Impact/Risks**: The database schema has been updated to version 8. The new import features are behind feature flags.
+- **Verification Steps**: `npm run test`; open the app, enable the feature flags in the `.env` file, and test the new import wizards.
+- **Linked Task/Issue**: M2
+
+## 2025-09-14 15:30 — fix(pricing): Correct price update logic and remove stubbed feature
+- **Author**: AI (Gemini)
+- **Scope**: src/features/pricing/AutomaticPriceUpdateService.ts
+- **Type**: fix
+- **Summary**: Fixed a TypeError during price updates and removed a call to a stubbed, non-functional feature.
+- **Details**:
+    - Initially fixed a `TypeError` by replacing a call to the non-existent method `PriceGuideScheduler.syncIfNecessary()` with `PriceGuideScheduler.run()`.
+    - Subsequently removed the call to `PriceGuideScheduler.run()` entirely, as it triggered a stubbed feature (Cardmarket Price Guide sync) that was not implemented and produced console warnings.
+- **Impact/Risks**: Low risk. Fixes a runtime error and prevents a noisy, non-functional feature from running.
+- **Verification Steps**: The price update process should complete without runtime errors or warnings about `cardmarketId`.
+- **Linked Task/Issue**: -
+
+## 2025-09-14 16:00 — chore(pricing): Add logging to MTGJSON importer
+- **Author**: AI (Gemini)
+- **Scope**: src/features/pricing/MTGJSONUploadService.ts, src/features/pricing/MTGJSONUploadWorker.ts
+- **Type**: chore
+- **Summary**: Added extensive console logging to the MTGJSON import process to aid in debugging.
+- **Details**:
+    - Added detailed logs to `MTGJSONUploadWorker.ts` to trace file reading, decompression, JSON parsing, and database insertion.
+    - Added logs to `MTGJSONUploadService.ts` to trace worker spawning, communication, and termination.
+    - Added `try...catch` blocks and ensured the worker is terminated in `finally` to improve robustness.
+- **Impact/Risks**: Low risk. This change only adds logging and does not alter the import logic itself.
+- **Verification Steps**: Attempting an MTGJSON import will now produce detailed logs in the browser's developer console.
+- **Linked Task/Issue**: -
+
 ## 2025-09-13 18:45 — feat(pricing): Implement batch price fetching for improved performance
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/ScryfallProvider.ts, src/features/pricing/PriceUpdateService.ts, src/test/features/scryfallProvider.test.ts, src/test/features/priceUpdateServiceBatch.test.ts, src/test/features/priceUpdateServiceWithProgress.test.ts

@@ -79,9 +79,6 @@ export class AutomaticPriceUpdateService {
       // Create a valuation snapshot after price updates
       await ValuationEngine.createValuationSnapshot();
       
-      // Schedule Price Guide sync
-      await PriceGuideScheduler.syncIfNecessary();
-      
       // Mark import as completed
       importStatusStore.completeImport(importId);
       

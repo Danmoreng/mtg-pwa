@@ -116,9 +116,9 @@ export interface DeckCard {
 }
 
 export interface PricePoint {
-  id: string; // Format: `${cardId}:${source}:${finish}:${date}`
+  id: string; // Format: `${cardId}:${provider}:${finish}:${date}`
   cardId: string;
-  source: 'scryfall' | 'mtgjson' | 'cardmarket'; // Simplified source instead of provider
+  provider: 'scryfall' | 'mtgjson.cardmarket' | 'cardmarket.priceguide'; // Specific provider identifiers
   finish: 'nonfoil' | 'foil' | 'etched';
   date: string; // ISO date format: 'YYYY-MM-DD'
   currency: 'EUR';
@@ -360,7 +360,7 @@ class MtgTrackerDb extends Dexie {
       scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
       decks: 'id, platform, name, importedAt, createdAt, updatedAt',
       deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
-      price_points: 'id, cardId, source, finish, date, currency, priceCent, asOf, createdAt, [cardId+asOf], [source+asOf], [cardId+source+finish+date]',
+      price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, [cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
       valuations: 'id, asOf, createdAt, [asOf+createdAt]',
       settings: 'k, createdAt, updatedAt',
       scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
@@ -375,7 +375,7 @@ class MtgTrackerDb extends Dexie {
           delete r.price;
         }
 
-        // derive finish/date/source/id from old shapes
+        // derive finish/date/provider/id from old shapes
         let finish: 'nonfoil'|'foil'|'etched' = r.finish ?? 'nonfoil';
         let date = r.date ?? (r.asOf ? new Date(r.asOf).toISOString().slice(0,10) : undefined);
         const parts = String(r.id ?? '').split(':'); // legacy ids
@@ -384,25 +384,25 @@ class MtgTrackerDb extends Dexie {
         if (maybeFinish === 'foil' || maybeFinish === 'etched') finish = maybeFinish;
         if (/^\d{4}-\d{2}-\d{2}$/.test(maybeDate)) date = maybeDate;
 
-        // Convert provider to source
-        let source: 'scryfall' | 'mtgjson' | 'cardmarket' = 'scryfall';
-        if (r.provider) {
-          if (r.provider === 'mtgjson.cardmarket') {
-            source = 'mtgjson';
-          } else if (r.provider === 'cardmarket.priceguide') {
-            source = 'cardmarket';
+        // Convert source to provider
+        let provider: 'scryfall' | 'mtgjson.cardmarket' | 'cardmarket.priceguide' = 'scryfall';
+        if (r.source) {
+          if (r.source === 'mtgjson') {
+            provider = 'mtgjson.cardmarket';
+          } else if (r.source === 'cardmarket') {
+            provider = 'cardmarket.priceguide';
           } else {
-            source = 'scryfall';
+            provider = 'scryfall';
           }
         }
         
         r.finish = finish;
-        r.source = source;
+        r.provider = provider;
         r.date = date ?? new Date().toISOString().slice(0,10);
         r.currency = r.currency ?? 'EUR';
         r.createdAt = r.createdAt ?? new Date();
         r.asOf = r.asOf ?? new Date();
-        r.id = `${r.cardId}:${source}:${finish}:${r.date}`;
+        r.id = `${r.cardId}:${provider}:${finish}:${r.date}`;
 
         await t.put(r);
       }

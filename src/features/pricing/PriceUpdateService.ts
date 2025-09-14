@@ -39,6 +39,7 @@ export class PriceUpdateService {
               // Process regular (nonfoil) price
               if (prices.eur !== undefined) {
                 const price = Money.parse(prices.eur.toString(), 'EUR');
+                const finish = 'nonfoil';
                 
                 // Create price point ID with new format
                 const pricePointId = `${cardId}:scryfall:${finish}:${dateStr}`;
@@ -47,7 +48,7 @@ export class PriceUpdateService {
                 const pricePoint = {
                   id: pricePointId,
                   cardId: cardId,
-                  source: 'scryfall' as const,
+                  provider: 'scryfall' as const,
                   finish: finish as 'nonfoil' | 'foil',
                   date: dateStr,
                   currency: 'EUR' as const,
@@ -71,7 +72,7 @@ export class PriceUpdateService {
                 const pricePoint = {
                   id: pricePointId,
                   cardId: cardId,
-                  source: 'scryfall' as const,
+                  provider: 'scryfall' as const,
                   finish: 'foil' as const,
                   date: dateStr,
                   currency: 'EUR' as const,
