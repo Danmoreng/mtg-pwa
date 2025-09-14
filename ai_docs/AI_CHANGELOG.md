@@ -2,6 +2,20 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-14 16:00 — fix(import): Fix Cardmarket CSV import error with non-string values
+- **Author**: AI (Qwen)
+- **Scope**: src/workers/cardmarketCsv.ts, src/features/imports/views/wizard/CardmarketImportWizard.vue
+- **Type**: fix
+- **Summary**: Fixed TypeError in Cardmarket CSV import when parsing non-string values in both worker and wizard components.
+- **Details**:
+  - Updated parseCurrency function in worker to handle non-string values (numbers, null, undefined)
+  - Added proper type checking and conversion to prevent "priceStr.replace is not a function" errors
+  - Fixed template expressions in CardmarketImportWizard.vue to safely convert values to strings before calling replace()
+  - Ensured robust handling of various data types that may be present in CSV files
+- **Impact/Risks**: Fixes critical import error; no breaking changes.
+- **Verification Steps**: `npm run build`; test Cardmarket CSV import with various data types.
+- **Linked Task/Issue**: Cardmarket CSV import error
+
 ## 2025-09-14 15:00 — refactor: Stabilize M2 Import Features
 - **Author**: AI (Gemini)
 - **Scope**: `src/data/db.ts`, `src/data/repos.ts`, `src/features/pricing/PriceGuideUploadWorker.ts`, `src/features/pricing/MTGJSONUploadWorker.ts`

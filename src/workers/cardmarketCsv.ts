@@ -1,27 +1,19 @@
 // Cardmarket CSV parser worker
 // This worker will run in a separate thread to parse large CSV files without blocking the UI
 
-// Helper function to parse currency strings (e.g., "1,23 €") into numbers
-function parseCurrency(value: string): number {
-  if (!value) return 0;
-  // Replace comma with period for decimal conversion, remove currency symbols and thousands separators
-  const cleanedValue = value
-    .replace(',', '.')
-    .replace(/[^0-9.-]+/g, '');
-  return parseFloat(cleanedValue);
-}
-
-// Type definitions for Cardmarket data
-interface CardmarketTransaction {
-  reference: string;
-  date: string;
-  category: string;
-  type: string;
-  counterpart: string;
-  amount: number;
-  currency: string;
-  balanceAfter: number;
-  lineNumber: number;
+// Helper: "1,23 €" -> 1.23 (returns 0 for blanks/garbage)
+function parseCurrency(value: any): number {
+  // Handle non-string values
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') value = String(value);
+  
+  // Handle empty strings
+  if (!value.trim()) return 0;
+  
+  const cleaned = value.replace(',', '.').replace(/[^0-9.-]+/g, '');
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
 }
 
 // Type definitions for Cardmarket data

@@ -7,7 +7,11 @@ import type { PricePoint } from '../../data/db';
 const PRICE_GUIDE_UPLOAD_WORKER = {
   async upload(file: File): Promise<number> {
     const text = await file.text();
-    const result = Papa.parse(text, { header: true });
+    const result = Papa.parse(text, { header: true, skipEmptyLines: true });
+    
+    const pick = (row: any, ...keys: string[]) =>
+      keys.map(k => row[k]).find(v => v !== undefined && v !== null && String(v).trim() !== '') ?? '';
+
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
 
@@ -15,7 +19,10 @@ const PRICE_GUIDE_UPLOAD_WORKER = {
     const cardmarketIds = [
       ...new Set(
         (result.data as any[])
-          .map((row) => parseInt(row['idProduct'], 10))
+          .map((row) => parseInt(
+            pick(row, 'idProduct', 'Product ID', 'product_id', 'id_product'),
+            10
+          ))
           .filter((id) => !isNaN(id))
       ),
     ];
@@ -34,15 +41,18 @@ const PRICE_GUIDE_UPLOAD_WORKER = {
     const pricePoints: PricePoint[] = [];
 
     for (const row of result.data as any[]) {
-      const cardmarketId = parseInt(row['idProduct'], 10);
+      const cardmarketId = parseInt(
+        pick(row, 'idProduct', 'Product ID', 'product_id', 'id_product'),
+        10
+      );
       if (isNaN(cardmarketId)) continue;
 
       const cardId = cardmarketIdToCardId[cardmarketId];
 
       if (cardId) {
-        const price = parseFloat(row['Avg. Sell Price']);
-        const avg7d = parseFloat(row['7-Day Avg.']);
-        const avg30d = parseFloat(row['30-Day Avg.']);
+        const price  = parseFloat(pick(row, 'Avg. Sell Price', 'Average Sell Price', 'Avg Sell Price'));
+        const avg7d  = parseFloat(pick(row, '7-Day Avg.', '7 Days Average', '7 Day Average', '7 day avg'));
+        const avg30d = parseFloat(pick(row, '30-Day Avg.', '30 Days Average', '30 Day Average', '30 day avg'));
 
         if (!isNaN(price)) {
           const pricePoint: PricePoint = {

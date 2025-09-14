@@ -17,26 +17,13 @@ export class PriceGuideSyncService {
       // Return a promise that resolves when the worker completes
       return new Promise((resolve) => {
         // Handle messages from worker
-        worker.onmessage = function(e) {
-          const { type, ...result } = e.data;
-          
-          switch (type) {
-            case 'progress':
-              // Report progress
-              if (progressCallback) {
-                progressCallback(result.processed, result.total);
-              }
-              break;
-              
-            case 'priceGuideSyncComplete':
-              // Clean up worker
-              WorkerManager.terminateWorker(worker);
-              // Resolve promise with result
-              resolve(result);
-              break;
-              
-            default:
-              console.warn(`Unknown message type from Price Guide sync worker: ${type}`);
+        worker.onmessage = (e) => {
+          const msg = e.data;
+          if (msg.type === 'progress') {
+            progressCallback?.(msg.processed, msg.total);
+          } else if (msg.type === 'priceGuideSyncComplete') {
+            WorkerManager.terminateWorker(worker);
+            resolve(msg);
           }
         };
         

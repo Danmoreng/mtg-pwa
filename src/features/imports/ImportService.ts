@@ -363,6 +363,7 @@ export class ImportService {
         layout: imageUrls?.layout || 'normal',
         imageUrl: imageUrls?.front || '',
         imageUrlBack: imageUrls?.back || '',
+        cardmarketId: typeof scryfallData?.cardmarket_id === 'number' ? scryfallData.cardmarket_id : undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
