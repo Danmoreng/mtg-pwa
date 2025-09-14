@@ -2,14 +2,14 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {MTGJSONUploadService} from '../../features/pricing/MTGJSONUploadService';
 import {cardRepository, pricePointRepository} from '../../data/repos';
-import {fflate} from 'fflate';
+import {decompressSync} from 'fflate';
 
 // Mock the worker
 vi.mock('threads', () => ({
   spawn: vi.fn().mockResolvedValue({
     upload: vi.fn().mockImplementation(async (file, wantedIds) => {
       const buffer = await file.arrayBuffer();
-      const decompressed = fflate.decompressSync(new Uint8Array(buffer));
+      const decompressed = decompressSync(new Uint8Array(buffer));
       const json = JSON.parse(new TextDecoder().decode(decompressed));
 
       let written = 0;
@@ -50,8 +50,8 @@ describe('MTGJSONUploadWorker', () => {
       },
     };
 
-    const compressed = fflate.compressSync(new TextEncoder().encode(JSON.stringify(json)));
-    const file = new File([compressed], 'all-prices.json.gz', { type: 'application/gzip' });
+    const jsonData = new TextEncoder().encode(JSON.stringify(json));
+    const file = new File([jsonData], 'all-prices.json', { type: 'application/json' });
 
     vi.spyOn(cardRepository, 'getAll').mockResolvedValue([{ id: 'card-1' }] as any);
     const bulkPutSpy = vi.spyOn(pricePointRepository, 'bulkPut').mockResolvedValue([] as any);

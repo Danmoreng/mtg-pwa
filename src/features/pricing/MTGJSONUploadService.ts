@@ -1,14 +1,16 @@
-import {spawn, Worker} from 'threads';
+import {spawn, Thread} from 'threads';
 import {cardRepository} from '../../data/repos';
 import MTGJSONUploadWorker from './MTGJSONUploadWorker?worker';
 
 export class MTGJSONUploadService {
   static async upload(file: File, progressCallback: (written: number) => void): Promise<void> {
     console.log(`[MTGJSONUploadService] Starting upload for file: ${file.name}`);
+    let uploadWorker: any = null;
+    
     try {
       console.log('[MTGJSONUploadService] Spawning worker...');
       // Add a 5-minute timeout for worker initialization
-      const uploadWorker = await spawn(new MTGJSONUploadWorker(), { timeout: 300000 });
+      uploadWorker = await spawn(new MTGJSONUploadWorker(), { timeout: 300000 });
       console.log('[MTGJSONUploadService] Worker spawned.');
 
       console.log('[MTGJSONUploadService] Fetching wanted card IDs...');
@@ -23,14 +25,19 @@ export class MTGJSONUploadService {
       } catch (error) {
         console.error('[MTGJSONUploadService] Worker returned an error:', error);
         throw error;
-      } finally {
-        console.log('[MTGJSONUploadService] Terminating worker.');
-        await Worker.terminate(uploadWorker);
       }
-
     } catch (error) {
       console.error('[MTGJSONUploadService] An error occurred in the upload service:', error);
       throw error;
+    } finally {
+      if (uploadWorker) {
+        console.log('[MTGJSONUploadService] Terminating worker.');
+        try {
+          await Thread.terminate(uploadWorker);
+        } catch (terminateError) {
+          console.error('[MTGJSONUploadService] Error terminating worker:', terminateError);
+        }
+      }
     }
   }
 }

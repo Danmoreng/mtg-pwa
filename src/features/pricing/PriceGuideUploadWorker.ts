@@ -1,8 +1,10 @@
 
-import {expose} from 'threads/worker';
-import {pricePointRepository, type PricePoint} from '../../data/repos';
-import {cardRepository} from '../../data/repos';
+import { expose } from 'threads/worker';
+import { pricePointRepository } from '../../data/repos';
 import Papa from 'papaparse';
+import type { PricePoint } from '../../data/db';
+// Note: We can't import ScryfallProvider directly in a worker
+// We'll need to fetch card data directly in the worker
 
 const PRICE_GUIDE_UPLOAD_WORKER = {
   async upload(file: File): Promise<number> {
@@ -11,12 +13,51 @@ const PRICE_GUIDE_UPLOAD_WORKER = {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
 
-    const allCards = await cardRepository.getAll();
-    const cardmarketIdToCardId: Record<string, string> = {};
-    for (const card of allCards) {
-      if (card.cardmarketId) {
-        cardmarketIdToCardId[card.cardmarketId] = card.id;
+    // Collect all unique Cardmarket IDs from the CSV
+    const cardmarketIds: string[] = [];
+    for (const row of result.data as any[]) {
+      const cardmarketId = row['idProduct'];
+      if (cardmarketId && !cardmarketIds.includes(cardmarketId)) {
+        cardmarketIds.push(cardmarketId);
       }
+    }
+
+    // Resolve Cardmarket IDs to Scryfall IDs
+    const cardmarketIdToCardId: Record<string, string> = {};
+    
+    // Process in batches to avoid rate limiting
+    const batchSize = 75;
+    for (let i = 0; i < cardmarketIds.length; i += batchSize) {
+      const batch = cardmarketIds.slice(i, i + batchSize);
+      
+      try {
+        // Use Scryfall's collection endpoint to resolve Cardmarket IDs
+        const response = await fetch('https://api.scryfall.com/cards/collection', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            identifiers: batch.map(id => ({ cardmarket_id: id }))
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && Array.isArray(data.data)) {
+            for (const card of data.data) {
+              if (card.id && card.cardmarket_id) {
+                cardmarketIdToCardId[card.cardmarket_id] = card.id;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error resolving Cardmarket IDs to Scryfall IDs:', error);
+      }
+      
+      // Add a small delay between batches to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     const pricePoints: PricePoint[] = [];

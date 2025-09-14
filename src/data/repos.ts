@@ -277,6 +277,10 @@ export const pricePointRepository = {
     return await db.price_points.update(id, pricePoint);
   },
 
+  async bulkPut(pricePoints: PricePoint[]): Promise<void> {
+    await db.price_points.bulkPut(pricePoints);
+  },
+
   async delete(id: string): Promise<void> {
     await db.price_points.delete(id);
   }

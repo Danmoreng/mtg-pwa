@@ -80,7 +80,7 @@ export class PriceGuideSyncWorker {
         currentDate,
         'nonfoil',
         Math.random() * 50 + 5, // Random price between 5-55 EUR
-        'cardmarket'
+        'cardmarket.priceguide'
       );
       
       // Add average data if available
@@ -99,7 +99,7 @@ export class PriceGuideSyncWorker {
           currentDate,
           'foil',
           pricePoint.priceCent * 1.5, // Foil is typically 50% more expensive
-          'cardmarket'
+          'cardmarket.priceguide'
         );
         
         // Add average data for foil
@@ -123,7 +123,7 @@ export class PriceGuideSyncWorker {
     date: string,
     finish: 'nonfoil' | 'foil' | 'etched',
     price: number,
-    source: 'cardmarket'
+    source: 'cardmarket.priceguide'
   ): any {
     const pricePointId = `${cardId}:${source}:${finish}:${date}`;
     

@@ -31,12 +31,12 @@
               Cardmarket Import
             </router-link>
           </li>
-          <li class="nav-item" v-if="showMtgjsonImport">
+          <li class="nav-item">
             <router-link to="/import/mtgjson" class="nav-link" :class="{ active: route.name === 'mtgjson-import' }">
               MTGJSON Import
             </router-link>
           </li>
-          <li class="nav-item" v-if="showPriceGuideImport">
+          <li class="nav-item">
             <router-link to="/import/price-guide" class="nav-link" :class="{ active: route.name === 'price-guide-import' }">
               Price Guide Import
             </router-link>
@@ -67,9 +67,6 @@ const isDecksRoute = computed(() => {
 
 // Navbar toggle state
 const isOpen = ref(false);
-
-const showMtgjsonImport = computed(() => import.meta.env.VITE_ENABLE_MTGJSON_UPLOAD);
-const showPriceGuideImport = computed(() => import.meta.env.VITE_ENABLE_PRICEGUIDE_SYNC);
 </script>
 
 <style scoped>
