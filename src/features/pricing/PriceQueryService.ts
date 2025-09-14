@@ -5,14 +5,14 @@ import { Money } from '../../core/Money';
 
 export class PriceQueryService {
   // Source precedence order (highest to lowest)
-  private static readonly SOURCE_PRECEDENCE = [
-    'cardmarket',  // Highest precedence
-    'mtgjson',     // Within ~90 days
+  private static readonly PROVIDER_PRECEDENCE = [
+    'cardmarket.priceguide',  // Highest precedence
+    'mtgjson.cardmarket',     // Within ~90 days
     'scryfall'               // Today only (lowest precedence)
   ];
   
   // Get the latest price for a card respecting source precedence
-  static async getLatestPriceForCard(cardId: string): Promise<{ price: Money; asOf: Date; source: string } | null> {
+  static async getLatestPriceForCard(cardId: string): Promise<{ price: Money; asOf: Date; provider: string } | null> {
     try {
       // Get all price points for this card
       const pricePoints = await pricePointRepository.getByCardId(cardId);
@@ -34,7 +34,7 @@ export class PriceQueryService {
       return {
         price: new Money(latestPricePoint.priceCent, latestPricePoint.currency),
         asOf: latestPricePoint.asOf,
-        source: latestPricePoint.source
+        provider: latestPricePoint.provider
       };
     } catch (error) {
       console.error(`Error getting latest price for card ${cardId}:`, error);
@@ -58,7 +58,7 @@ export class PriceQueryService {
       
       // Apply filters
       if (options?.source) {
-        pricePoints = pricePoints.filter(pp => pp.source === options.source);
+        pricePoints = pricePoints.filter(pp => pp.provider === options.source);
       }
       
       if (options?.finish) {
@@ -115,7 +115,7 @@ export class PriceQueryService {
       
       return {
         price: new Money(pricePoint.priceCent, pricePoint.currency),
-        source: pricePoint.source,
+        provider: pricePoint.provider,
         finish: pricePoint.finish
       };
     } catch (error) {
@@ -133,17 +133,16 @@ export class PriceQueryService {
     try {
       const dateString = date.toISOString().split('T')[0];
       
-      // Get all price points for this card on the specified date and finish
-      let pricePoints = await db.price_points
-        .where('[cardId+finish+date]')
-        .equals([cardId, finish, dateString])
-        .toArray();
+      // Get all price points for this card on the specified date
+      let pricePoints = await pricePointRepository.getByCardIdAndDate(cardId, dateString);
       
       if (pricePoints.length === 0) {
-        // If no exact finish match, try any finish
-        pricePoints = await pricePointRepository.getByCardIdAndDate(cardId, dateString);
+        return null;
       }
       
+      // Filter by finish
+      pricePoints = pricePoints.filter(pp => pp.finish === finish);
+
       if (pricePoints.length === 0) {
         return null;
       }
@@ -171,11 +170,11 @@ export class PriceQueryService {
   // Sort price points by source precedence
   private static sortPricePointsByPrecedence(pricePoints: any[]): any[] {
     return pricePoints.sort((a, b) => {
-      // First, sort by source precedence
-      const sourceIndexA = this.SOURCE_PRECEDENCE.indexOf(a.source);
-      const sourceIndexB = this.SOURCE_PRECEDENCE.indexOf(b.source);
+      // First, sort by provider precedence
+      const sourceIndexA = this.PROVIDER_PRECEDENCE.indexOf(a.provider);
+      const sourceIndexB = this.PROVIDER_PRECEDENCE.indexOf(b.provider);
       
-      // If one source is not in our precedence list, put it last
+      // If one provider is not in our precedence list, put it last
       const precedenceA = sourceIndexA === -1 ? Infinity : sourceIndexA;
       const precedenceB = sourceIndexB === -1 ? Infinity : sourceIndexB;
       
@@ -183,14 +182,14 @@ export class PriceQueryService {
         return precedenceA - precedenceB;
       }
       
-      // If sources have the same precedence, sort by date (most recent first)
+      // If providers have the same precedence, sort by date (most recent first)
       return new Date(b.asOf).getTime() - new Date(a.asOf).getTime();
     });
   }
   
   // Get the source precedence rank
   static getSourcePrecedence(source: string): number {
-    const index = this.SOURCE_PRECEDENCE.indexOf(source);
+    const index = this.PROVIDER_PRECEDENCE.indexOf(source);
     return index === -1 ? Infinity : index;
   }
 }

@@ -122,12 +122,12 @@ const chartData = computed(() => {
   
   // Add average lines if available (for Price Guide)
   const avg7dData = sortedPricePoints.value.map(p => 
-    p.avg7dCent ? new Money(p.avg7dCent, p.currency).getDecimal() : 0
-  ).filter((_, index) => sortedPricePoints.value[index].avg7dCent !== undefined);
+    p.avg7dCent ? new Money(p.avg7dCent, p.currency).getDecimal() : null
+  );
   
   const avg30dData = sortedPricePoints.value.map(p => 
-    p.avg30dCent ? new Money(p.avg30dCent, p.currency).getDecimal() : 0
-  ).filter((_, index) => sortedPricePoints.value[index].avg30dCent !== undefined);
+    p.avg30dCent ? new Money(p.avg30dCent, p.currency).getDecimal() : null
+  );
 
   const datasets = [
     {

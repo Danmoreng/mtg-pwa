@@ -75,7 +75,7 @@ export class PriceGuideSyncWorker {
       const currentDate = new Date().toISOString().split('T')[0];
       
       // Create price point for current price
-      const pricePoint = createPricePoint(
+      const pricePoint = this.createPricePoint(
         card.id,
         currentDate,
         'nonfoil',
@@ -94,7 +94,7 @@ export class PriceGuideSyncWorker {
       
       // Occasionally create foil price point
       if (Math.random() > 0.7) { // 30% chance of having foil data
-        const foilPricePoint = createPricePoint(
+        const foilPricePoint = this.createPricePoint(
           card.id,
           currentDate,
           'foil',
@@ -130,7 +130,7 @@ export class PriceGuideSyncWorker {
     return {
       id: pricePointId,
       cardId: cardId,
-      source: source,
+      provider: source,
       finish: finish,
       date: date,
       currency: 'EUR' as const,

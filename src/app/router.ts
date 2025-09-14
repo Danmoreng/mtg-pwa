@@ -2,6 +2,8 @@ import {createRouter, createWebHistory} from 'vue-router'
 import HomeView from '../features/dashboard/HomeView.vue'
 import CsvImportView from '../features/imports/views/CsvImportView.vue'
 import CardmarketImportWizard from '../features/imports/views/wizard/CardmarketImportWizard.vue'
+import MtgjsonImportWizard from '../features/imports/views/wizard/MtgjsonImportWizard.vue'
+import PriceGuideUploadWizard from '../features/imports/views/wizard/PriceGuideUploadWizard.vue'
 import DeckImportView from '../features/decks/views/DeckImportView.vue'
 import DecksView from '../features/decks/views/DecksView.vue'
 import DeckDetailView from '../features/decks/views/DeckDetailView.vue'
@@ -43,6 +45,16 @@ const routes = [
         path: '/cards',
         name: 'cards',
         component: CardsView
+    },
+    {
+        path: '/import/mtgjson',
+        name: 'mtgjson-import',
+        component: MtgjsonImportWizard
+    },
+    {
+        path: '/import/price-guide',
+        name: 'price-guide-import',
+        component: PriceGuideUploadWizard
     }
 ]
 

@@ -1,49 +1,15 @@
-// PriceGuideScheduler handles scheduling of Price Guide sync operations
-import { PriceGuideSyncWorker } from './PriceGuideSyncWorker';
+import { SettingsService } from '../../core/SettingsService';
+import { PriceGuideSyncService } from './PriceGuideSyncService';
 
 export class PriceGuideScheduler {
-  private static readonly SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
-  private static timeoutId: number | null = null;
-  
-  // Schedule periodic Price Guide sync
-  static schedulePeriodicSync(): void {
-    // Clear any existing timeout
-    if (this.timeoutId !== null) {
-      clearTimeout(this.timeoutId);
-    }
-    
-    // Schedule the next sync
-    this.timeoutId = window.setTimeout(async () => {
-      try {
-        console.log('Starting scheduled Price Guide sync');
-        await PriceGuideSyncWorker.syncPriceGuide();
-        console.log('Completed scheduled Price Guide sync');
-      } catch (error) {
-        console.error('Error during scheduled Price Guide sync:', error);
-      } finally {
-        // Schedule the next sync
-        this.schedulePeriodicSync();
-      }
-    }, this.SYNC_INTERVAL);
-  }
-  
-  // Check if we need to sync based on the last sync time
-  static async needsSync(): Promise<boolean> {
-    try {
-      // In a real implementation, we would check the last sync time
-      // For now, we'll just return true to indicate a sync is needed
-      return true;
-    } catch (error) {
-      console.error('Error checking if Price Guide sync is needed:', error);
-      // If we can't determine, assume we need a sync
-      return true;
-    }
-  }
-  
-  // Perform a sync if needed
-  static async syncIfNecessary(): Promise<void> {
-    if (await this.needsSync()) {
-      await PriceGuideSyncWorker.syncPriceGuide();
+  static async run(): Promise<void> {
+    const lastSync = await SettingsService.get('last_priceguide_sync_timestamp');
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (!lastSync || now - lastSync > twentyFourHours) {
+      await PriceGuideSyncService.syncPriceGuide();
+      await SettingsService.set('last_priceguide_sync_timestamp', now);
     }
   }
 }
