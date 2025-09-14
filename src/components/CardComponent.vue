@@ -190,6 +190,19 @@ import {useCardsStore} from '../stores';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 import PriceHistoryChart from './PriceHistoryChart.vue';
 import { PriceQueryService } from '../features/pricing/PriceQueryService';
+const ID_MAP_SETTING_KEY = 'mtgjson.idMap.v1';
+import { settingRepository } from '../data/repos';
+
+async function resolveMtgjsonUuidForCard(card: any): Promise<string | null> {
+  try {
+    const idMap = await settingRepository.get(ID_MAP_SETTING_KEY);
+    if (!idMap) return null;
+    const uuid = idMap[card.id] || (card.oracleId ? idMap[card.oracleId] : null);
+    return uuid ? String(uuid).toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
 
 // Enable attribute inheritance
 defineOptions({
@@ -273,20 +286,40 @@ const formatMoney = (cents: number, currency: string) => {
 const loadCardDetails = async () => {
   loadingPrice.value = true;
   try {
-    // Fetch price points from database
-    const allPricePoints = await db.price_points.where('cardId').equals(props.card.id).toArray();
-    pricePoints.value = allPricePoints;
+    const uuid = await resolveMtgjsonUuidForCard(props.card);
+    const idsToQuery = uuid ? [props.card.id, uuid] : [props.card.id];
 
-    // Find the most recent price point using the new PriceQueryService
-    const latestPrice = await PriceQueryService.getLatestPriceForCard(props.card.id);
-    if (latestPrice) {
-      currentPrice.value = latestPrice.price;
+    // 1) Pull all price points for scryfall id (+ uuid if available)
+    const rows = await db.price_points.where('cardId').anyOf(idsToQuery).toArray();
+
+    // 2) Normalize missing .date using .asOf and keep only rows with a date
+    const toISO = (d: any) => {
+      try { return new Date(d).toISOString().slice(0, 10); } catch { return undefined; }
+    };
+    const canonical = rows
+        .map((pp: any) => ({
+          ...pp,
+          date: pp.date ?? (pp.asOf ? toISO(pp.asOf) : undefined)
+        }))
+        .filter((pp: any) => typeof pp.date === 'string');
+
+    // 3) Sort by date asc for charting
+    canonical.sort((a: any, b: any) => (a.date as string).localeCompare(b.date as string));
+
+    pricePoints.value = canonical;
+
+    // 4) Latest price: try service on scryfall id, then uuid; fallback to last canonical
+    let latest = await PriceQueryService.getLatestPriceForCard(props.card.id);
+    if (!latest && uuid) latest = await PriceQueryService.getLatestPriceForCard(uuid);
+    if (latest) {
+      currentPrice.value = latest.price;
+    } else if (canonical.length) {
+      const last = canonical[canonical.length - 1];
+      currentPrice.value = new Money(last.priceCent ?? 0, last.currency ?? 'EUR');
     }
 
-    // Load lots for this card
+    // 5) Lots & transactions (keyed by scryfall id as before)
     lots.value = await db.card_lots.where('cardId').equals(props.card.id).toArray();
-
-    // Load transactions for this card
     transactions.value = await db.transactions.where('cardId').equals(props.card.id).toArray();
   } catch (error) {
     console.error('Error loading card details:', error);
