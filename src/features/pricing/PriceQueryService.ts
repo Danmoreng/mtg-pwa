@@ -1,5 +1,4 @@
 // PriceQueryService handles querying price points with provider precedence
-import db from '../../data/db';
 import { pricePointRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
 

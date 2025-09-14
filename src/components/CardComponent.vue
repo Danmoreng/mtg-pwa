@@ -110,7 +110,7 @@
                   </div>
 
                   <!-- Historic Price Chart -->
-                  <div v-if="pricePoints.length > 0" class="mb-3">
+                  <div v-if="pricePoints && pricePoints.length > 0" class="mb-3">
                     <h3 class="h6 mb-2">Price History</h3>
                     <PriceHistoryChart :price-points="pricePoints" :transactions="transactions"/>
                   </div>
@@ -205,41 +205,17 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue';
+import {computed, ref} from 'vue';
 import db from '../data/db';
 import {Money} from '../core/Money';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 import PriceHistoryChart from './PriceHistoryChart.vue';
+import { useCardsStore } from '../stores';
 
-const ID_MAP_SETTING_KEY = 'mtgjson.idMap.v1';
-import {settingRepository} from '../data/repos';
+const cardsStore = useCardsStore();
 
-async function resolveMtgjsonUuidForCard(card: any): Promise<string | null> {
-  try {
-    const idMap = await settingRepository.get(ID_MAP_SETTING_KEY);
-    if (!idMap) return null;
-    const uuid = idMap[card.id] || (card.oracleId ? idMap[card.oracleId] : null);
-    return uuid ? String(uuid).toLowerCase() : null;
-  } catch {
-    return null;
-  }
-}
-
-onMounted(() => {
-  setTimeout(async () => {
-    await loadCardDetails();
-  }, 0);
-})
-
-const currentPriceNonfoil = ref<Money | null>(null);
-const currentPriceFoil = ref<Money | null>(null);
-
-// same preference as the chart: MTGJSON > PriceGuide > Scryfall
-const providerRank: Record<string, number> = {
-  'mtgjson.cardmarket': 3,
-  'cardmarket.priceguide': 2,
-  'scryfall': 1,
-};
+const currentPriceNonfoil = computed(() => cardsStore.getLatestNonfoil(props.card.id));
+const currentPriceFoil    = computed(() => cardsStore.getLatestFoil(props.card.id));
 
 // Enable attribute inheritance
 defineOptions({
@@ -254,7 +230,6 @@ const props = defineProps<{
 
 // Reactive state
 const showModal = ref(false);
-const currentPrice = ref<Money | null>(null);
 const loadingPrice = ref(false);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
@@ -285,8 +260,10 @@ const totalOwnedQuantity = computed(() => {
 });
 
 // Methods
-const openModal = () => {
+const openModal = async () => {
   showModal.value = true;
+  await loadCardDetails();
+  pricePoints.value = await cardsStore.getPriceHistory(props.card.id);
 };
 
 const closeModal = () => {
@@ -303,62 +280,7 @@ const formatMoney = (cents: number, currency: string) => {
 };
 
 const loadCardDetails = async () => {
-  loadingPrice.value = true;
-  try {
-    // ---- resolve ID(s) and read points ----
-    const uuid = await resolveMtgjsonUuidForCard(props.card);
-    const idsToQuery = uuid ? [props.card.id, uuid] : [props.card.id];
-
-    // 1) Pull all price points for scryfall id (+ uuid if available)
-    const rows = await db.price_points.where('cardId').anyOf(idsToQuery).toArray();
-
-    // 2) Normalize missing .date using .asOf and keep only rows with a date
-    const toISO = (d: any) => {
-      try {
-        return new Date(d).toISOString().slice(0, 10);
-      } catch {
-        return undefined;
-      }
-    };
-
-    // normalize date, keep only points that have a date
-    const canonical = rows
-        .map(pp => ({...pp, date: pp.date ?? (pp.asOf ? toISO(pp.asOf) : undefined)}));
-
-    // sort for chart (optional)
-    canonical.sort((a, b) => (a.date as string).localeCompare(b.date as string));
-    pricePoints.value = canonical;
-
-    // ---- pick latest per finish, merging providers by preference & latest asOf ----
-    function pickLatestForFinish(finish: 'nonfoil' | 'foil'): Money | null {
-      // choose best value per date
-      const byDate: Record<string, { priceCent: number; currency: string; rank: number; asOfTs: number }> = {};
-      for (const p of canonical) {
-        if ((p.finish ?? 'nonfoil') !== finish) continue;
-        const date = p.date as string;
-        const rank = providerRank[p.provider ?? ''] ?? 0;
-        const asOfTs = p.asOf ? new Date(p.asOf as any).getTime() : 0;
-
-        const prev = byDate[date];
-        if (!prev || rank > prev.rank || (rank === prev.rank && asOfTs > prev.asOfTs)) {
-          byDate[date] = {priceCent: p.priceCent, currency: p.currency ?? 'EUR', rank, asOfTs};
-        }
-      }
-      const dates = Object.keys(byDate);
-      if (!dates.length) return null;
-      const latestDate = dates.sort((a, b) => a.localeCompare(b)).at(-1)!;
-      const best = byDate[latestDate];
-      return new Money(best.priceCent, best.currency);
-    }
-
-    currentPriceNonfoil.value = pickLatestForFinish('nonfoil');
-    currentPriceFoil.value = pickLatestForFinish('foil');
-
-    // keep single currentPrice for the small card tile:
-    currentPrice.value =
-        (props.card.finish === 'foil' ? currentPriceFoil.value : currentPriceNonfoil.value) ||
-        currentPriceFoil.value || currentPriceNonfoil.value || null;
-
+  try{
     // ---- lots & transactions (as before) ----
     lots.value = await db.card_lots.where('cardId').equals(props.card.id).toArray();
     transactions.value = await db.transactions.where('cardId').equals(props.card.id).toArray();
