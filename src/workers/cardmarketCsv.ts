@@ -1,6 +1,16 @@
 // Cardmarket CSV parser worker
 // This worker will run in a separate thread to parse large CSV files without blocking the UI
 
+// Helper function to parse currency strings (e.g., "1,23 €") into numbers
+function parseCurrency(value: string): number {
+  if (!value) return 0;
+  // Replace comma with period for decimal conversion, remove currency symbols and thousands separators
+  const cleanedValue = value
+    .replace(',', '.')
+    .replace(/[^0-9.-]+/g, '');
+  return parseFloat(cleanedValue);
+}
+
 // Type definitions for Cardmarket data
 interface CardmarketTransaction {
   reference: string;
@@ -8,19 +18,32 @@ interface CardmarketTransaction {
   category: string;
   type: string;
   counterpart: string;
-  amount: string;
+  amount: number;
   currency: string;
-  balanceAfter: string;
+  balanceAfter: number;
+  lineNumber: number;
+}
+
+// Type definitions for Cardmarket data
+interface CardmarketTransaction {
+  reference: string;
+  date: string;
+  category: string;
+  type: string;
+  counterpart: string;
+  amount: number;
+  currency: string;
+  balanceAfter: number;
   lineNumber: number;
 }
 
 interface CardmarketOrder {
   orderId: string;
   direction: 'sale' | 'purchase';
-  merchandiseValue: string;  // Warenwert
-  shipmentCosts: string;       // Versandkosten
-  commission: string;         // Provision/Gebühren
-  totalValue: string;         // Gesamtwert
+  merchandiseValue: number;  // Warenwert
+  shipmentCosts: number;       // Versandkosten
+  commission: number;         // Provision/Gebühren
+  totalValue: number;         // Gesamtwert
   // ... other existing fields
   dateOfPurchase: string;
   username: string;
@@ -39,8 +62,8 @@ interface CardmarketArticle {
   expansion: string;
   category: string;
   amount: string;
-  price: string;
-  total: string;
+  price: number;
+  total: number;
   currency: string;
   comments: string;
   direction: 'sale' | 'purchase';
@@ -94,8 +117,8 @@ function parseTransactionsCSV(csvText: string): CardmarketTransaction[] {
     transaction.category = getValue('Category', 'Kategorie');
     transaction.type = getValue('Type', 'Typ');
     transaction.counterpart = getValue('Counterpart', 'Gegenpartei');
-    transaction.amount = getValue('Amount', 'Betrag');
-    transaction.balanceAfter = getValue('Closing balance (EUR)', 'Balance After', 'Saldo danach (EUR)');
+    transaction.amount = parseCurrency(getValue('Amount', 'Betrag'));
+    transaction.balanceAfter = parseCurrency(getValue('Closing balance (EUR)', 'Balance After', 'Saldo danach (EUR)'));
     
     // Only add transactions with a reference
     if (transaction.reference) {
@@ -154,10 +177,10 @@ function parseOrdersCSV(csvText: string, direction: 'sale' | 'purchase'): Cardma
     order.country = getValue('Country', 'Land');
     order.city = getValue('City', 'Stadt');
     order.articleCount = getValue('Article Count', 'Items', 'Anzahl Artikel');
-    order.merchandiseValue = getValue('Merchandise Value', 'Warenwert');
-    order.shipmentCosts = getValue('Shipment Costs', 'Versandkosten');
-    order.commission = getValue('Commission', 'Trustee service fee', 'Provision');
-    order.totalValue = getValue('Total Value', 'Gesamtwert');
+    order.merchandiseValue = parseCurrency(getValue('Merchandise Value', 'Warenwert'));
+    order.shipmentCosts = parseCurrency(getValue('Shipment Costs', 'Versandkosten'));
+    order.commission = parseCurrency(getValue('Commission', 'Trustee service fee', 'Provision'));
+    order.totalValue = parseCurrency(getValue('Total Value', 'Gesamtwert'));
     
     // Only add orders with an ID
     if (order.orderId) {
@@ -218,8 +241,8 @@ function parseArticlesCSV(csvText: string, direction: 'sale' | 'purchase'): Card
     article.expansion = getValue('Expansion', 'Erweiterung');
     article.category = getValue('Category', 'Kategorie');
     article.amount = getValue('Amount', 'Anzahl');
-    article.price = getValue('Article Value', 'Price', 'Preis');
-    article.total = getValue('Total');
+    article.price = parseCurrency(getValue('Article Value', 'Price', 'Preis'));
+    article.total = parseCurrency(getValue('Total'));
     article.currency = getValue('Currency');
     article.comments = getValue('Comments');
     
