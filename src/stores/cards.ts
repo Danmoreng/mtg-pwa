@@ -3,6 +3,7 @@ import { cardRepository } from '../data/repos';
 import db from '../data/db';
 import { Money } from '../core/Money';
 import type { Card } from '../data/db';
+import { PriceQueryService } from '../features/pricing/PriceQueryService';
 
 // Define the state structure for cards
 interface CardsState {
@@ -74,29 +75,17 @@ export const useCardsStore = defineStore('cards', {
       this.error = null;
       
       try {
-        // Get all price points
-        const allPricePoints = await db.price_points.toArray();
-        
-        // Group by cardId and find most recent for each
+        // Get all cards to know which card IDs we need prices for
+        const allCards = await cardRepository.getAll();
         const pricesMap: Record<string, Money> = {};
-        const grouped: Record<string, any[]> = {};
         
-        allPricePoints.forEach(point => {
-          if (!grouped[point.cardId]) {
-            grouped[point.cardId] = [];
+        // Get latest price for each card using PriceQueryService (respects provider precedence)
+        for (const card of allCards) {
+          const priceResult = await PriceQueryService.getLatestPriceForCard(card.id);
+          if (priceResult) {
+            pricesMap[card.id] = priceResult.price;
           }
-          grouped[point.cardId].push(point);
-        });
-        
-        Object.keys(grouped).forEach(cardId => {
-          const points = grouped[cardId];
-          if (points.length > 0) {
-            // Sort by date descending to get the most recent price
-            points.sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
-            const latest = points[0];
-            pricesMap[cardId] = new Money(latest.price, latest.currency);
-          }
-        });
+        }
         
         this.cardPrices = pricesMap;
       } catch (error) {

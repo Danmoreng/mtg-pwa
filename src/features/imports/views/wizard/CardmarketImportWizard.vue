@@ -170,7 +170,7 @@
                       <td v-if="fileType.includes('articles')">{{ row.name }}</td>
                       <td v-if="fileType.includes('articles')">{{ row.expansion }}</td>
                       <td v-if="fileType.includes('articles')">
-                        {{ formatCurrency(parseFloat(row.price.replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }}
+                        {{ formatCurrency(parseFloat(String(row.price).replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }}
                       </td>
                       <td v-if="fileType.includes('articles')">{{ row.amount }}</td>
                       <td v-if="fileType.includes('articles')">{{ row.shipmentId }}</td>
@@ -183,13 +183,13 @@
                       <td v-if="fileType.includes('orders')">{{ row.username }}</td>
                       <td v-if="fileType.includes('orders')">{{ row.articleCount }}</td>
                       <td v-if="fileType.includes('orders')">{{
-                          formatCurrency(parseFloat(row.merchandiseValue.replace(/[€$£\s]/g, '').replace(',', '.')) * 100)
+                          formatCurrency(parseFloat(String(row.merchandiseValue).replace(/[€$£\s]/g, '').replace(',', '.')) * 100)
                         }}
                       </td>
                       <td v-if="fileType === 'transactions'">{{ row.category }}</td>
                       <td v-if="fileType === 'transactions'">{{ row.type }}</td>
                       <td v-if="fileType === 'transactions'">{{
-                        formatCurrency(parseFloat(row.amount.replace(/[€$£\s]/g, '').replace(',', '.')) * 100)
+                        formatCurrency(parseFloat(String(row.amount).replace(/[€$£\s]/g, '').replace(',', '.')) * 100)
                       }}</td>
                     </tr>
                     <tr v-if="getValidRows(parsedData[fileType], fileType).length > 5">
@@ -244,7 +244,7 @@
                     <div class="flex-grow-1">
                       <div class="fw-medium">{{ row.name }}</div>
                       <div class="small text-muted">
-                        {{ row.expansion }} • {{ row.amount }} × {{ formatCurrency(parseFloat(row.price.replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }} • Order #{{ row.shipmentId }}
+                        {{ row.expansion }} • {{ row.amount }} × {{ formatCurrency(parseFloat(String(row.price).replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }} • Order #{{ row.shipmentId }}
                       </div>
                     </div>
                     <div class="ms-3">
@@ -267,7 +267,7 @@
                     <div class="flex-grow-1">
                       <div class="fw-medium">{{ row.name }}</div>
                       <div class="small text-muted">
-                        {{ row.expansion }} • {{ row.amount }} × {{ formatCurrency(parseFloat(row.price.replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }} • Order #{{ row.shipmentId }}
+                        {{ row.expansion }} • {{ row.amount }} × {{ formatCurrency(parseFloat(String(row.price).replace(/[€$£\s]/g, '').replace(',', '.')) * 100) }} • Order #{{ row.shipmentId }}
                       </div>
                     </div>
                     <div class="ms-3">
@@ -406,7 +406,7 @@ const formatFileSize = (bytes: number): string => {
 
 // Format currency
 const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-EU', {
+  return new Intl.NumberFormat('de-DE', {
     style: 'currency',
     currency: 'EUR'
   }).format(amount / 100); // Convert from cents
@@ -689,18 +689,19 @@ const isValidDate = (dateStr: string): boolean => {
 };
 
 // Check if a price is valid
-const isValidPrice = (priceStr: string): boolean => {
-  // Remove currency symbols and spaces
-  const cleanPrice = priceStr.replace(/[€$£\s]/g, '').replace(',', '.');
-  return !isNaN(parseFloat(cleanPrice));
+const isValidPrice = (price: unknown): boolean => {
+  if (price === null || price === undefined) return false;
+  if (typeof price === 'number') return Number.isFinite(price); // already numeric
+  const clean = String(price).trim().replace(/[€$£\s]/g, '').replace(',', '.');
+  const n = Number.parseFloat(clean);
+  return Number.isFinite(n);
 };
 
 // Check if a quantity is valid
-const isValidQuantity = (quantityStr: string): boolean => {
-  const quantity = parseInt(quantityStr, 10);
-  return !isNaN(quantity) && quantity > 0;
+const isValidQuantity = (q: unknown): boolean => {
+  const n = Number.parseInt(String(q ?? '').trim(), 10);
+  return Number.isFinite(n) && n > 0;
 };
-
 // Get file type name for display
 function getFileTypeName(fileType: string) {
   switch (fileType) {
@@ -759,13 +760,13 @@ const validateRow = (row: any, fileType: string): string[] => {
       errors.push('Expansion/Set is required');
     }
 
-    if (!row.price) {
+    if (row.price === undefined || row.price === null || String(row.price).trim() === '') {
       errors.push('Price is required');
     } else if (!isValidPrice(row.price)) {
       errors.push('Invalid price format (expected numeric value)');
     }
 
-    if (!row.amount) {
+    if (row.amount === undefined || row.amount === null || String(row.amount).trim() === '') {
       errors.push('Quantity is required');
     } else if (!isValidQuantity(row.amount)) {
       errors.push('Invalid quantity (expected positive integer)');
@@ -791,7 +792,7 @@ const validateRow = (row: any, fileType: string): string[] => {
       errors.push('Invalid article count (expected positive integer)');
     }
 
-    if (!row.merchandiseValue) {
+    if (row.merchandiseValue === undefined || row.merchandiseValue === null || String(row.merchandiseValue).trim() === '') {
       errors.push('Merchandise value is required');
     } else if (!isValidPrice(row.merchandiseValue)) {
       errors.push('Invalid merchandise value format (expected numeric value)');
@@ -801,7 +802,7 @@ const validateRow = (row: any, fileType: string): string[] => {
       errors.push('Reference is required');
     }
 
-    if (!row.amount) {
+    if (row.amount === undefined || row.amount === null || String(row.amount).trim() === '') {
       errors.push('Amount is required');
     } else if (!isValidPrice(row.amount)) {
       errors.push('Invalid amount format (expected numeric value)');
