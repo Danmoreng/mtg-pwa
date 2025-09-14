@@ -21,13 +21,12 @@ async function syncPrices(): Promise<void> {
         if (price) {
           // Create price point ID with date
           const dateStr = now.toISOString().split('T')[0];
-          const pricePointId = `${card.id}:scryfall:${dateStr}`;
           
           // Create price point
           const pricePoint = {
-            id: pricePointId,
+            id: `${card.id}:scryfall:nonfoil:${dateStr}`,
             cardId: card.id,
-            source: 'scryfall' as const,
+            provider: 'scryfall' as const,
             finish: 'nonfoil' as const,
             date: dateStr,
             currency: 'EUR' as const,

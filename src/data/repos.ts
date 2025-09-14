@@ -27,6 +27,10 @@ export const cardRepository = {
     return await db.cards.toArray();
   },
 
+  async getByCardmarketIds(ids: number[]): Promise<Card[]> {
+    return await db.cards.where('cardmarketId').anyOf(ids).toArray();
+  },
+
   async update(id: string, card: Partial<Card>): Promise<number> {
     return await db.cards.update(id, card);
   },

@@ -39,9 +39,9 @@ async function processMTGJSONBackfill(data: any, progressCallback?: (processed: 
                 
                 // Create price point
                 const pricePoint = {
-                  id: `${card.id}:mtgjson:nonfoil:${date}`,
+                  id: `${card.id}:mtgjson.cardmarket:nonfoil:${date}`,
                   cardId: card.id,
-                  source: 'mtgjson' as const,
+                  provider: 'mtgjson.cardmarket' as const,
                   finish: 'nonfoil' as const,
                   date: date,
                   currency: 'EUR' as const,
@@ -67,9 +67,9 @@ async function processMTGJSONBackfill(data: any, progressCallback?: (processed: 
                 
                 // Create price point
                 const pricePoint = {
-                  id: `${card.id}:mtgjson:foil:${date}`,
+                  id: `${card.id}:mtgjson.cardmarket:foil:${date}`,
                   cardId: card.id,
-                  source: 'mtgjson' as const,
+                  provider: 'mtgjson.cardmarket' as const,
                   finish: 'foil' as const,
                   date: date,
                   currency: 'EUR' as const,

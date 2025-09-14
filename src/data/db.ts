@@ -13,6 +13,7 @@ export interface Card {
   layout?: string;
   imageUrl?: string;
   imageUrlBack?: string;
+  cardmarketId?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -354,7 +355,7 @@ class MtgTrackerDb extends Dexie {
 
     // Version 8 - Enhanced price points schema for M2
     this.version(8).stores({
-      cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, createdAt, updatedAt',
+      cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
       card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
       transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
       scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',

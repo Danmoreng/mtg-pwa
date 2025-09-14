@@ -3,7 +3,6 @@ import { PriceUpdateService } from './PriceUpdateService';
 import { settingRepository } from '../../data/repos';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { ValuationEngine } from '../analytics/ValuationEngine';
-import { PriceGuideScheduler } from './PriceGuideScheduler';
 
 export class AutomaticPriceUpdateService {
   // Check if we need to update prices based on TTL (24 hours)

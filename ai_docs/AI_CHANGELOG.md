@@ -2,6 +2,29 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-14 15:00 — refactor: Stabilize M2 Import Features
+- **Author**: AI (Gemini)
+- **Scope**: `src/data/db.ts`, `src/data/repos.ts`, `src/features/pricing/PriceGuideUploadWorker.ts`, `src/features/pricing/MTGJSONUploadWorker.ts`
+- **Type**: refactor
+- **Summary**: Refactored the Cardmarket Price Guide and MTGJSON importers to be more robust and memory-efficient.
+- **Details**:
+    - **Cardmarket Price Guide Import**:
+        - Added `cardmarketId` to the `Card` data model to store the Cardmarket Product ID.
+        - Removed the runtime dependency on the Scryfall API by querying the local database for cards, making the import process offline-capable and more reliable.
+        - Added a new repository method `getByCardmarketIds` for efficient lookups.
+    - **MTGJSON Import**:
+        - Replaced the memory-intensive `JSON.parse` with the `clarinet` streaming JSON parser.
+        - The worker now processes the large `AllPrices.json` file in a streaming manner, significantly reducing memory consumption and preventing browser crashes.
+        - Implemented a state machine within the parser to efficiently extract price data for owned cards.
+- **Impact/Risks**:
+    - The Cardmarket import will only work for cards that have their `cardmarketId` populated. A backfill process for existing cards may be needed.
+    - The MTGJSON import logic has been completely rewritten. It should be tested with both `.json` and `.json.gz` files.
+- **Verification Steps**:
+    - Run `npm run build` to ensure the new worker code compiles correctly.
+    - Manually test the Cardmarket Price Guide import with a sample CSV.
+    - Manually test the MTGJSON import with a small `AllPricesToday.json` file and the large `AllPrices.json.gz` file.
+- **Linked Task/Issue**: M2 Implementation
+
 ## 2025-09-14 17:00 — docs: Add MTGJSON importer documentation
 - **Author**: AI (Qwen)
 - **Scope**: ai_docs/MTGJSON_IMPORTER.md, ai_docs/IMPORTERS.md, ai_docs/ARCHITECTURE.md
