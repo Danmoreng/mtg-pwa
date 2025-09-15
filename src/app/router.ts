@@ -1,66 +1,72 @@
-import {createRouter, createWebHistory} from 'vue-router'
-import HomeView from '../features/dashboard/HomeView.vue'
-import CsvImportView from '../features/imports/views/CsvImportView.vue'
-import CardmarketImportWizard from '../features/imports/views/wizard/CardmarketImportWizard.vue'
-import MtgjsonImportWizard from '../features/imports/views/wizard/MtgjsonImportWizard.vue'
-import PriceGuideUploadWizard from '../features/imports/views/wizard/PriceGuideUploadWizard.vue'
-import DeckImportView from '../features/decks/views/DeckImportView.vue'
-import DecksView from '../features/decks/views/DecksView.vue'
-import DeckDetailView from '../features/decks/views/DeckDetailView.vue'
-import CardsView from '../features/cards/views/CardsView.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import HomeView from '../features/dashboard/HomeView.vue';
+import DataImportView from '../features/imports/views/DataImportView.vue';
+import CardmarketImportWizard from '../features/imports/views/wizard/CardmarketImportWizard.vue';
+import MtgjsonImportWizard from '../features/imports/views/wizard/MtgjsonImportWizard.vue';
+import PriceGuideUploadWizard from '../features/imports/views/wizard/PriceGuideUploadWizard.vue';
+import DeckImportView from '../features/decks/views/DeckImportView.vue';
+import DecksView from '../features/decks/views/DecksView.vue';
+import DeckDetailView from '../features/decks/views/DeckDetailView.vue';
+import CardsView from '../features/cards/views/CardsView.vue';
 
 const routes = [
-    {
-        path: '/',
-        name: 'home',
-        component: HomeView
-    },
-    {
-        path: '/import/csv',
-        name: 'csv-import',
-        component: CsvImportView
-    },
-    {
-        path: '/import/cardmarket',
-        name: 'cardmarket-import',
-        component: CardmarketImportWizard
-    },
-    {
-        path: '/import/deck',
-        name: 'deck-import',
-        component: DeckImportView
-    },
-    {
-        path: '/decks',
-        name: 'decks',
-        component: DecksView
-    },
-    {
-        path: '/decks/:id',
-        name: 'deck-detail',
-        component: DeckDetailView,
-        props: true
-    },
-    {
-        path: '/cards',
-        name: 'cards',
-        component: CardsView
-    },
-    {
-        path: '/import/mtgjson',
-        name: 'mtgjson-import',
-        component: MtgjsonImportWizard
-    },
-    {
-        path: '/import/price-guide',
-        name: 'price-guide-import',
-        component: PriceGuideUploadWizard
-    }
-]
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView,
+  },
+  {
+    path: '/import',
+    component: DataImportView,
+    children: [
+      {
+        path: '',
+        name: 'import',
+        redirect: '/import/cardmarket',
+      },
+      {
+        path: 'cardmarket',
+        name: 'import-cardmarket',
+        component: CardmarketImportWizard,
+      },
+      {
+        path: 'mtgjson',
+        name: 'import-mtgjson',
+        component: MtgjsonImportWizard,
+      },
+      {
+        path: 'price-guide',
+        name: 'import-price-guide',
+        component: PriceGuideUploadWizard,
+      },
+    ],
+  },
+  {
+    path: '/import/deck',
+    name: 'deck-import',
+    component: DeckImportView,
+  },
+  {
+    path: '/decks',
+    name: 'decks',
+    component: DecksView,
+  },
+  {
+    path: '/decks/:id',
+    name: 'deck-detail',
+    component: DeckDetailView,
+    props: true,
+  },
+  {
+    path: '/cards',
+    name: 'cards',
+    component: CardsView,
+  },
+];
 
 const router = createRouter({
-    history: createWebHistory(import.meta.env.BASE_URL),
-    routes
-})
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,
+});
 
-export default router
+export default router;

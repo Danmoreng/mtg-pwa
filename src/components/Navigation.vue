@@ -27,18 +27,8 @@
             </router-link>
           </li>
           <li class="nav-item">
-            <router-link to="/import/cardmarket" class="nav-link" :class="{ active: route.name === 'cardmarket-import' }">
-              Cardmarket Import
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/import/mtgjson" class="nav-link" :class="{ active: route.name === 'mtgjson-import' }">
-              MTGJSON Import
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/import/price-guide" class="nav-link" :class="{ active: route.name === 'price-guide-import' }">
-              Price Guide Import
+            <router-link to="/import" class="nav-link" :class="{ active: route.path.startsWith('/import') }">
+              Data Import
             </router-link>
           </li>
         </ul>
