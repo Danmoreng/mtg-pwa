@@ -115,12 +115,8 @@ export const useCardsStore = defineStore('cards', {
       const card = this.cards[cardId];
       if (!card) return;
 
-      // ensure id map
-      await this.ensureIdMap();
-      const uuid = this.uuidForCard(card);
-      const idsToQuery = uuid ? [card.id, uuid] : [card.id];
-
-      const rows = await db.price_points.where('cardId').anyOf(idsToQuery).toArray();
+      // Query only by Scryfall ID since all price points now use Scryfall IDs
+      const rows = await db.price_points.where('cardId').equals(cardId).toArray();
       const canonical = rows.map((pp) => ({
         date: pp.date,
         asOf: pp.asOf,
@@ -169,13 +165,10 @@ export const useCardsStore = defineStore('cards', {
       const card = this.cards[cardId];
       if (!card) return [];
 
-      await this.ensureIdMap();
-      const uuid = this.uuidForCard(card);
-      const idsToQuery = uuid ? [card.id, uuid] : [card.id];
-
+      // Query only by Scryfall ID since all price points now use Scryfall IDs
       const toISO = (d: any) => { try { return new Date(d).toISOString().slice(0, 10); } catch { return undefined; } };
 
-      const rows = await db.price_points.where('cardId').anyOf(idsToQuery).toArray();
+      const rows = await db.price_points.where('cardId').equals(cardId).toArray();
       return rows
         .map((pp) => ({ ...pp, date: pp.date ?? (pp.asOf ? toISO(pp.asOf) : undefined) }))
         .filter((pp) => typeof pp.date === 'string')
