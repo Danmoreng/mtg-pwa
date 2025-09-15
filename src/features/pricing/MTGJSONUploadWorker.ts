@@ -138,6 +138,7 @@ const looksGzip = (name: string) => /\.gz$/i.test(name);
 async function parseAllPricesStream(
   chunks: AsyncGenerator<string>,
   wanted: Set<string>,
+  uuidToScryfallIdMap: Record<string, string>,
   batchSize: number,
   ninetyDaysAgo: Date,
   now: Date
@@ -194,6 +195,13 @@ async function parseAllPricesStream(
       const retail = card?.paper?.cardmarket?.retail;
       if (!retail) return;
 
+      // Translate MTGJSON UUID to Scryfall ID for consistent cardId usage
+      const scryfallId = uuidToScryfallIdMap[uuid];
+      if (!scryfallId) {
+        console.warn('[MTGJSONUploadWorker] No Scryfall ID found for MTGJSON UUID', uuid);
+        return;
+      }
+
       const batch: PricePoint[] = [];
       for (const [finishKey, byDate] of Object.entries(retail)) {
         const finish = mapFinish(finishKey);
@@ -205,7 +213,7 @@ async function parseAllPricesStream(
 
           batch.push({
             id: `${uuid}:mtgjson.cardmarket:${finish}:${dateStr}`,
-            cardId: uuid,
+            cardId: scryfallId, // Use Scryfall ID instead of MTGJSON UUID
             provider: 'mtgjson.cardmarket',
             finish,
             date: dateStr,
@@ -300,7 +308,7 @@ async function parseAllPricesStream(
 // ---------------- worker API ----------------
 
 const MTGJSON_UPLOAD_WORKER = {
-    async upload(file: File, wantedIds: string[]): Promise<number> {
+    async upload(file: File, wantedIds: string[], uuidToScryfallIdMap: Record<string, string>): Promise<number> {
         try {
             console.log(`[MTGJSONUploadWorker] Received file: ${file.name}, size: ${file.size} bytes`);
             const wantedSet = new Set(wantedIds);
@@ -316,6 +324,7 @@ const MTGJSON_UPLOAD_WORKER = {
             const { processed, written } = await parseAllPricesStream(
                 chunks,
                 wantedSet,
+                uuidToScryfallIdMap,
                 batchSize,
                 ninetyDaysAgo,
                 now

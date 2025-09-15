@@ -130,9 +130,18 @@ export class MTGJSONUploadService {
         );
       }
 
+      // Create reverse mapping from MTGJSON UUIDs to Scryfall IDs
+      const uuidToScryfallIdMap: Record<string, string> = {};
+      for (const card of cards) {
+        const uuid = idMap[card.id] || (card.oracleId ? idMap[card.oracleId] : undefined);
+        if (uuid) {
+          uuidToScryfallIdMap[uuid] = card.id;
+        }
+      }
+
       console.log('[MTGJSONUploadService] Calling worker.upload()...');
       try {
-        const written = await uploadWorker.upload(file, wantedUuids);
+        const written = await uploadWorker.upload(file, wantedUuids, uuidToScryfallIdMap);
         console.log(
           `[MTGJSONUploadService] Worker finished processing. ${written} cards processed.`
         );
