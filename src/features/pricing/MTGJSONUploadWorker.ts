@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { expose } from 'threads/worker';
+import { expose, Transfer } from 'threads/worker';
 import { pricePointRepository } from '../../data/repos';
 import type { PricePoint } from '../../data/db';
 import { mapFinish } from '../../utils/finishMapper';
@@ -11,6 +11,22 @@ type RetailFinishes = Record<string, RetailPricesByDate>;
 type MtgjsonCard = {
     paper?: { cardmarket?: { retail?: RetailFinishes } };
 };
+
+// Progress tracking
+let progressPort: MessagePort | null = null;
+
+type ProgressTick = {
+  phase: 'importing-price-points';
+  processedCards: number;
+  totalWanted: number;
+  writtenPricePoints: number;
+  percentage: number;      // 0..100
+  note?: string;
+};
+
+function sendProgress(p: ProgressTick) {
+  try { progressPort?.postMessage(p); } catch {}
+}
 
 // ----------------- stream helpers -----------------
 
@@ -227,6 +243,15 @@ async function parseAllPricesStream(
             await pricePointRepository.bulkPut(batch);
             totalWritten += batch.length;
             batch.length = 0;
+            // Send progress update after batch write
+            sendProgress({
+              phase: 'importing-price-points',
+              processedCards: processedWanted,
+              totalWanted: wantedLC.size,
+              writtenPricePoints: totalWritten,
+              percentage: Math.min(99, Math.round((processedWanted / Math.max(1, wantedLC.size)) * 100)),
+              note: 'batch written'
+            });
             // let the event loop breathe a tiny bit
             await new Promise((r) => setTimeout(r, 1));
           }
@@ -235,8 +260,26 @@ async function parseAllPricesStream(
       if (batch.length) {
         await pricePointRepository.bulkPut(batch);
         totalWritten += batch.length;
+        // Send progress update after batch write
+        sendProgress({
+          phase: 'importing-price-points',
+          processedCards: processedWanted,
+          totalWanted: wantedLC.size,
+          writtenPricePoints: totalWritten,
+          percentage: Math.min(99, Math.round((processedWanted / Math.max(1, wantedLC.size)) * 100)),
+          note: 'batch written'
+        });
       }
       processedWanted++;
+      // Send progress update after finishing one wanted UUID
+      sendProgress({
+        phase: 'importing-price-points',
+        processedCards: processedWanted,
+        totalWanted: wantedLC.size,
+        writtenPricePoints: totalWritten,
+        percentage: Math.min(99, Math.round((processedWanted / Math.max(1, wantedLC.size)) * 100)),
+        note: 'card done'
+      });
     } catch (e) {
       // keep streaming on per-card issues
       // eslint-disable-next-line no-console
@@ -307,8 +350,20 @@ async function parseAllPricesStream(
 
 // ---------------- worker API ----------------
 
-const MTGJSON_UPLOAD_WORKER = {
-    async upload(file: File, wantedIds: string[], uuidToScryfallIdMap: Record<string, string>): Promise<number> {
+// Define progress message types
+type ProgressMessage = 
+  | { type: 'downloading-all-identifiers'; message: string; percentage: number }
+  | { type: 'processing-all-identifiers'; message: string; percentage: number }
+  | { type: 'downloading-all-prices'; message: string; percentage: number }
+  const MTGJSON_UPLOAD_WORKER = {
+    setProgressPort(port: MessagePort) {
+        progressPort = port;
+        // Some browsers require start() on dedicated ports (mainly for MessageChannel)
+        // @ts-ignore
+        progressPort.start?.();
+    },
+    
+    async upload(file: File, wantedIds: string[], uuidToScryfallIdMap: Record<string, string>): Promise<{ processed: number; written: number }> {
         try {
             console.log(`[MTGJSONUploadWorker] Received file: ${file.name}, size: ${file.size} bytes`);
             const wantedSet = new Set(wantedIds);
@@ -330,10 +385,19 @@ const MTGJSON_UPLOAD_WORKER = {
                 now
             );
 
+            sendProgress({
+                phase: 'importing-price-points',
+                processedCards: processed,
+                totalWanted: wantedSet.size,
+                writtenPricePoints: written,
+                percentage: 100,
+                note: 'done'
+            });
+            
             console.log(
                 `[MTGJSONUploadWorker] Streaming parse finished. Processed ${processed} wanted cards; wrote ${written} price points.`
             );
-            return processed;
+            return { processed, written };
         } catch (err: unknown) {
             // Re-throw a simple, cloneable error back to the main thread
             const msg =

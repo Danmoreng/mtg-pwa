@@ -29,9 +29,9 @@
           <!-- Face card area: exact card ratio, no bars -->
           <div class="card-aspect position-relative overflow-hidden">
             <img
-                :src="(getFaceCard(deck.id)?.imageUrl) || placeholder"
+                :src="(getFaceCard(deck.id)?.imageUrl)"
                 :alt="getFaceCard(deck.id)?.name || 'Face card'"
-                class="w-100 h-100 d-block img-fit-cover"
+                class="w-100 h-100 d-block img-fit-cover rounded-4"
             />
           </div>
 
@@ -75,9 +75,6 @@ const decks = ref<Deck[]>([]);
 const loading = ref(true);
 const cardCounts = ref<Record<string, number>>({});
 const faceCards = ref<Record<string, Card>>({});
-
-// 63:88 ≈ 0.716 — matches MTG card art, prevents top/bottom bars
-const placeholder = 'https://placehold.co/315x440?text=Card+Image';
 
 const formatDate = (d?: string | Date) => (d ? new Date(d).toLocaleDateString() : '—');
 const getCardCount = (deckId: string) => cardCounts.value[deckId] ?? 0;
