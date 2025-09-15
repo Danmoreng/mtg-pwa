@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { expose, Transfer } from 'threads/worker';
+import { expose } from 'threads/worker';
 import { pricePointRepository } from '../../data/repos';
 import type { PricePoint } from '../../data/db';
 import { mapFinish } from '../../utils/finishMapper';
@@ -350,12 +350,7 @@ async function parseAllPricesStream(
 
 // ---------------- worker API ----------------
 
-// Define progress message types
-type ProgressMessage = 
-  | { type: 'downloading-all-identifiers'; message: string; percentage: number }
-  | { type: 'processing-all-identifiers'; message: string; percentage: number }
-  | { type: 'downloading-all-prices'; message: string; percentage: number }
-  const MTGJSON_UPLOAD_WORKER = {
+const MTGJSON_UPLOAD_WORKER = {
     setProgressPort(port: MessagePort) {
         progressPort = port;
         // Some browsers require start() on dedicated ports (mainly for MessageChannel)

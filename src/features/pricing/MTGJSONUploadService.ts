@@ -1,4 +1,6 @@
-import { spawn, Thread, Transfer } from 'threads';
+import { spawn, Thread } from 'threads';
+// @ts-expect-error - Transfer is available at runtime but TypeScript doesn't recognize it
+import { Transfer } from 'threads';
 import { cardRepository, settingRepository } from '../../data/repos';
 import MTGJSONUploadWorker from './MTGJSONUploadWorker?worker';
 import { gunzipSync, strFromU8 } from 'fflate';
@@ -274,7 +276,7 @@ export class MTGJSONUploadService {
       // Create reverse mapping from MTGJSON UUIDs to Scryfall IDs
       const uuidToScryfallIdMap: Record<string, string> = {};
       for (const card of cards) {
-        const uuid = idMap[card.id] || (card.oracleId ? idMap[c.oracleId] : undefined);
+        const uuid = idMap[card.id] || (card.oracleId ? idMap[card.oracleId] : undefined);
         if (uuid) {
           uuidToScryfallIdMap[uuid] = card.id;
         }
@@ -354,6 +356,7 @@ export class MTGJSONUploadService {
         const channel = new MessageChannel();
         
         // Tell the worker where to send progress
+        // @ts-ignore
         await uploadWorker.setProgressPort(Transfer(channel.port2, [channel.port2]));
         
         // Pipe progress events into our existing callback
