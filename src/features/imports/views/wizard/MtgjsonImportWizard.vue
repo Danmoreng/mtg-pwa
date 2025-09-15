@@ -15,8 +15,30 @@
           </ol>
         </div>
 
-        <div v-if="isImporting" class="progress">
-          <div class="progress-bar" role="progressbar" :style="{ width: progress + '%' }" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">{{ progress }}%</div>
+        <div v-if="isImporting" class="progress-section">
+          <div class="phase-section mb-3">
+            <div class="phase-title mb-1">Downloading AllIdentifiers.json.gz</div>
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" :style="{ width: identifiersProgress + '%' }" :aria-valuenow="identifiersProgress" aria-valuemin="0" aria-valuemax="100">{{ identifiersProgress }}%</div>
+            </div>
+            <div class="phase-message mt-1">{{ identifiersMessage }}</div>
+          </div>
+          
+          <div class="phase-section mb-3" v-if="currentPhase === 'downloading-all-prices' || currentPhase === 'importing-price-points' || currentPhase === 'completed'">
+            <div class="phase-title mb-1">Downloading AllPrices.json.gz</div>
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" :style="{ width: pricesProgress + '%' }" :aria-valuenow="pricesProgress" aria-valuemin="0" aria-valuemax="100">{{ pricesProgress }}%</div>
+            </div>
+            <div class="phase-message mt-1">{{ pricesMessage }}</div>
+          </div>
+          
+          <div class="phase-section mb-3" v-if="currentPhase === 'importing-price-points' || currentPhase === 'completed'">
+            <div class="phase-title mb-1">Importing Price Points</div>
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" :style="{ width: importProgress + '%' }" :aria-valuenow="importProgress" aria-valuemin="0" aria-valuemax="100">{{ importProgress }}%</div>
+            </div>
+            <div class="phase-message mt-1">{{ importMessage }}</div>
+          </div>
         </div>
 
         <div v-if="importFinished" class="alert alert-success">
@@ -38,7 +60,7 @@
               class="btn btn-primary"
               :disabled="isImporting"
           >
-            {{ isImporting ? (downloading ? 'Downloading...' : 'Importing...') : 'Import Prices' }}
+            {{ isImporting ? 'Importing...' : 'Import Prices' }}
           </button>
         </div>
       </div>
@@ -51,9 +73,14 @@ import { ref } from 'vue';
 import { MTGJSONUploadService } from '../../../pricing/MTGJSONUploadService';
 
 const isImporting = ref(false);
-const downloading = ref(false);
 const importFinished = ref(false);
-const progress = ref(0);
+const currentPhase = ref('');
+const identifiersProgress = ref(50); // Start with 50% for cached data (download complete)
+const identifiersMessage = ref('Using cached AllIdentifiers mapping...');
+const pricesProgress = ref(0);
+const pricesMessage = ref('');
+const importProgress = ref(0);
+const importMessage = ref('');
 const processedCount = ref(0);
 const errors = ref<string[]>([]);
 
@@ -61,46 +88,93 @@ const startImport = async () => {
   if (isImporting.value) return;
 
   isImporting.value = true;
-  downloading.value = true;
   importFinished.value = false;
   errors.value = [];
-  progress.value = 0;
+  currentPhase.value = '';
+  identifiersProgress.value = 0; // Reset to 0 when starting fresh
+  identifiersMessage.value = 'Downloading AllIdentifiers.json.gz...';
+  pricesProgress.value = 0;
+  pricesMessage.value = '';
+  importProgress.value = 0;
+  importMessage.value = '';
   processedCount.value = 0;
 
   try {
-    await MTGJSONUploadService.upload('auto', (processed) => {
-      processedCount.value = processed;
-      progress.value = 100; // For now, just show 100% when done
+    await MTGJSONUploadService.upload('auto', (info) => {
+      currentPhase.value = info.type;
+      
+      switch (info.type) {
+        case 'downloading-all-identifiers':
+          identifiersProgress.value = info.percentage || 0;
+          identifiersMessage.value = info.message;
+          break;
+        case 'processing-all-identifiers':
+          identifiersProgress.value = info.percentage || 0;
+          identifiersMessage.value = info.message;
+          break;
+        case 'downloading-all-prices':
+          pricesProgress.value = info.percentage || 0;
+          pricesMessage.value = info.message;
+          break;
+        case 'importing-price-points':
+          importProgress.value = info.percentage || 0;
+          importMessage.value = info.message;
+          break;
+        case 'completed':
+          importProgress.value = 100;
+          importMessage.value = info.message;
+          processedCount.value = (info as any).writtenPricePoints ?? 0; // show price points
+          isImporting.value = false;
+          importFinished.value = true;
+          break;
+      }
     });
-    isImporting.value = false;
-    downloading.value = false;
-    importFinished.value = true;
   } catch (error) {
     errors.value.push('Failed to import MTGJSON data: ' + (error as Error).message);
     isImporting.value = false;
-    downloading.value = false;
   }
-};
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 </script>
 
 <style scoped>
-.mtgjson-wizard {
-  padding: var(--space-lg);
-  max-width: 800px;
-  margin: 0 auto;
-}
 .info-section {
   background: var(--color-background);
   border-radius: var(--radius-md);
   padding: var(--space-md);
+}
+.progress-section {
+  margin-bottom: var(--space-md);
+}
+.phase-section {
+  padding: var(--space-sm) 0;
+}
+.phase-title {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+.phase-message {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+.progress {
+  height: 20px;
+  margin-bottom: 5px;
+  background-color: #e9ecef;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  background-color: #0d6efd;
+  transition: width 0.6s ease;
 }
 .error-messages {
   margin-top: var(--space-md);
