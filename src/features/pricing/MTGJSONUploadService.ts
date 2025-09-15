@@ -7,6 +7,7 @@ type IdMap = Record<string, string>; // scryfallId or scryfallOracleId -> mtgjso
 
 const ID_MAP_SETTING_KEY = 'mtgjson.idMap.v1';
 const ALL_IDENTIFIERS_URL = 'https://mtgjson.com/api/v5/AllIdentifiers.json.gz';
+const ALL_PRICES_URL = 'https://mtgjson.com/api/v5/AllPrices.json.gz';
 
 /**
  * Build a Scryfall(SF/Oracle) -> MTGJSON UUID map from a variety of known AllIdentifiers shapes.
@@ -94,8 +95,8 @@ async function loadIdMap(): Promise<IdMap> {
 }
 
 export class MTGJSONUploadService {
-  static async upload(file: File, progressCallback: (written: number) => void): Promise<void> {
-    console.log(`[MTGJSONUploadService] Starting upload for file: ${file.name}`);
+  static async upload(file: File | 'auto', progressCallback: (written: number) => void): Promise<void> {
+    console.log(`[MTGJSONUploadService] Starting upload for file: ${file === 'auto' ? 'AUTOMATIC DOWNLOAD' : file.name}`);
     let uploadWorker: any = null;
 
     try {
@@ -139,9 +140,28 @@ export class MTGJSONUploadService {
         }
       }
 
+      // Handle automatic download
+      let fileToProcess: File;
+      if (file === 'auto') {
+        console.log('[MTGJSONUploadService] Downloading AllPrices.json.gz automatically...');
+        const response = await fetch(ALL_PRICES_URL, { mode: 'cors' });
+        if (!response.ok) {
+          throw new Error(
+            `[MTGJSONUploadService] Failed to fetch AllPrices.json.gz: ${response.status} ${response.statusText}`
+          );
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'application/gzip' });
+        fileToProcess = new File([blob], 'AllPrices.json.gz', { type: 'application/gzip' });
+        console.log(`[MTGJSONUploadService] Downloaded AllPrices.json.gz (${fileToProcess.size} bytes)`);
+      } else {
+        fileToProcess = file;
+      }
+
       console.log('[MTGJSONUploadService] Calling worker.upload()...');
       try {
-        const written = await uploadWorker.upload(file, wantedUuids, uuidToScryfallIdMap);
+        const written = await uploadWorker.upload(fileToProcess, wantedUuids, uuidToScryfallIdMap);
         console.log(
           `[MTGJSONUploadService] Worker finished processing. ${written} cards processed.`
         );
