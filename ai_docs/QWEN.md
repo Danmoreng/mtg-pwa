@@ -8,7 +8,7 @@
 
 1. **Human‑Centric Development**: The human sets up the environment, runs dev server, and performs manual testing.
 2. **AI as Assistant**: The AI proposes designs, code changes, and tests; it does **not** execute dev server or test commands.
-3. **Clear Boundaries**: The AI never runs `npm run dev/test` but may run `npm run build` to check for compilation errors. For manual testing and verification, the human runs the dev server.
+3. **Clear Boundaries**: The AI never runs `npm run dev/test` but may run `npm run build` to check for compilation errors. For manual testing and verification, the human runs the dev server. The AI should ask the human to run tests and provide the results in a special text file.
 4. **Traceability**: Every AI‑proposed change must be logged in a dedicated **AI changelog** (see "Changelog Discipline").
 
 ## Development Workflow
@@ -18,13 +18,14 @@
 - **CAN (AI)**: Run `npm run build` to check for compilation errors.
 - **CAN (AI)**: Recommend exact commands for the human to run, e.g. `npm install dexie`.
 - **CAN (AI)**: Propose concrete code patches, new files, and migrations.
-- **DO (AI)**: Provide step‑by‑step local verification instructions for the human.
+- **DO (AI)**: Provide step‑by‑step local verification instructions for the human, including asking the human to run tests and share results.
 
 ### Code Analysis & Suggestions
 - **DO**: Read/reflect on existing code, folder layout, and conventions.
 - **DO**: Suggest refactors, bug fixes, and features with rationale.
 - **DO**: Explain complex logic (valuation FIFO, fingerprint matching, PWA caching) simply and precisely.
 - **DO**: Assist with debugging based on error messages and stack traces supplied by the human.
+- **DO**: Ask the human to run tests and provide results when proposing code changes.
 
 ### Implementation Support
 - **DO**: Provide complete code blocks with filenames and insertion points.
@@ -32,6 +33,7 @@
 - **DO**: Provide unit/E2E test specs and fixtures.
 - **DO**: Supply documentation updates when altering behavior.
 - **DO**: Use **Bootstrap 5 utility classes** for styling and **Reka UI** components for interactive elements.
+- **DO**: Request test execution from the human and provide clear instructions on how to share results.
 
 ## Communication Guidelines
 
@@ -77,10 +79,10 @@
 1. Human states a task/issue.
 2. AI analyzes context and proposes a **small, reviewable changeset** (code + tests + docs).
 3. Human applies the changes and runs commands/tests.
-4. Human reports results; AI iterates until acceptance.
+4. Human reports results in a special text file; AI iterates until acceptance.
 
 ### Debugging Process
-1. Human shares error text, stack traces, or failing test output.
+1. Human shares error text, stack traces, or failing test output in a special text file.
 2. AI explains likely causes and supplies patches and **targeted reproduction steps**.
 3. Human applies and re‑tests; repeat as needed.
 
@@ -90,6 +92,7 @@
 - Run dev server or test commands.
 - Assume unverified environment details.
 - Provide opaque changes without explaining rationale.
+- Attempt to run tests directly in the environment.
 
 ### The AI may (with human approval)
 - Propose dependency installs with exact commands.
@@ -102,6 +105,7 @@
 - Cite files/regions precisely.
 - Confirm understanding of requirements.
 - Target **clean, maintainable** code aligned with project conventions.
+- Ask the human to run tests and provide results in a special text file for analysis.
 
 ## Getting Started (for new tasks)
 1. **Review** relevant files and the project plan.
@@ -129,8 +133,14 @@ When proposing changes, the AI should reply with these sections:
 npm install
 npm run typecheck
 npm run build  # AI can run this to check for compilation errors
-npm run test   # Human runs tests
+npm run test   # Human runs tests and provides results in a special text file
 npm run dev    # Human runs dev server at http://localhost:5173
+```
+
+Open the app; ensure no console errors and DB is created. After running tests, please provide the test results in a special text file for the AI to analyze.
+
+### CHANGELOG ENTRY (to append)
+… (fill with today's timestamp and details)
 ```
 
 ## Changelog Discipline
@@ -168,7 +178,7 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
   - Implemented Money (cents) with parse/format.
   - Added initial unit tests.
 - **Impact/Risks**: schema migration creates new DB; no destructive changes.
-- **Verification Steps**: `npm run test`; open app, ensure DB created without errors.
+- **Verification Steps**: `npm run test` (human to provide results in special text file); open app, ensure DB created without errors.
 - **Linked Task/Issue**: M1
 ```
 
@@ -284,10 +294,10 @@ v1 init; no prior data.
 ### Verification (run by human)
 ```bash
 npm install
-npm run test
+npm run test   # Human runs tests and provides results in a special text file
 npm run dev
 ```
-Open the app; ensure no console errors and DB is created.
+Open the app; ensure no console errors and DB is created. After running tests, please provide the test results in a special text file for the AI to analyze.
 
 ### CHANGELOG ENTRY (to append)
 … (fill with today's timestamp and details)
