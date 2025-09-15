@@ -2,7 +2,7 @@
   <nav class="navbar navbar-expand-md navbar-light bg-body fixed-top border-bottom">
     <div class="container-fluid">
       <router-link to="/" class="navbar-brand">
-        <img style="max-width: 40px;" src="/src/assets/icon.svg" alt="logo">
+        <img style="max-width: 48px;" src="/icons/icon-256.png" alt="logo">
         MTG Collection Tracker
       </router-link>
       <button class="navbar-toggler" type="button" @click="isOpen = !isOpen" aria-controls="navbarNav"
