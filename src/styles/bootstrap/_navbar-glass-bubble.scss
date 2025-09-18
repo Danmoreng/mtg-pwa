@@ -53,6 +53,10 @@ $caustics: $caustics !default;
   position: relative;
 }
 
+.navbar.fixed-top {
+  position: fixed;
+}
+
 /* The moving glass bubble */
 .nav-bubble {
   position: absolute;
