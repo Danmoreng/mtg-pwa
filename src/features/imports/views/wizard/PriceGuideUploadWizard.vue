@@ -53,7 +53,7 @@
         <div class="wizard-navigation pt-3">
           <button
               @click="startImport"
-              class="btn btn-primary"
+              class="btn btn-glass-primary"
               :disabled="!uploadedFile || isImporting"
           >
             {{ isImporting ? 'Importing...' : 'Import Prices' }}

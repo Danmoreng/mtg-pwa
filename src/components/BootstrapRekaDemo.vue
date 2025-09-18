@@ -27,7 +27,7 @@ const isDialogOpen = ref(false)
       <h3 class="mb-2">Dropdown Menu</h3>
       <DropdownMenuRoot>
         <DropdownMenuTrigger as-child>
-          <button type="button" class="btn btn-primary">
+          <button type="button" class="btn btn-glass-primary">
             Actions
           </button>
         </DropdownMenuTrigger>
@@ -47,7 +47,7 @@ const isDialogOpen = ref(false)
       <h3 class="mb-2">Modal Dialog</h3>
       <DialogRoot v-model:open="isDialogOpen">
         <DialogTrigger as-child>
-          <button class="btn btn-outline-primary">Open dialog</button>
+          <button class="btn btn-glass-primary">Open dialog</button>
         </DialogTrigger>
 
         <DialogPortal>
@@ -67,7 +67,7 @@ const isDialogOpen = ref(false)
                 </div>
                 <div class="modal-footer">
                   <DialogClose as-child><button class="btn btn-secondary">Cancel</button></DialogClose>
-                  <button class="btn btn-primary" @click="isDialogOpen = false">Continue</button>
+                  <button class="btn btn-glass-primary" @click="isDialogOpen = false">Continue</button>
                 </div>
               </div>
             </div>
