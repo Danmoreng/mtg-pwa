@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar navbar-expand-md navbar-light bg-body fixed-top border-bottom">
+  <nav class="navbar navbar-expand-md navbar-light glass fixed-top">
     <div class="container-fluid">
       <router-link to="/" class="navbar-brand">
         <img style="max-width: 48px;" src="/icons/icon-256.png" alt="logo">

@@ -21,18 +21,18 @@
         <div class="d-flex gap-2">
           <button
               @click="toggleFaceCardSelection"
-              :class="['btn', isSelectingFaceCard ? 'btn-warning' : 'btn-primary']"
+              :class="['btn', isSelectingFaceCard ? 'btn-glass-warning' : 'btn-glass-primary']"
           >
             {{ isSelectingFaceCard ? 'Cancel Select Mode' : 'Select Face Card' }}
           </button>
           <button
               v-if="deck.faceCardId"
               @click="clearFaceCard"
-              class="btn btn-outline-secondary"
+              class="btn btn-glass-secondary"
           >
             Remove Face Card
           </button>
-          <button @click="openDeleteModal" class="btn btn-outline-danger">
+          <button @click="openDeleteModal" class="btn btn-glass-danger">
             Delete Deck
           </button>
         </div>

@@ -37,7 +37,7 @@
           @escape-key-down="closeModal"
       >
         <div class="modal-dialog modal-dialog-centered modal-lg">
-          <div class="modal-content">
+          <div class="modal-content glass">
             <div class="modal-header py-2">
               <DialogTitle class="modal-title h5 mb-0">{{ card.name }}</DialogTitle>
               <DialogClose as-child>
