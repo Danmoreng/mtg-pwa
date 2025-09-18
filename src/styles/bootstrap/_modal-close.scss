@@ -1,0 +1,83 @@
+/* src/styles/bootstrap/_modal-close.scss */
+
+/* Ensure the glass overlay sits behind the content */
+.modal-content.glass { overflow: clip; } /* or hidden */
+.modal-content.glass::after { z-index: 0; }
+.modal-content.glass > * { position: relative; z-index: 1; }
+
+/* Close button base – no glow, bigger hit area, currentColor icon */
+.modal .btn-close {
+  /* Size / layout */
+  --btn-close-size: 2.25rem;
+  width: var(--btn-close-size);
+  height: var(--btn-close-size);
+  border-radius: 999px;
+  margin: -0.25rem -0.25rem -0.25rem auto; /* typical alignment */
+  position: relative; z-index: 1;          /* above glass overlay */
+
+  /* Kill Bootstrap’s glow and opacity fades */
+  box-shadow: none !important;
+  outline: none;
+  opacity: 1;
+
+  /* Icon color (BS 5.3+) */
+  --bs-btn-close-color: var(--color-text);
+
+  /* Fallback icon for ≤5.2 using currentColor */
+  --_x: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='currentColor' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 1 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+  background-image: var(--bs-btn-close-bg, var(--_x));
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60% 60%;
+
+  color: var(--color-text); /* drives currentColor if fallback kicks in */
+  transition:
+          transform .14s ease,
+          box-shadow .18s ease,
+          backdrop-filter .18s ease,
+          -webkit-backdrop-filter .18s ease,
+          background-color .18s ease,
+          opacity .18s ease;
+}
+
+/* Hover: subtle liquid-glass sheen with tiny lift */
+.modal .btn-close:hover {
+  backdrop-filter: blur(6px) saturate(var(--glass-sat, 120%));
+  -webkit-backdrop-filter: blur(6px) saturate(var(--glass-sat, 120%));
+  background: color-mix(in hsl, var(--glass-highlight, rgba(255,255,255,.2)) 35%, transparent);
+  box-shadow: var(--elev-2);
+  transform: translateY(-1px);
+}
+
+/* Active/pressed: reduce elevation */
+.modal .btn-close:active { box-shadow: var(--elev-1); transform: translateY(0); }
+
+/* Remove glow but keep accessible keyboard focus (no mouse focus ring) */
+.modal .btn-close:focus,
+.modal .btn-close:focus-visible { box-shadow: none !important; }
+.modal .btn-close:focus-visible {
+  outline: 2px solid color-mix(in hsl, var(--color-text) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* Dark theme: force a white icon (5.3+ and fallback) */
+[data-theme="dark"] .modal .btn-close,
+[data-bs-theme="dark"] .modal .btn-close {
+  --bs-btn-close-color: #fff;
+  color: #fff;
+}
+
+/* Fallbacks: no blur or reduced transparency */
+@media (prefers-reduced-transparency: reduce) {
+  .modal .btn-close:hover {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: color-mix(in hsl, var(--glass-highlight, rgba(255,255,255,.2)) 15%, transparent);
+  }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .modal .btn-close:hover {
+    background: color-mix(in hsl, var(--glass-highlight, rgba(255,255,255,.2)) 20%, transparent);
+  }
+}

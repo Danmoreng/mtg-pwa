@@ -2,7 +2,8 @@
 
 // Order matters: functions → variables → maps → mixins → root → reboot → utilities → components
 @import "bootstrap/scss/functions";
-@import "./variables";              // your overrides before Bootstrap variables
+@import "./variables";
+// your overrides before Bootstrap variables
 @import "bootstrap/scss/variables";
 @import "bootstrap/scss/maps";
 @import "bootstrap/scss/mixins";
@@ -33,3 +34,6 @@
 @import "bootstrap/scss/pagination";
 // Generate utility classes
 @import "bootstrap/scss/utilities/api";
+@import "./glass";
+@import "./buttons-liquid";
+@import "./modal-close";

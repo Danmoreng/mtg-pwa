@@ -19,7 +19,7 @@
             <div class="small text-muted mb-1">
               Last: {{ formatDate(lastUpdate) }} | Next: {{ formatDate(nextUpdate) }}
             </div>
-            <button @click="refreshPrices" class="btn btn-sm btn-link p-0" :disabled="isUpdating">
+            <button @click="refreshPrices" class="btn btn-sm btn-glass" :disabled="isUpdating">
               {{ isUpdating ? 'Updating...' : 'Refresh Now' }}
             </button>
           </div>
