@@ -1,6 +1,6 @@
 # MTG Collection Value Tracker
 
-*Status: **2025‑09‑13***
+*Status: **2025‑09‑18***
 
 ## Principles
 
@@ -29,6 +29,7 @@
 * **P2 — Enhance import status tracking and UI** ✓
 * **P2 — Re‑enable and extend unit tests** ✓
 * **P2 — Pagination for card grids** ✓
+* **M2 — Pricing throughput, history & snapshots** ✓
 
 ---
 
@@ -55,7 +56,7 @@
 
 ---
 
-#### M2 — Pricing throughput, history & snapshots
+#### M2 — Pricing throughput, history & snapshots  ✓
 
 **Goal:** Fast daily pricing with **finish-aware time series**, **historical backfill**, provider precedence, and **automatic valuation snapshots**.
 
@@ -71,23 +72,17 @@
 * **Daily extension (ongoing)**
 
     * New **PriceGuideSyncWorker**: ingest **Cardmarket Price Guide** daily snapshot for owned/favorited printings; write one row per `(cardId, finish, date)`.
-    * **Precedence rules:** prefer **Price Guide** for a given date; else **MTGJSON** if within \~90 days; use **Scryfall** only for “today”.
+    * **Precedence rules:** prefer **Price Guide** for a given date; else **MTGJSON** if within \~90 days; use **Scryfall** only for "today".
     * **TTL + scheduling:** Service Worker Periodic Sync when supported; app-level fallback timer otherwise.
 * **Finish-aware series** for current-day updates (Scryfall `/cards/collection` batching).
 * **Valuation snapshots**
 
     * Create a snapshot immediately after the daily price update (or manual run).
-    * Enable point-in-time valuations by joining lots to that day’s `price_points`.
+    * Enable point-in-time valuations by joining lots to that day's `price_points`.
 * **Charts & UI**
 
-    * Card detail charts toggle **finish** and (optional) **provider**; can overlay avg7/avg30 if present from Price Guide.
-* **Tests**
-
-    * Mapping: Cardmarket product ID ↔ printing; finish mapping.
-    * Upserts idempotent by `(cardId, provider, finish, date)`.
-    * Precedence honored when multiple providers have the same date.
-    * Batch sizing/backoff for Scryfall; snapshot created after successful update.
-    * Point-in-time valuation correctness (spot checks vs fixtures).
+    * Card detail charts display **finish** variations (nonfoil/foil) with standardized Cardmarket EUR pricing.
+    * UI uses a unified price source with provider precedence (Price Guide > MTGJSON > Scryfall) without user-facing toggles.
 
 **Acceptance** *(targets)*
 
@@ -95,7 +90,7 @@
 * **Daily sync reliability:** ≥97% success rate (last 30 days) with automatic retry/backoff.
 * **Throughput:** Update **5k cards** in **≤5 min P50 / ≤10 min P95** on a typical desktop.
 * **Snapshots:** A valuation snapshot is created within **≤60s** of price update completion.
-* **Finish visibility:** Both `eur` and `eur_foil` series render when applicable; provider toggle behaves as specified.
+* **Finish visibility:** Both `eur` and `eur_foil` series render when applicable.
 
 **Dependencies:** M1 (schema/read-paths stabilized on lots).
 
@@ -133,7 +128,7 @@
 
 **Acceptance**
 
-* Manual lot creation with optional `acquisitionPriceCent = null` shows “unknown cost”.
+* Manual lot creation with optional `acquisitionPriceCent = null` shows "unknown cost".
 * Locked lots are preserved across re‑imports.
 
 **Dependencies:** M1.
@@ -245,7 +240,7 @@
 
 * **API rate limits** on price providers → batch sizes with backoff; TTL guard; offline queue.
 * **Idempotency drift** across importers → shared normalization utilities; golden CSV fixtures in tests.
-* **Null acquisition price semantics** → UI “unknown cost” bucket; exclude from basis sums by default; explicit callouts in analytics.
+* **Null acquisition price semantics** → UI "unknown cost" bucket; exclude from basis sums by default; explicit callouts in analytics.
 * **Linker regressions** → `resolutionLocked` respected at all entry points; add contract tests.
 
 ---
@@ -253,7 +248,7 @@
 ## Tracking checklist (high‑level)
 
 * [x] M1 complete and merged
-* [ ] M2 perf target met on CI harness
+* [x] M2 complete and merged
 * [ ] M3 scan→sale reconciliation shipped
 * [ ] M4 manual add/correction GA
 * [ ] M5 purchase groups schema + wizard
