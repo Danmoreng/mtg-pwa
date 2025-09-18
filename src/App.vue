@@ -4,7 +4,7 @@ import Navigation from './components/Navigation.vue';
 
 <template>
   <Navigation />
-  <main class="container-lg py-3">
+  <main class="container-lg" style="padding-top: calc(var(--app-navbar-h) + 1.5rem); padding-bottom: 1.5rem;">
     <router-view />
   </main>
 </template>
