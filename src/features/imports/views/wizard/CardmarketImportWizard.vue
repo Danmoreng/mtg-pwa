@@ -36,7 +36,7 @@
                   <p><strong>Download from:</strong><br>
                   Cardmarket → My Account → Transactions → All Transactions → Download CSV</p>
                   <p class="mb-1"><strong>Direct link:</strong></p>
-                  <a href="https://www.cardmarket.com/de/Magic/Account/Transactions/Details" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                  <a href="https://www.cardmarket.com/de/Magic/Account/Transactions/Details" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-glass-primary">
                     Go to Transactions Page
                   </a>
                 </div>
@@ -47,7 +47,7 @@
                   <p><strong>Download from:</strong><br>
                   Cardmarket → My Account → Statistics → Sold Articles → CSV Export</p>
                   <p class="mb-1"><strong>Direct link:</strong></p>
-                  <a href="https://www.cardmarket.com/de/Magic/Account/Statistics" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                  <a href="https://www.cardmarket.com/de/Magic/Account/Statistics" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-glass-primary">
                     Go to Statistics Page
                   </a>
                 </div>
@@ -60,7 +60,7 @@
                   <p><strong>Download from:</strong><br>
                   Cardmarket → My Account → Statistics → Purchased Articles → CSV Export</p>
                   <p class="mb-1"><strong>Direct link:</strong></p>
-                  <a href="https://www.cardmarket.com/de/Magic/Account/Statistics" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                  <a href="https://www.cardmarket.com/de/Magic/Account/Statistics" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-glass-primary">
                     Go to Statistics Page
                   </a>
                 </div>
@@ -341,7 +341,7 @@
       <button
           v-if="currentStep < steps.length - 1"
           @click="nextStep"
-          class="btn btn-primary"
+          class="btn btn-glass-primary"
           :disabled="!canProceed"
       >
         Next
@@ -350,7 +350,7 @@
       <button
           v-if="currentStep === steps.length - 1"
           @click="startImport"
-          class="btn btn-primary"
+          class="btn btn-glass-primary"
           :disabled="isImporting"
       >
         {{ isImporting ? 'Importing...' : 'Import Data' }}

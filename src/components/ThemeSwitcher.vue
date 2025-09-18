@@ -1,7 +1,7 @@
 <template>
   <button 
     type="button"
-    :class="currentTheme === 'light' ? 'rounded-4 btn btn-outline-dark' : 'rounded-4 btn btn-outline-light'"
+    class="btn btn-glass-secondary"
     @click="toggleTheme"
     :aria-label="`Switch to ${currentTheme === 'light' ? 'dark' : 'light'} mode`"
   >

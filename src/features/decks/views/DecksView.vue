@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
       <h1 class="h3 mb-0">Decks</h1>
-      <router-link to="/import/deck" class="btn btn-primary">
+      <router-link to="/import/deck" class="btn btn-glass-primary">
         Import Deck
       </router-link>
     </div>
@@ -17,7 +17,7 @@
     <!-- Empty state -->
     <div v-else-if="decks.length === 0" class="text-center py-5">
       <p class="text-muted mb-3">You haven't imported any decks yet.</p>
-      <router-link to="/import/deck" class="btn btn-primary">
+      <router-link to="/import/deck" class="btn btn-glass-primary">
         Import Your First Deck
       </router-link>
     </div>

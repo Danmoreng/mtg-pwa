@@ -28,7 +28,7 @@
         ></textarea>
       </div>
       
-      <button @click="importDeck" :disabled="isImporting" class="btn btn-primary mb-4">
+      <button @click="importDeck" :disabled="isImporting" class="btn btn-glass-primary mb-4">
         {{ isImporting ? 'Importing...' : 'Import Deck' }}
       </button>
       

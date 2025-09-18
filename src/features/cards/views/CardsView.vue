@@ -17,7 +17,7 @@
             <option value="price">Price</option>
             <option value="owned">Owned Quantity</option>
           </select>
-          <button @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'" class="btn btn-outline-primary">
+          <button @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'" class="btn btn-glass-primary">
             {{ sortDirection === 'asc' ? '↑' : '↓' }}
           </button>
         </div>

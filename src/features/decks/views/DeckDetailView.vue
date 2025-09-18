@@ -66,7 +66,7 @@
                       class="form-control"
                       placeholder="Deck title"
                   />
-                  <button @click="saveTitle" class="btn btn-primary">Save</button>
+                  <button @click="saveTitle" class="btn btn-glass-primary">Save</button>
                   <button @click="cancelEditingTitle" class="btn btn-outline-secondary">Cancel</button>
                 </div>
               </div>
