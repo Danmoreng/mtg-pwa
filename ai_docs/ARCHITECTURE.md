@@ -1,6 +1,6 @@
 # Architecture (Authoritative)
 
-_Status updated: 2025-09-13_
+_Status updated: 2025-09-18_
 
 ## Overview
 Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-first design; all card data, pricing history, and user state live on-device. Background work handled via Web Workers.
@@ -21,6 +21,7 @@ Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-f
 │                Web Workers (Background)                     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │ CSV Parser  │  │ Price Sync  │  │ Snapshot    │         │
+│  │ MTGJSON     │  │ PriceGuide  │  │             │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │                    Dexie Repositories                       │
@@ -68,14 +69,18 @@ All monetary values are stored as integer cents (EUR) to avoid float drift.
 - **scans** — ManaBox exports, normalized fingerprint; may resolve to `cardId` post-linking  
 
 ## Pricing Pipeline
-Provider: Scryfall. Multi-layer caching:  
-1. **Service Worker caching** (stale-while-revalidate ~24h API; images cache-first ~30d)  
-2. **In-memory cache**  
-3. **Database storage** in `price_points`  
-4. **Rate limiting** (~100ms between API requests)  
+Multi-layer caching with standardized Cardmarket EUR pricing:
+1. **Service Worker caching** (stale-while-revalidate ~24h API; images cache-first ~30d)
+2. **In-memory cache**
+3. **Database storage** in `price_points` with provider precedence
+4. **Rate limiting** (~100ms between API requests)
 
 ### Price Update Flow
-- On app start, check TTL; if stale, queue price sync worker → batch fetch by set/card → persist `price_points` → update stores/UI  
+- On app start, check TTL; if stale, queue price sync worker → batch fetch by set/card → persist `price_points` → update stores/UI
+- Daily price updates via Cardmarket Price Guide ingestion
+- Historical backfill via MTGJSON AllPrices data
+- Finish-aware processing for foil/nonfoil/etched variants
+- Automatic valuation snapshots after price updates  
 
 ## Valuation Engine
 - FIFO per-lot; realized P/L from sells uses proportional FIFO  
@@ -106,11 +111,14 @@ Provider: Scryfall. Multi-layer caching:
 - Cards store centralizes price data with getters/selectors  
 
 ## Current Capabilities
-- Database v7 with lots as source of truth; holdings derived from lots  
+- Database v8 with lots as source of truth; holdings derived from lots  
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
 - Cardmarket Import Wizard with ID-first resolution  
 - MTGJSON Import Wizard for historical pricing data  
+- Price history with finish-aware time series  
+- Provider precedence system (Price Guide > MTGJSON > Scryfall)  
+- Automatic valuation snapshots  
 - Unified CardComponent with modal details and price history charts  
 - Deck import from Moxfield; ownership computed from lots  
 - Real-time import progress tracking  

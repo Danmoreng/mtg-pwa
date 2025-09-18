@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-18 15:00 — docs: Update roadmap and architecture documentation to reflect M2 completion
+- **Author**: AI (Qwen)
+- **Scope**: ai_docs/ROADMAP.md, ai_docs/ARCHITECTURE.md
+- **Type**: docs
+- **Summary**: Updated documentation to reflect the completion of Milestone 2 features including pricing history, provider precedence, and valuation snapshots.
+- **Details**:
+  - Marked Milestone 2 as complete in ROADMAP.md
+  - Updated status date to 2025-09-18
+  - Updated ARCHITECTURE.md to reflect current database version (v8) and capabilities
+  - Added information about price history, provider precedence, and automatic valuation snapshots
+  - Updated system diagram to include MTGJSON and PriceGuide workers
+- **Impact/Risks**: Documentation improvements only; no code changes.
+- **Verification Steps**: Review documentation for accuracy and completeness.
+- **Linked Task/Issue**: Roadmap update
+
 ## 2025-09-15 15:30 — fix: Resolve build errors in MTGJSON upload service
 - **Author**: AI (Qwen)
 - **Scope**: src/features/pricing/MTGJSONUploadService.ts, src/features/pricing/MTGJSONUploadWorker.ts
