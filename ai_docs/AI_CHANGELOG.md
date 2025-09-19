@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-19 10:00 — refactor: Simplify and improve glass design style
+- **Author**: AI (Gemini)
+- **Scope**: `src/styles/bootstrap/_glass.scss`, `src/styles/bootstrap/_navbar-glass-bubble.scss`, `src/styles/bootstrap-theme.css`
+- **Type**: refactor
+- **Summary**: Refactored the glass design styles to be simpler, more consistent, and more performant.
+- **Details**:
+    - Removed unused `--glass-opacity` CSS variables.
+    - Made light and dark theme glass background color definitions more consistent.
+    - Removed the complex `::after` pseudo-element (liquid highlight and noise) from the main glass surface mixin.
+    - Aligned the default glass shadow with the existing elevation shadow system.
+    - Greatly simplified the navbar "bubble" effect by reducing the complexity of backgrounds and shadows.
+- **Impact/Risks**: The visual appearance of glass surfaces and the navbar will be cleaner and simpler. The performance of the navbar animation should be improved. No functional changes.
+- **Verification Steps**: Visually inspect glass components (cards, modals, navbar) in both light and dark themes to ensure they render correctly.
+- **Linked Task/Issue**: User request to improve and simplify the glass design.
+
 ## 2025-09-18 15:00 — docs: Update roadmap and architecture documentation to reflect M2 completion
 - **Author**: AI (Qwen)
 - **Scope**: ai_docs/ROADMAP.md, ai_docs/ARCHITECTURE.md

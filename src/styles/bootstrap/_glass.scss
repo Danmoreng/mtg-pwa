@@ -2,12 +2,6 @@
 
 :root { --glass-sat: 120%; }
 
-/* Optional: subtle noise to avoid banding on translucent surfaces */
-$noise: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'>\
-<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/></filter>\
-<rect width='60' height='60' filter='url(#n)' opacity='.025'/></svg>");
-
 @mixin glass-surface($bg: var(--glass-bg), $blur: var(--glass-blur), $shadow: var(--glass-shadow)) {
   background: $bg;
   backdrop-filter: blur($blur) saturate(var(--glass-sat));
@@ -15,17 +9,6 @@ $noise: url("data:image/svg+xml;utf8,\
   box-shadow: $shadow;
   position: relative;
   border: 1px solid var(--glass-border);
-  /* liquid highlight rim */
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(180deg, var(--glass-highlight), transparent 40%),
-    $noise;
-    opacity: .6;
-  }
 }
 
 /* Generic utility */
@@ -73,6 +56,7 @@ $noise: url("data:image/svg+xml;utf8,\
   --bs-navbar-brand-font-weight: 600;
   --bs-navbar-color: var(--color-text);
   --bs-navbar-hover-color: var(--color-text);
+  overflow: hidden; /* Contain the glow effect */
 }
 
 /* MD3 button variants */
