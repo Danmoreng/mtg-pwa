@@ -30,10 +30,10 @@
   <!-- Modal Dialog using Reka UI -->
   <DialogRoot v-model:open="showModal">
     <DialogPortal>
-      <DialogOverlay class="modal-backdrop fade show" @click="closeModal"/>
+      <DialogOverlay class="modal-backdrop fade show" />
       <DialogContent
           class="modal d-block compact-modal"
-          @pointer-down-outside="closeModal"
+          @click="handleBackdropClick"
           @escape-key-down="closeModal"
       >
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -277,6 +277,14 @@ const formatDate = (date: Date) => {
 const formatMoney = (cents: number, currency: string) => {
   const money = new Money(cents, currency);
   return money.format('de-DE');
+};
+
+const handleBackdropClick = (event: MouseEvent) => {
+  // Close modal only if the click is on the container itself (the backdrop)
+  // and not on a child element (the modal content).
+  if (event.target === event.currentTarget) {
+    closeModal();
+  }
 };
 
 const loadCardDetails = async () => {
