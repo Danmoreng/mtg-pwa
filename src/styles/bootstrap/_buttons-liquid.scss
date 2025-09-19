@@ -3,30 +3,6 @@
    "bulb turning on" hover with subtle refraction/caustics.
 */
 
-/* ---------- SVG textures ---------- */
-$noise: $noise !default;
-@if not variable-exists(noise) {
-  $noise: url("data:image/svg+xml;utf8,\
-  <svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'>\
-  <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/></filter>\
-  <rect width='60' height='60' filter='url(#n)' opacity='.025'/></svg>");
-}
-
-/* Caustics / refraction flecks (very subtle) */
-$caustics: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>\
-  <defs>\
-    <filter id='c'>\
-      <feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7' stitchTiles='stitch'/>\
-      <feColorMatrix type='saturate' values='0'/>\
-      <feComponentTransfer>\
-        <feFuncA type='gamma' exponent='2.2' amplitude='0.10'/>\
-      </feComponentTransfer>\
-    </filter>\
-  </defs>\
-  <rect width='80' height='80' filter='url(#c)' fill='white' opacity='.22'/>\
-</svg>");
-
 /* ---------- Theme knobs ---------- */
 :root,
 [data-bs-theme="light"],
@@ -45,7 +21,6 @@ $caustics: url("data:image/svg+xml;utf8,\
   /* Text and base accents */
   --btn-glass-text-color: #1f3e61;
   --btn-glass-bg-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.2) 100%);
-  --btn-glass-inset-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.06), inset 0 2px 3px rgba(255, 255, 255, 0.85);
 
   /* Colored outer shadows (computed from --glass-color) */
   --btn-shadow-alpha: 28%;
@@ -76,7 +51,6 @@ $caustics: url("data:image/svg+xml;utf8,\
 
   --btn-glass-text-color: #f9fafb;
   --btn-glass-bg-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
-  --btn-glass-inset-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.06);
 
   --btn-shadow-alpha: 26%;
   --btn-shadow-alpha-hover: 36%;
@@ -106,42 +80,15 @@ $caustics: url("data:image/svg+xml;utf8,\
   background-color: color-mix(in hsl, var(--glass-color, currentColor) var(--_plate), transparent);
 
   /* Layer stack: gradient, lens overlays, caustics, noise */
-  background-image:
-          var(--btn-glass-bg-gradient),
-          var(--btn-lens-top),
-          var(--btn-lens-bottom),
-          var(--btn-lens-rim),
-            /* caustics texture */
-          linear-gradient(rgba(255,255,255,var(--btn-caustics-opacity)), rgba(255,255,255,0)),
-          $caustics,
-          $noise;
-  background-size:
-          cover,
-          cover,
-          cover,
-          cover,
-          200% 200%,
-          120px 120px,
-          60px 60px;
-  background-position:
-          center,
-          center,
-          center,
-          center,
-          0% 0%,
-          0% 0%,
-          0% 0%;
+  background-image: var(--btn-glass-bg-gradient);
+  background-size: cover;
+  background-position: center;
 
   /* Crisp border using theme color */
   border: 1px solid color-mix(in hsl, var(--glass-color, currentColor) var(--_border), transparent);
 
   /* Colored outer shadow + subtle insets for thickness */
-  box-shadow:
-          0 2px 6px -3px color-mix(in hsl, var(--glass-color, currentColor) var(--btn-shadow-alpha), transparent),
-          var(--btn-glass-inset-shadow);
-
-  /* Luminous bloom (also colorized) */
-  filter: drop-shadow(0 3px 7px color-mix(in hsl, var(--glass-color, currentColor) 24%, transparent));
+  box-shadow: var(--elev-1), 0 0 8px color-mix(in hsl, var(--glass-color, currentColor) 20%, transparent);
 
   /* Glass effect */
   backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat));
@@ -152,42 +99,11 @@ $caustics: url("data:image/svg+xml;utf8,\
           box-shadow .22s cubic-bezier(.22,.61,.36,1),
           background-color .18s ease,
           border-color .18s ease,
-          filter .22s ease,
           opacity .2s ease;
   z-index: 0;
 }
 
 .btn[class*="btn-glass-"] > * { position: relative; z-index: 1; }
-
-/* BULB glow */
-.btn[class*="btn-glass-"]::before {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  inset: -40% -30% -30% -30%; /* oversize for soft edges */
-  background: radial-gradient(circle at 50% 55%,
-          color-mix(in hsl, var(--glass-color, currentColor) 76%, white 24%) 0 7%,
-          color-mix(in hsl, var(--glass-color, currentColor) 56%, transparent) 18%,
-          transparent 70%);
-  filter: blur(18px) saturate(120%);
-  opacity: 0; /* Off by default */
-  transition: opacity .38s ease, transform .38s ease;
-}
-
-/* LENS / refraction overlay */
-.btn[class*="btn-glass-"]::after {
-  content: "";
-  position: absolute;
-  z-index: 0; /* under content */
-  inset: 0;
-  background-image:
-          var(--btn-glare-bg),
-          conic-gradient(from 210deg at 28% 18%, rgba(255,255,255,.22) 0 18deg, rgba(255,255,255,0) 18deg 220deg, rgba(255,255,255,.18) 220deg 238deg, rgba(255,255,255,0) 238deg 360deg);
-  mix-blend-mode: normal; /* keep readable; change to screen if design allows */
-  pointer-events: none;
-  opacity: .24;
-  transition: opacity .3s ease, transform .3s ease;
-}
 
 /* ---------- Interaction states ---------- */
 .btn[class*="btn-glass-"]:hover {
@@ -195,24 +111,8 @@ $caustics: url("data:image/svg+xml;utf8,\
   --_border: var(--glass-border-hover);
   background-color: color-mix(in hsl, var(--glass-color, currentColor) var(--_plate), transparent);
   border-color: color-mix(in hsl, var(--glass-color, currentColor) var(--_border), transparent);
-  box-shadow:
-          0 7px 20px -4px color-mix(in hsl, var(--glass-color, currentColor) var(--btn-shadow-alpha-hover), transparent),
-          var(--btn-glass-inset-shadow);
-  filter: drop-shadow(0 6px 14px color-mix(in hsl, var(--glass-color, currentColor) 36%, transparent));
+  box-shadow: var(--elev-2), 0 0 12px color-mix(in hsl, var(--glass-color, currentColor) 30%, transparent);
   transform: translateY(-2px);
-
-  /* shimmer the caustics */
-  animation: glass-caustics 2.2s ease-in-out both;
-}
-
-.btn[class*="btn-glass-"]:hover::before { /* bulb turns on */
-  opacity: var(--btn-glow-opacity);
-  transform: scale(1.02);
-}
-
-.btn[class*="btn-glass-"]:hover::after {
-  opacity: .42;
-  transform: translateY(-1px);
 }
 
 .btn[class*="btn-glass-"]:active,
@@ -222,10 +122,7 @@ $caustics: url("data:image/svg+xml;utf8,\
   --_border: var(--glass-border-active);
   background-color: color-mix(in hsl, var(--glass-color, currentColor) var(--_plate), transparent);
   border-color: color-mix(in hsl, var(--glass-color, currentColor) var(--_border), transparent);
-  box-shadow:
-          0 2px 6px -3px color-mix(in hsl, var(--glass-color, currentColor) var(--btn-shadow-alpha-active), transparent),
-          var(--btn-glass-inset-shadow);
-  filter: drop-shadow(0 3px 7px color-mix(in hsl, var(--glass-color, currentColor) 24%, transparent));
+  box-shadow: var(--elev-1), 0 0 8px color-mix(in hsl, var(--glass-color, currentColor) 20%, transparent);
   transform: scale(.98) translateY(0);
 }
 
@@ -249,13 +146,6 @@ $caustics: url("data:image/svg+xml;utf8,\
   .btn[class*="btn-glass-"] { transition: none; }
   .btn[class*="btn-glass-"]::before,
   .btn[class*="btn-glass-"]::after { transition: none; animation: none; }
-}
-
-/* ---------- Caustics shimmer keyframes ---------- */
-@keyframes glass-caustics {
-  0%   { background-position: center, center, center, center, 0% 0%, 0% 0%, 0% 0%; }
-  50%  { background-position: center, center, center, center, 60% 30%, 60% 30%, 0% 0%; }
-  100% { background-position: center, center, center, center, 120% 60%, 120% 60%, 0% 0%; }
 }
 
 /* ---------- Bootstrap integration & variants ---------- */

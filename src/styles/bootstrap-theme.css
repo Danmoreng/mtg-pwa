@@ -24,13 +24,13 @@
 
     /* Liquid/Frosted Glass tokens */
     --glass-blur: 14px;
-    --glass-opacity: .72;
     --glass-border: color-mix(in hsl, var(--color-text) 8%, transparent);
     --glass-highlight: color-mix(in hsl, #fff 40%, transparent);
-    --glass-shadow: 0 10px 30px rgba(0, 0, 0, .12), 0 2px 8px rgba(0, 0, 0, .06);
+    --glass-shadow: var(--elev-3);
 
     /* Translucent backgrounds (use on navbars/cards/modals) */
-    --glass-bg: color-mix(in hsl, var(--surface-2) 70%, transparent);
+    --glass-base: var(--surface-2);
+    --glass-bg: color-mix(in hsl, var(--glass-base) 70%, transparent);
     --glass-bg-strong: color-mix(in hsl, var(--surface-3) 85%, transparent);
 
     /* Elevation */
@@ -121,7 +121,6 @@
     --glass-sat: 100%;
     --glass-blur: 18px;
     --glass-base: color-mix(in hsl, #0b0c10 75%, #ffffff 25%);
-    --glass-opacity: .68;
 
     --glass-bg:        color-mix(in hsl, var(--glass-base) 70%, transparent);
     --glass-bg-strong: color-mix(in hsl, var(--glass-base) 85%, transparent);
@@ -129,7 +128,7 @@
     --glass-border:   color-mix(in hsl, #ffffff 12%, transparent);
     --glass-highlight: color-mix(in hsl, #ffffff 16%, transparent);
 
-    --glass-shadow: 0 10px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
+    --glass-shadow: var(--elev-3);
 }
 
 /* Reset styles */

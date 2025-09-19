@@ -5,46 +5,12 @@ tracks the active/hovered nav item (Bootstrap).
 Works with your existing glass variables.
 ============================================= */
 
-
-/* Reuse textures if already defined by buttons file */
-$noise: $noise !default;
-@if not variable-exists(noise) {
-  $noise: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'>\
-<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/></filter>\
-<rect width='60' height='60' filter='url(#n)' opacity='.025'/></svg>");
-}
-
-
-$caustics: $caustics !default;
-@if not variable-exists(caustics) {
-  $caustics: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>\
-<defs>\
-<filter id='c'>\
-<feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7' stitchTiles='stitch'/>\
-<feColorMatrix type='saturate' values='0'/>\
-<feComponentTransfer>\
-<feFuncA type='gamma' exponent='2.2' amplitude='0.10'/>\
-</feComponentTransfer>\
-</filter>\
-</defs>\
-<rect width='80' height='80' filter='url(#c)' fill='white' opacity='.22'/>\
-</svg>");
-}
-
 /* ---------- Theme knobs (matches your toned-down buttons) ---------- */
 :root, [data-bs-theme="light"], [data-theme="light"] {
-  --nav-bubble-plate: 36%;
-  --nav-bubble-border: 78%;
-  --nav-bubble-shadow: 40%;
   --nav-bubble-glow: .85;
 }
 
 [data-bs-theme="dark"], [data-theme="dark"] {
-  --nav-bubble-plate: 24%;
-  --nav-bubble-border: 66%;
-  --nav-bubble-shadow: 36%;
   --nav-bubble-glow: .78;
 }
 
@@ -65,45 +31,35 @@ $caustics: $caustics !default;
   width: var(--_w, 0px);
   height: var(--_h, 0px);
   transform: translate3d(var(--_x, 0px), var(--_y, 0px), 0);
-  border-radius: 0.5rem;
   pointer-events: none;
   z-index: 0; /* below links */
   opacity: 0; /* hidden until placed */
-
-  /* Tinted plate derived from accent */
-  background-color: color-mix(in hsl, var(--nav-accent, var(--bs-primary, #0d6efd)) var(--nav-bubble-plate), transparent);
-
-  /* Lens + glare + caustics (subtle) */
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, .55) 0%, rgba(255, 255, 255, .25) 12%, rgba(255, 255, 255, 0) 46%),
-  radial-gradient(110% 160% at 50% 135%, rgba(0, 0, 0, .12) 0%, rgba(0, 0, 0, 0) 52%),
-  radial-gradient(100% 140% at 50% 50%, rgba(255, 255, 255, .35) 0%, rgba(255, 255, 255, .12) 22%, rgba(255, 255, 255, 0) 55%),
-  linear-gradient(110deg, rgba(255, 255, 255, 0) 32%, rgba(255, 255, 255, 0.75) 50%, rgba(255, 255, 255, 0) 68%),
-  linear-gradient(rgba(255, 255, 255, .10), rgba(255, 255, 255, 0)),
-  $caustics,
-  $noise;
-  background-size: cover, cover, cover, cover, 200% 200%, 120px 120px, 60px 60px;
-  background-position: center, center, center, center, 0% 0%, 0% 0%, 0% 0%;
-
-  border: 1px solid color-mix(in hsl, var(--nav-accent, var(--bs-primary, #0d6efd)) var(--nav-bubble-border), transparent);
-
-  /* Colored shadow + faint insets to sell thickness */
-  box-shadow: 0 7px 20px -6px color-mix(in hsl, var(--nav-accent, var(--bs-primary, #0d6efd)) var(--nav-bubble-shadow), transparent),
-  inset 0 -2px 4px rgba(0, 0, 0, .08),
-  inset 0 2px 3px rgba(255, 255, 255, .65);
-
-  /* Light bloom (toned) */
-  filter: drop-shadow(0 6px 14px color-mix(in hsl, var(--nav-accent, var(--bs-primary, #0d6efd)) 28%, transparent));
-
-  /* Use your existing global glass saturation variable */
-  backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(var(--glass-sat, 120%));
-  -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(var(--glass-sat, 120%));
 
   transition: transform .36s cubic-bezier(.22, .61, .36, 1), width .26s ease, height .26s ease, opacity .2s ease;
   will-change: transform, width, height;
 }
 
+/* The glow effect */
+.nav-bubble::before {
+  content: "";
+  position: absolute;
+  inset: -150% 5%; /* Tall and narrow */
+  background: conic-gradient(from 90deg at 50% 50%,
+  color-mix(in hsl, var(--bs-primary) 50%, transparent) 0deg,
+  color-mix(in hsl, var(--bs-success) 50%, transparent) 180deg,
+  color-mix(in hsl, var(--bs-primary) 50%, transparent) 360deg);
+  filter: blur(20px);
+  opacity: .7;
+  transition: opacity .3s ease;
+  z-index: -1;
+  transform: translateY(25%); /* Start the gradient lower */
+}
+
 /* Keep links above the bubble */
 .navbar .nav-link {
+  display: flex;
+  align-items: center;
+  height: var(--app-navbar-h); /* Fill the navbar height */
   position: relative;
   z-index: 1;
   margin: 0 1rem;
