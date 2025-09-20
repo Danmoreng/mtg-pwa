@@ -85,6 +85,29 @@
 
                     <dt class="col text-muted">Finish</dt>
                     <dd class="col text-end fw-semibold">{{ card.finish }}</dd>
+
+                    <!-- External Links -->
+                    <dt class="col text-muted">Links</dt>
+                    <dd class="col text-end">
+                      <a 
+                        :href="`https://scryfall.com/card/${card.setCode}/${card.number}`" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="link-primary text-decoration-none me-2"
+                      >
+                        Scryfall
+                      </a>
+                      <a 
+                        v-if="card.cardmarketId"
+                        :href="`https://www.cardmarket.com/en/Magic/Products/Singles/${formatSetNameForCardmarket(card.set)}/${formatCardNameForCardmarket(card.name)}?language=1&minCondition=4`" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="link-warning text-decoration-none"
+                      >
+                        Cardmarket
+                      </a>
+                      <span v-else class="text-muted">Cardmarket ID missing</span>
+                    </dd>
                   </dl>
                 </div>
 
@@ -297,6 +320,25 @@ const loadCardDetails = async () => {
   } finally {
     loadingPrice.value = false;
   }
+};
+
+// Helper methods for external links
+const formatSetNameForCardmarket = (setName: string) => {
+  // Remove special characters and replace spaces with hyphens
+  return setName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+};
+
+const formatCardNameForCardmarket = (cardName: string) => {
+  // Remove special characters and replace spaces with hyphens
+  return cardName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 };
 </script>
 
