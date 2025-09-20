@@ -10,8 +10,10 @@ declare module 'vue' {
   export interface GlobalComponents {
     BootstrapRekaDemo: typeof import('./src/components/BootstrapRekaDemo.vue')['default']
     CardComponent: typeof import('./src/components/CardComponent.vue')['default']
+    HeroGlass: typeof import('./src/components/HeroGlass.vue')['default']
     ImportStatusIndicator: typeof import('./src/components/ImportStatusIndicator.vue')['default']
     Navigation: typeof import('./src/components/Navigation.vue')['default']
+    NoiseOverlay: typeof import('./src/components/NoiseOverlay.vue')['default']
     PaginationComponent: typeof import('./src/components/PaginationComponent.vue')['default']
     PortfolioValueChart: typeof import('./src/components/PortfolioValueChart.vue')['default']
     PriceHistoryChart: typeof import('./src/components/PriceHistoryChart.vue')['default']

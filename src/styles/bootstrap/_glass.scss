@@ -1,26 +1,178 @@
 /* _glass.scss */
 
-:root { --glass-sat: 120%; }
-
-@mixin glass-surface($bg: var(--glass-bg), $blur: var(--glass-blur), $shadow: var(--glass-shadow)) {
-  background: $bg;
-  backdrop-filter: blur($blur) saturate(var(--glass-sat));
-  -webkit-backdrop-filter: blur($blur) saturate(var(--glass-sat));
-  box-shadow: $shadow;
-  position: relative;
-  border: 1px solid var(--glass-border);
+/* ---------- Theme knobs ---------- */
+:root {
+  --glass-sat: 120%;
+  --glass-con: 110%;
+  --glass-blur: 14px;
+  
+  /* Glass variants with alpha channels for better control */
+  --glass-bg: 255 255 255 / 0.60;
+  --glass-bg-soft: 255 255 255 / 0.35;
+  --glass-bg-strong: 255 255 255 / 0.85;
+  
+  /* Dark theme variants */
+  --glass-bg-dark: 15 15 18 / 0.35;
+  --glass-bg-dark-soft: 15 15 18 / 0.20;
+  --glass-bg-dark-strong: 15 15 18 / 0.80;
+  
+  /* Border colors - improved contrast for light mode */
+  --glass-border-light: 255 255 255 / 0.75;
+  --glass-border-dark: 255 255 255 / 0.18;
+  
+  /* Shadow definitions */
+  --glass-shadow-light: inset 0 1px 0 rgba(255,255,255,0.6);
+  --glass-shadow-dark: inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
-/* Generic utility */
+[data-bs-theme="dark"],
+[data-theme="dark"] {
+  --glass-sat: 100%;
+  --glass-blur: 18px;
+  --glass-bg: var(--glass-bg-dark);
+  --glass-bg-soft: var(--glass-bg-dark-soft);
+  --glass-bg-strong: var(--glass-bg-dark-strong);
+  --glass-border-light: var(--glass-border-dark);
+}
+
+/* ---------- Glass Mixins ---------- */
+@mixin glass-surface($bg: rgb(var(--glass-bg)), $blur: var(--glass-blur), $shadow: var(--glass-shadow-light)) {
+  background: $bg;
+  backdrop-filter: blur($blur) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  -webkit-backdrop-filter: blur($blur) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  box-shadow: $shadow;
+  position: relative;
+  border: 1px solid rgba(var(--glass-border-light));
+}
+
+@mixin glass-card {
+  @include glass-surface(rgb(var(--glass-bg)));
+  box-shadow: var(--glass-shadow-light), 0 8px 24px rgba(0,0,0,0.06);
+}
+
+@mixin glass-pane {
+  @include glass-surface(rgb(var(--glass-bg-soft)));
+  box-shadow: var(--glass-shadow-light), 0 6px 18px rgba(0,0,0,0.05);
+}
+
+@mixin glass-panel {
+  @include glass-surface(rgb(var(--glass-bg-strong)));
+  box-shadow: var(--glass-shadow-light), 0 10px 30px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(255,255,255,0.1);
+  position: relative;
+}
+
+@mixin glass-soft {
+  @include glass-surface(rgb(var(--glass-bg-soft)));
+  box-shadow: var(--glass-shadow-light), 0 6px 16px rgba(0,0,0,0.04);
+}
+
+@mixin glass-strong {
+  @include glass-surface(rgb(var(--glass-bg-strong)));
+  box-shadow: var(--glass-shadow-light), 0 14px 40px rgba(0,0,0,0.1);
+}
+
+@mixin glass-ultra {
+  @include glass-surface(rgba(255,255,255,0.98));
+  box-shadow: 0 16px 60px rgba(0,0,0,0.15);
+  border: 1px solid rgba(255,255,255,0.95);
+}
+
+@mixin glass-hero {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.75), rgba(255,255,255,0.45));
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), 0 14px 40px rgba(0,0,0,0.08);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---------- Dark theme variants ---------- */
+[data-bs-theme="dark"],
+[data-theme="dark"] {
+  .glass-card {
+    background: rgb(var(--glass-bg-dark));
+    border-color: rgba(var(--glass-border-dark));
+    box-shadow: var(--glass-shadow-dark), 0 8px 24px rgba(0,0,0,0.4);
+  }
+  
+  .glass-pane {
+    background: rgb(var(--glass-bg-dark-soft));
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: var(--glass-shadow-dark), 0 6px 18px rgba(0,0,0,0.35);
+  }
+  
+  .glass-panel {
+    background: rgb(var(--glass-bg-dark-strong));
+    border-color: rgba(var(--glass-border-dark));
+    box-shadow: var(--glass-shadow-dark), 0 10px 30px rgba(0,0,0,0.5);
+  }
+  
+  .glass-soft {
+    background: rgb(var(--glass-bg-dark-soft));
+    border-color: rgba(255,255,255,0.06);
+  }
+  
+  .glass-strong {
+    background: rgb(var(--glass-bg-dark-strong));
+    border-color: rgba(255,255,255,0.2);
+  }
+  
+  .glass-hero {
+    background: linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 14px 40px rgba(0,0,0,0.5);
+  }
+}
+
+/* ---------- Glass Variants ---------- */
 .glass {
-  @include glass-surface(var(--glass-bg));
+  @include glass-surface();
+}
+
+.glass-card {
+  @include glass-card();
+}
+
+.glass-pane {
+  @include glass-pane();
+}
+
+.glass-panel {
+  @include glass-panel();
+}
+
+.glass-soft {
+  @include glass-soft();
 }
 
 .glass-strong {
-  @include glass-surface(var(--glass-bg-strong));
+  @include glass-strong();
 }
 
-/* Elevation utilities (MD3) */
+.glass-ultra {
+  @include glass-ultra();
+}
+
+.glass-hero {
+  @include glass-hero();
+}
+
+/* ---------- Accent Glow for Panels ---------- */
+.glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 1.5rem;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 20%, hsla(var(--bs-primary),0.3), transparent 80%);
+  mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1.5px;
+}
+
+/* ---------- Elevation utilities (MD3) ---------- */
 .elevation-1 {
   box-shadow: var(--elev-1) !important;
 }
@@ -41,7 +193,7 @@
   box-shadow: var(--elev-5) !important;
 }
 
-/* Component hooks */
+/* ---------- Component hooks ---------- */
 .card.glass,
 .modal-content.glass,
 .dropdown-menu.glass {
@@ -57,9 +209,18 @@
   --bs-navbar-color: var(--color-text);
   --bs-navbar-hover-color: var(--color-text);
   overflow: hidden; /* Contain the glow effect */
+  
+  /* Improve border visibility in light mode */
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* MD3 button variants */
+/* Dark theme navbar border */
+[data-bs-theme="dark"] .navbar.glass,
+[data-theme="dark"] .navbar.glass {
+  border: 1px solid rgba(var(--glass-border-dark));
+}
+
+/* ---------- MD3 button variants ---------- */
 .btn-tonal {
   color: color-mix(in hsl, var(--color-text) 92%, black 8%);
   background: color-mix(in hsl, var(--color-primary) 18%, var(--surface-2) 82%);
@@ -81,9 +242,10 @@
   box-shadow: var(--elev-3);
 }
 
-/* Prefers reduced transparency: fall back to solid surfaces */
+/* ---------- Prefers reduced transparency: fall back to solid surfaces ---------- */
 @media (prefers-reduced-transparency: reduce) {
-  .glass, .glass-strong, .navbar.glass, .card.glass, .modal-content.glass, .dropdown-menu.glass {
+  .glass, .glass-card, .glass-pane, .glass-panel, .glass-soft, .glass-strong, .glass-ultra, .glass-hero,
+  .navbar.glass, .card.glass, .modal-content.glass, .dropdown-menu.glass {
     background: var(--surface-2) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;

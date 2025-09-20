@@ -24,14 +24,24 @@
 
     /* Liquid/Frosted Glass tokens */
     --glass-blur: 14px;
+    --glass-con: 110%;
+    --glass-sat: 120%;
     --glass-border: color-mix(in hsl, var(--color-text) 8%, transparent);
     --glass-highlight: color-mix(in hsl, #fff 40%, transparent);
     --glass-shadow: var(--elev-3);
 
-    /* Translucent backgrounds (use on navbars/cards/modals) */
-    --glass-base: var(--surface-2);
-    --glass-bg: color-mix(in hsl, var(--glass-base) 70%, transparent);
-    --glass-bg-strong: color-mix(in hsl, var(--surface-3) 85%, transparent);
+    /* Translucent backgrounds (use on navbars/cards/modals) with alpha channels */
+    --glass-bg: 255 255 255 / 0.60;
+    --glass-bg-soft: 255 255 255 / 0.35;
+    --glass-bg-strong: 255 255 255 / 0.85;
+    
+    /* Border colors */
+    --glass-border-light: 255 255 255 / 0.55;
+    --glass-border-dark: 255 255 255 / 0.18;
+    
+    /* Shadow definitions */
+    --glass-shadow-light: inset 0 1px 0 rgba(255,255,255,0.6);
+    --glass-shadow-dark: inset 0 1px 0 rgba(255,255,255,0.08);
 
     /* Elevation */
     --elev-1: 0 1px 2px rgba(0, 0, 0, .06), 0 1px 1px rgba(0, 0, 0, .04);
@@ -119,13 +129,17 @@
     --surface-5: color-mix(in hsl, var(--color-surface) 76%, var(--color-primary) 24%);
 
     --glass-sat: 100%;
+    --glass-con: 110%;
     --glass-blur: 18px;
-    --glass-base: color-mix(in hsl, #0b0c10 75%, #ffffff 25%);
-
-    --glass-bg:        color-mix(in hsl, var(--glass-base) 70%, transparent);
-    --glass-bg-strong: color-mix(in hsl, var(--glass-base) 85%, transparent);
-
-    --glass-border:   color-mix(in hsl, #ffffff 12%, transparent);
+    
+    /* Dark theme glass variants */
+    --glass-bg: 15 15 18 / 0.35;
+    --glass-bg-soft: 15 15 18 / 0.20;
+    --glass-bg-strong: 15 15 18 / 0.80;
+    
+    /* Border colors for dark theme */
+    --glass-border-light: var(--glass-border-dark);
+    --glass-border: color-mix(in hsl, #ffffff 12%, transparent);
     --glass-highlight: color-mix(in hsl, #ffffff 16%, transparent);
 
     --glass-shadow: var(--elev-3);

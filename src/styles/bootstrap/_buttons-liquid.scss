@@ -9,6 +9,7 @@
 [data-theme="light"] {
   --btn-glass-blur: 8px;
   --btn-glass-sat: 150%;
+  --btn-glass-con: 110%;
 
   /* Color infusion amounts */
   --glass-plate: 30%;
@@ -41,6 +42,7 @@
 [data-theme="dark"] {
   --btn-glass-blur: 10px;
   --btn-glass-sat: 120%;
+  --btn-glass-con: 110%;
 
   --glass-plate: 20%;
   --glass-plate-hover: 32%;
@@ -76,7 +78,7 @@
   --_plate: var(--glass-plate);
   --_border: var(--glass-border);
 
-  /* Tinted base */
+  /* Tinted base with alpha channel */
   background-color: color-mix(in hsl, var(--glass-color, currentColor) var(--_plate), transparent);
 
   /* Layer stack: gradient, lens overlays, caustics, noise */
@@ -90,9 +92,9 @@
   /* Colored outer shadow + subtle insets for thickness */
   box-shadow: var(--elev-1), 0 0 8px color-mix(in hsl, var(--glass-color, currentColor) 20%, transparent);
 
-  /* Glass effect */
-  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat));
-  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat));
+  /* Enhanced glass effect with contrast */
+  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
 
   transition:
           transform .22s cubic-bezier(.22,.61,.36,1),
@@ -138,6 +140,7 @@
   .btn[class*="btn-glass-"] {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+    background: color-mix(in hsl, var(--glass-color, currentColor) 20%, var(--surface-2)) !important;
   }
 }
 
@@ -163,4 +166,151 @@
 
 @each $name, $color in $theme-colors {
   @include make-btn-glass-variant($name, $color);
+}
+
+/* ---------- Additional glass button variants ---------- */
+.btn-glass-card {
+  @extend .btn;
+  background: rgb(var(--glass-bg));
+  border: 1px solid rgba(var(--glass-border-light));
+  box-shadow: var(--glass-shadow-light), 0 8px 24px rgba(0,0,0,0.06);
+  
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  color: var(--btn-glass-text-color);
+
+  /* Glass effect with contrast */
+  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+
+  transition:
+          transform .22s cubic-bezier(.22,.61,.36,1),
+          box-shadow .22s cubic-bezier(.22,.61,.36,1),
+          background-color .18s ease,
+          border-color .18s ease,
+          opacity .2s ease;
+  z-index: 0;
+}
+
+.btn-glass-pane {
+  @extend .btn;
+  background: rgb(var(--glass-bg-soft));
+  border: 1px solid rgba(var(--glass-border-light));
+  box-shadow: var(--glass-shadow-light), 0 6px 18px rgba(0,0,0,0.05);
+  
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  color: var(--btn-glass-text-color);
+
+  /* Glass effect with contrast */
+  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+
+  transition:
+          transform .22s cubic-bezier(.22,.61,.36,1),
+          box-shadow .22s cubic-bezier(.22,.61,.36,1),
+          background-color .18s ease,
+          border-color .18s ease,
+          opacity .2s ease;
+  z-index: 0;
+}
+
+.btn-glass-panel {
+  @extend .btn;
+  background: rgb(var(--glass-bg-strong));
+  border: 1px solid rgba(var(--glass-border-light));
+  box-shadow: var(--glass-shadow-light), 0 10px 30px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(255,255,255,0.1);
+  position: relative;
+  
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  color: var(--btn-glass-text-color);
+
+  /* Glass effect with contrast */
+  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+
+  transition:
+          transform .22s cubic-bezier(.22,.61,.36,1),
+          box-shadow .22s cubic-bezier(.22,.61,.36,1),
+          background-color .18s ease,
+          border-color .18s ease,
+          opacity .2s ease;
+  z-index: 0;
+}
+
+/* Add glow effect for panel buttons */
+.btn-glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: calc(var(--bs-btn-border-radius, .75rem) + 1.5px);
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 20%, hsla(var(--bs-primary),0.3), transparent 80%);
+  mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1.5px;
+  z-index: -1;
+}
+
+.btn-glass-soft {
+  @extend .btn;
+  background: rgb(var(--glass-bg-soft));
+  border: 1px solid rgba(var(--glass-border-light));
+  box-shadow: var(--glass-shadow-light), 0 6px 16px rgba(0,0,0,0.04);
+  
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  color: var(--btn-glass-text-color);
+
+  /* Glass effect with contrast */
+  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+
+  transition:
+          transform .22s cubic-bezier(.22,.61,.36,1),
+          box-shadow .22s cubic-bezier(.22,.61,.36,1),
+          background-color .18s ease,
+          border-color .18s ease,
+          opacity .2s ease;
+  z-index: 0;
+}
+
+.btn-glass-strong {
+  @extend .btn;
+  background: rgb(var(--glass-bg-strong));
+  border: 1px solid rgba(var(--glass-border-light));
+  box-shadow: var(--glass-shadow-light), 0 14px 40px rgba(0,0,0,0.1);
+  
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  color: var(--btn-glass-text-color);
+
+  /* Glass effect with contrast */
+  backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+  -webkit-backdrop-filter: blur(var(--btn-glass-blur)) saturate(var(--btn-glass-sat)) contrast(var(--btn-glass-con));
+
+  transition:
+          transform .22s cubic-bezier(.22,.61,.36,1),
+          box-shadow .22s cubic-bezier(.22,.61,.36,1),
+          background-color .18s ease,
+          border-color .18s ease,
+          opacity .2s ease;
+  z-index: 0;
 }

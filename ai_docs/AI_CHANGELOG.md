@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-20 15:30 — feat: Improved frosted glass effects with better border visibility and rimlight accents
+- **Author**: AI (Qwen)
+- **Scope**: src/styles/bootstrap/_glass.scss, src/styles/bootstrap/_navbar-glass-bubble.scss, src/features/dashboard/HomeView.vue
+- **Type**: feat
+- **Summary**: Enhanced frosted glass effects with improved border visibility in light mode and rimlight accents for panels.
+- **Details**:
+    - Fixed navbar border visibility in light mode by adding a contrasting border
+    - Enhanced glass panel styling with improved rimlight accents on top and bottom
+    - Updated dashboard panels to use consistent glass panel styling with border accents
+    - Improved navbar bubble glow effect containment
+    - Enhanced glass surface definitions with better contrast and depth
+- **Impact/Risks**: Visual enhancements to UI components, no breaking changes
+- **Verification Steps**: `npm run build` (successful); manual verification of glass effects in navbar, dashboard panels, and buttons
+- **Linked Task/Issue**: Enhancement of frosted glass effects
+
 ## 2025-09-19 10:00 — refactor: Simplify and improve glass design style
 - **Author**: AI (Gemini)
 - **Scope**: `src/styles/bootstrap/_glass.scss`, `src/styles/bootstrap/_navbar-glass-bubble.scss`, `src/styles/bootstrap-theme.css`
