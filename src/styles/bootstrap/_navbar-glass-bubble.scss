@@ -5,16 +5,20 @@ tracks the active/hovered nav item (Bootstrap).
 Works with your existing glass variables.
 ============================================= */
 
-/* ---------- Theme knobs (matches your toned-down buttons) ---------- */
+/* ---------- Theme knobs ---------- */
 :root, [data-bs-theme="light"], [data-theme="light"] {
   --nav-bubble-glow: .85;
+  --nav-bubble-blur: 20px;
+  --nav-bubble-opacity: .7;
 }
 
 [data-bs-theme="dark"], [data-theme="dark"] {
   --nav-bubble-glow: .78;
+  --nav-bubble-blur: 24px;
+  --nav-bubble-opacity: .85;
 }
 
-/* ---------- Layout hooks (no background here to avoid double glass) ---------- */
+/* ---------- Layout hooks ---------- */
 .navbar .navbar-nav {
   position: relative;
 }
@@ -35,24 +39,44 @@ Works with your existing glass variables.
   z-index: 0; /* below links */
   opacity: 0; /* hidden until placed */
 
+  /* Glass effect */
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  
+  /* Background with alpha channel */
+  background: rgb(var(--glass-bg));
+  
+  /* Border */
+  border: 1px solid rgba(var(--glass-border-light));
+  
+  /* Inner glow and outer rim light */
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,0.6), 
+    0 0 0 1px rgba(255,255,255,0.2) inset,
+    0 0 0 1px rgba(255,255,255,0.1);
+  
+  border-radius: 50px; /* Pill shape */
+  
+  /* Contain the glow effect within the bubble */
+  overflow: hidden;
+  
   transition: transform .36s cubic-bezier(.22, .61, .36, 1), width .26s ease, height .26s ease, opacity .2s ease;
   will-change: transform, width, height;
 }
 
-/* The glow effect */
+/* The glow effect - contained within the bubble */
 .nav-bubble::before {
   content: "";
   position: absolute;
-  inset: -150% 5%; /* Tall and narrow */
+  inset: -100%; /* Extended to ensure coverage */
   background: conic-gradient(from 90deg at 50% 50%,
   color-mix(in hsl, var(--bs-primary) 50%, transparent) 0deg,
   color-mix(in hsl, var(--bs-success) 50%, transparent) 180deg,
   color-mix(in hsl, var(--bs-primary) 50%, transparent) 360deg);
-  filter: blur(20px);
-  opacity: .7;
+  filter: blur(var(--nav-bubble-blur));
+  opacity: var(--nav-bubble-opacity);
   transition: opacity .3s ease;
   z-index: -1;
-  transform: translateY(25%); /* Start the gradient lower */
 }
 
 /* Keep links above the bubble */
@@ -63,6 +87,8 @@ Works with your existing glass variables.
   position: relative;
   z-index: 1;
   margin: 0 1rem;
+  border-radius: 50px; /* Match bubble shape */
+  transition: all 0.2s ease;
 }
 
 .navbar .nav-link.active {
@@ -80,5 +106,6 @@ Works with your existing glass variables.
   .nav-bubble {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+    background: var(--surface-2) !important;
   }
 }
