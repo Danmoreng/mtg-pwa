@@ -22,4 +22,34 @@ export class WorkerManager {
   static terminateWorker(worker: Worker): void {
     worker.terminate();
   }
+  
+  // Create a price sync worker
+  static createPriceSyncWorker(): Worker {
+    return this.createWorker('./priceSync.ts');
+  }
+  
+  // Create a price guide sync worker
+  static createPriceGuideSyncWorker(): Worker {
+    return this.createWorker('./priceGuideSync.ts');
+  }
+  
+  // Create a MTGJSON backfill worker
+  static createMTGJSONBackfillWorker(): Worker {
+    return this.createWorker('./mtgjsonBackfill.ts');
+  }
+  
+  // Create a Cardmarket CSV worker
+  static createCardmarketCsvWorker(): Worker {
+    return this.createWorker('./cardmarketCsv.ts');
+  }
+  
+  // Create a reconciler worker
+  static createReconcilerWorker(): Worker {
+    return this.createWorker('./reconcile.ts');
+  }
+  
+  // Create an allocation worker
+  static createAllocationWorker(): Worker {
+    return this.createWorker('./allocate.ts');
+  }
 }

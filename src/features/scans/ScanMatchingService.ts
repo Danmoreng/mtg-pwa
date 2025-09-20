@@ -3,6 +3,9 @@ import db from '../../data/db';
 import { cardLotRepository, transactionRepository, scanRepository } from '../../data/repos';
 import type { Scan, Transaction, CardLot } from '../../data/db';
 
+// Import the new reconciler service
+import * as Reconciler from './ReconcilerService';
+
 export class ScanMatchingService {
   // Match scans to sales with lot tracking
   static async matchScansToSales(): Promise<void> {
@@ -119,19 +122,6 @@ export class ScanMatchingService {
     }
   }
 
-  // Link a scan to a specific card lot
-  static async linkScanToLot(scanId: string, lotId: string): Promise<void> {
-    try {
-      // Update the scan with the lot ID
-      await scanRepository.update(scanId, {
-        lotId: lotId
-      });
-    } catch (error) {
-      console.error(`Error linking scan ${scanId} to lot ${lotId}:`, error);
-      throw error;
-    }
-  }
-
   // Get all scans for a specific lot
   static async getScansForLot(lotId: string): Promise<Scan[]> {
     try {
@@ -178,5 +168,53 @@ export class ScanMatchingService {
       console.error(`Error getting sales for card ${cardId}:`, error);
       throw error;
     }
+  }
+  
+  // Adapter methods for the new reconciler service
+  
+  /**
+   * Reconcile scans to lots
+   * Adapter that delegates to the new implementation
+   */
+  static async reconcileScansToLots(
+    identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  ): Promise<void> {
+    return await Reconciler.reconcileScansToLots(identity);
+  }
+
+  /**
+   * Reconcile SELLs to lots
+   * Adapter that delegates to the new implementation
+   */
+  static async reconcileSellsToLots(
+    identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  ): Promise<void> {
+    return await Reconciler.reconcileSellsToLots(identity);
+  }
+
+  /**
+   * Run the full reconciler
+   * Adapter that delegates to the new implementation
+   */
+  static async runReconciler(
+    identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  ): Promise<void> {
+    return await Reconciler.runReconciler(identity);
+  }
+  
+  /**
+   * Link scan to lot
+   * Adapter that delegates to the new implementation
+   */
+  static async linkScanToLot(scanId: string, lotId: string): Promise<void> {
+    return await Reconciler.linkScanToLot(scanId, lotId);
+  }
+  
+  /**
+   * Reassign SELL transaction to lot
+   * Adapter that delegates to the new implementation
+   */
+  static async reassignSellToLot(transactionId: string, lotId: string): Promise<void> {
+    return await Reconciler.reassignSellToLot(transactionId, lotId);
   }
 }

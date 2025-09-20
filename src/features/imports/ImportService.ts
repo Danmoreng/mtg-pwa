@@ -2,12 +2,18 @@
 import { transactionRepository, cardLotRepository, cardRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import { resolveSetCode } from '../pricing/SetCodeResolver';
 import db from '../../data/db';
 import type { Card, CardLot } from '../../data/db';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
 import { FinanceService } from '../analytics/FinanceService';
+
+// Use the new normalization gateway
+import { NormalizationGateway } from '../../core/Normalization';
+const { resolveSetCode } = NormalizationGateway;
+
+import * as ImportPipelines from './ImportPipelines';
+import type { Deck } from '../../data/db';
 
 export class ImportService {
     // Import Cardmarket transactions
@@ -496,5 +502,37 @@ export class ImportService {
         }
 
         return results;
+    }
+    
+    // Adapter methods for the new M3 import pipelines
+    
+    /**
+     * Import Manabox scans with box cost
+     * Adapter that delegates to the new implementation
+     */
+    static async importManaboxScansWithBoxCost(
+      rows: ImportPipelines.ManaboxImportRow[],
+      boxCost: ImportPipelines.BoxCost,
+      happenedAt: Date,
+      source: string,
+      externalRef: string
+    ): Promise<{ acquisitionId: string; scanIds: string[] }> {
+      return await ImportPipelines.importManaboxScansWithBoxCost(rows, boxCost, happenedAt, source, externalRef);
+    }
+
+    /**
+     * Import Cardmarket SELLs
+     * Adapter that delegates to the new implementation
+     */
+    static async importCardmarketSells(orderLines: ImportPipelines.CardmarketSellOrderLine[]): Promise<string[]> {
+      return await ImportPipelines.importCardmarketSells(orderLines);
+    }
+
+    /**
+     * Import decks
+     * Adapter that delegates to the new implementation
+     */
+    static async importDecks(decks: Omit<ImportPipelines.Deck, 'id'>[], deckCards: ImportPipelines.DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
+      return await ImportPipelines.importDecks(decks, deckCards);
     }
 }
