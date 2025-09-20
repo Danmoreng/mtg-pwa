@@ -3,6 +3,10 @@ import {cardLotRepository, transactionRepository, valuationRepository} from '../
 import type { CardLot } from '../../data/db';
 import { PriceQueryService } from '../pricing/PriceQueryService';
 
+// Import the new PnL service and cost allocation service
+import * as PnLService from './PnLService';
+import * as CostAllocationService from './CostAllocationService';
+
 // Valuation engine for calculating portfolio value and P/L
 export class ValuationEngine {
   // Calculate the current value of a card lot
@@ -215,5 +219,30 @@ export class ValuationEngine {
       console.error('Error creating valuation snapshot:', error);
       throw error;
     }
+  }
+  
+  // Adapter methods for the new PnL service and cost allocation service
+  
+  /**
+   * Calculate P&L for an acquisition
+   * Adapter that delegates to the new implementation
+   */
+  static async getAcquisitionPnL(
+    acquisitionId: string,
+    asOf: Date = new Date()
+  ): Promise<PnLService.AcquisitionPnL> {
+    return await PnLService.getAcquisitionPnL(acquisitionId, asOf);
+  }
+  
+  /**
+   * Allocate acquisition costs to lots
+   * Adapter that delegates to the new implementation
+   */
+  static async allocateAcquisitionCosts(
+    acquisitionId: string,
+    method: CostAllocationService.AllocationMethod,
+    opts?: CostAllocationService.AllocationOptions
+  ): Promise<void> {
+    return await CostAllocationService.allocateAcquisitionCosts(acquisitionId, method, opts);
   }
 }

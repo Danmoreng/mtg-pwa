@@ -3,6 +3,7 @@
 import db, { 
   type Card, 
   type CardLot,
+  type Acquisition,
   type Transaction, 
   type Scan, 
   type Deck, 
@@ -60,6 +61,10 @@ export const cardLotRepository = {
 
   async getByExternalRef(externalRef: string): Promise<CardLot[]> {
     return await db.card_lots.where('externalRef').equals(externalRef).toArray();
+  },
+
+  async getByAcquisitionId(acquisitionId: string): Promise<CardLot[]> {
+    return await db.card_lots.where('acquisitionId').equals(acquisitionId).toArray();
   },
 
   async getActiveLotsByCardId(cardId: string): Promise<CardLot[]> {
@@ -123,6 +128,11 @@ export const transactionRepository = {
       .toArray();
   },
 
+  // 3.3 Transaction repo idempotency helper
+  async getBySourceRef(source: string, externalRef: string): Promise<Transaction[]> {
+    return await db.transactions.where('[source+externalRef]').equals([source, externalRef]).toArray();
+  },
+
   async update(id: string, transaction: Partial<Transaction>): Promise<number> {
     return await db.transactions.update(id, transaction);
   },
@@ -152,6 +162,11 @@ export const scanRepository = {
 
   async getByLotId(lotId: string): Promise<Scan[]> {
     return await db.scans.where('lotId').equals(lotId).toArray();
+  },
+
+  // 3.2 Scan repo additions
+  async getByAcquisitionId(acquisitionId: string): Promise<Scan[]> {
+    return await db.scans.where('acquisitionId').equals(acquisitionId).toArray();
   },
 
   async update(id: string, scan: Partial<Scan>): Promise<number> {
@@ -265,15 +280,16 @@ export const pricePointRepository = {
       .toArray();
   },
 
-  async getByCardIdAndSourceAndFinishAndDate(
+  // 3.4 Fix pricePointRepository method name/index
+  async getByCardIdAndProviderAndFinishAndDate(
     cardId: string,
-    source: string,
+    provider: string,
     finish: string,
     date: string
   ): Promise<PricePoint[]> {
     return await db.price_points
-      .where('[cardId+source+finish+date]')
-      .equals([cardId, source, finish, date])
+      .where('[cardId+provider+finish+date]')
+      .equals([cardId, provider, finish, date])
       .toArray();
   },
 
@@ -311,6 +327,16 @@ export const valuationRepository = {
   async delete(id: string): Promise<void> {
     await db.valuations.delete(id);
   }
+};
+
+// 3.1 New acquisition repository
+export const acquisitionRepository = {
+  async add(a: Acquisition): Promise<string> { return db.acquisitions.add(a); },
+  async getById(id: string) { return db.acquisitions.get(id); },
+  async getByExternalRef(source: string, externalRef: string) {
+    return db.acquisitions.where('[source+externalRef]').equals([source, externalRef]).first();
+  },
+  async update(id: string, patch: Partial<Acquisition>) { return db.acquisitions.update(id, patch); },
 };
 
 // Setting repository
