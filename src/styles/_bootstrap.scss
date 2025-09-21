@@ -1,15 +1,19 @@
-// src/styles/bootstrap/_partials.scss
-
-// Order matters: functions → variables → maps → mixins → root → reboot → utilities → components
+// 1) Functions
 @import "bootstrap/scss/functions";
-@import "./variables";
-// your overrides before Bootstrap variables
+
+// 2) Your scalar overrides
+@import "./_variables";
+
+// 3) Bootstrap vars & maps
 @import "bootstrap/scss/variables";
 @import "bootstrap/scss/maps";
+
+// 4) Your map merges
+@import "./_maps";
+
+// 5) Core
 @import "bootstrap/scss/mixins";
 @import "bootstrap/scss/root";
-
-// Base & utilities
 @import "bootstrap/scss/reboot";
 @import "bootstrap/scss/type";
 @import "bootstrap/scss/containers";
@@ -17,7 +21,7 @@
 @import "bootstrap/scss/utilities";
 @import "bootstrap/scss/helpers";
 
-// Components you actually want
+// 6) Components you use
 @import "bootstrap/scss/transitions";
 @import "bootstrap/scss/close";
 @import "bootstrap/scss/buttons";
@@ -32,10 +36,6 @@
 @import "bootstrap/scss/progress";
 @import "bootstrap/scss/spinners";
 @import "bootstrap/scss/pagination";
-// Generate utility classes
+
+// 7) Utilities API must be last
 @import "bootstrap/scss/utilities/api";
-@import "./glass";
-@import "./buttons-liquid";
-@import "./theme-switcher";
-@import "./modal-close";
-@import "navbar-glass-bubble";

@@ -1,0 +1,13 @@
+@use "sass:map";
+
+// Keep Bootstrap’s colors but override the ones you care about.
+$theme-colors: map.merge(
+                $theme-colors,
+                (
+                        "primary": #2563eb,
+                        "secondary": #64748b,
+                        "success": #10b981,
+                        "warning": #f59e0b,
+                        "danger": #ef4444
+                )
+);

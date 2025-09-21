@@ -1,0 +1,267 @@
+/* ===========================
+   Theme switcher icon button
+   =========================== */
+.btn-icon {
+  position: relative; display:flex; align-items:center; justify-content:center;
+  width: 48px; height: 48px; padding: 0; border: none; background: transparent;
+  color: var(--bs-body-color); cursor: pointer; border-radius: 50%;
+  transition: color .2s ease;
+
+  &:hover { color: var(--bs-primary); }
+
+  &::before {
+    content:""; position:absolute; inset:0; border-radius:50%;
+    background: radial-gradient(circle at center,
+            color-mix(in hsl, var(--bs-primary) 30%, transparent) 0%, transparent 50%);
+    opacity:0; transform: scale(.5); transition: opacity .3s ease, transform .3s ease;
+  }
+  &:hover::before { opacity:1; transform: scale(1.2); }
+}
+
+/* ===========================
+   Modal close (glass contexts)
+   =========================== */
+.modal-content.glass { overflow: clip; }
+.modal-content.glass::after { z-index: 0; }
+.modal-content.glass > * { position: relative; z-index: 1; }
+
+.modal .btn-close {
+  --btn-close-size: 1.25rem;
+  width: var(--btn-close-size); height: var(--btn-close-size);
+  margin: -0.25rem -0.25rem -0.25rem auto;
+  border-radius: 999px; position: relative; z-index: 1;
+  box-shadow: none !important; outline: none; opacity: .7;
+  --bs-btn-close-color: var(--color-text);
+  --_x: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='currentColor' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 1 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+  background: transparent var(--bs-btn-close-bg, var(--_x)) no-repeat center/60%;
+  color: var(--color-text); transition: opacity .18s ease;
+  &:hover { opacity: 1; }
+  &:focus, &:focus-visible { box-shadow: none !important; }
+  &:focus-visible { @include focus-ring(); }
+}
+
+.modal .btn-close::before {
+  content:""; position:absolute; inset:-40%; border-radius:50%;
+  background: conic-gradient(from 90deg at 50% 50%,
+          color-mix(in hsl, var(--bs-primary) 40%, transparent) 0deg,
+          color-mix(in hsl, var(--bs-success) 40%, transparent) 180deg,
+          color-mix(in hsl, var(--bs-primary) 40%, transparent) 360deg);
+  filter: blur(10px); opacity: 0; transform: scale(.5);
+  transition: opacity .2s ease, transform .2s ease;
+}
+[data-theme="dark"] .modal .btn-close::before,
+[data-bs-theme="dark"] .modal .btn-close::before {
+  background: conic-gradient(from 90deg at 50% 50%,
+          color-mix(in hsl, var(--bs-primary) 25%, transparent) 0deg,
+          color-mix(in hsl, var(--bs-success) 25%, transparent) 180deg,
+          color-mix(in hsl, var(--bs-primary) 25%, transparent) 360deg);
+}
+.modal .btn-close:hover::before { opacity: 1; transform: scale(1); }
+
+/* ===========================
+   Navbar “glass bubble” highlight
+   =========================== */
+:root, [data-bs-theme="light"], [data-theme="light"] {
+  --nav-bubble-glow: .85; --nav-bubble-blur: 20px; --nav-bubble-opacity: .7;
+}
+[data-bs-theme="dark"], [data-theme="dark"] {
+  --nav-bubble-glow: .78; --nav-bubble-blur: 24px; --nav-bubble-opacity: .85;
+}
+.navbar .navbar-nav { position: relative; }
+.navbar.fixed-top { position: fixed; }
+
+.nav-bubble {
+  position:absolute; top:0; left:0; pointer-events:none; z-index:0; opacity:0;
+  width: var(--_w, 0px); height: var(--_h, 0px);
+  transform: translate3d(var(--_x,0), var(--_y,0), 0);
+  border-radius: 50px; overflow: hidden;
+  transition: transform .36s cubic-bezier(.22,.61,.36,1), width .26s ease, height .26s ease, opacity .2s ease;
+  will-change: transform, width, height;
+
+  @include glass-surface();
+  background: rgb(var(--glass-bg));
+  box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.6),
+          0 0 0 1px rgba(255,255,255,.2) inset,
+          0 0 0 1px rgba(255,255,255,.1);
+}
+.nav-bubble::before {
+  content:""; position:absolute; inset:-100%;
+  background: conic-gradient(from 90deg at 50% 50%,
+          color-mix(in hsl, var(--bs-primary) 50%, transparent) 0deg,
+          color-mix(in hsl, var(--bs-success) 50%, transparent) 180deg,
+          color-mix(in hsl, var(--bs-primary) 50%, transparent) 360deg);
+  filter: blur(var(--nav-bubble-blur)); opacity: var(--nav-bubble-opacity);
+  transition: opacity .3s ease; z-index:-1;
+}
+.navbar .nav-link {
+  display:flex; align-items:center; height: var(--app-navbar-h);
+  position:relative; z-index:1; margin: 0 1rem; border-radius: 50px;
+  transition: all .2s ease;
+}
+.navbar .nav-link.active { font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .nav-bubble { transition:none; } }
+@media (prefers-reduced-transparency: reduce) {
+  .nav-bubble { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; background: var(--surface-2)!important; }
+}
+
+/* ==========================================
+   Neon Glass Buttons (Bootstrap color-aware)
+   Usage:
+     <button class="btn btn-glass btn-glass-primary">...</button>
+     <button class="btn btn-glass-soft btn-glass-success">...</button>
+     <button class="btn btn-glass-strong btn-glass-warning">...</button>
+   ========================================== */
+
+/* 1) Shared base (no compound extends) */
+%btn-glass-common {
+  @include glass-button-base;
+
+  /* Accent & ring; variants override --btn-glass-accent via .btn-glass-<name> */
+  --btn-glass-accent: var(--bs-primary);
+  --btn-ring: 6px;
+
+  /* neon-demo style derivations from accent */
+  --btn-tint:   color-mix(in oklab, var(--btn-glass-accent) 20%, transparent);
+  --btn-shadow: color-mix(in oklab, var(--btn-glass-accent) 35%, transparent);
+
+  color: var(--bs-body-color);
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  border: 1px solid rgba(var(--glass-border-light));
+
+  /* Glass plate (two-stop gradient like demo) */
+  background: linear-gradient(
+    135deg,
+    rgb(var(--glass-bg)),
+    color-mix(in oklab, rgb(var(--glass-bg)) 70%, transparent)
+  );
+
+  /* Core glass effect */
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+
+  /* Base “thickness” + subtle neon rim always present */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 0 0 .8px color-mix(in oklab, var(--btn-glass-accent) 55%, transparent);
+
+  position: relative;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+
+  /* Glossy highlight */
+  &::after {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 45%);
+    mix-blend-mode: screen; opacity: .35;
+  }
+
+  /* Gradient border layer (kept from your version, tuned slightly) */
+  &::before {
+    content: "";
+    position: absolute; inset: 0; padding: 1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(
+      120deg,
+      color-mix(in oklab, var(--btn-glass-accent) 85%, white 10%),
+      transparent 30%,
+      color-mix(in oklab, var(--btn-glass-accent) 60%, white 10%)
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.55),
+      0 16px 34px -16px var(--btn-shadow),
+      /* crisp edge */
+      0 0 0 1px color-mix(in oklab, var(--btn-glass-accent) 85%, white 10%);
+  }
+
+  &:active,
+  &.active,
+  .show > &.dropdown-toggle {
+    transform: translateY(0);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.55),
+      0 10px 24px -14px var(--btn-shadow),
+      0 0 0 .8px color-mix(in oklab, var(--btn-glass-accent) 60%, transparent);
+  }
+
+  &:focus-visible {
+    /* neon inner ring + soft outer halo from demo */
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.55),
+      0 0 0 2px color-mix(in oklab, var(--btn-glass-accent) 80%, white 10%),
+      0 0 0 var(--btn-ring) color-mix(in oklab, var(--btn-glass-accent) 32%, transparent),
+      var(--elev-2);
+    outline: none;
+  }
+
+  /* Fallback when backdrop-filter isn’t available */
+  @supports not ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
+    background: color-mix(in oklab, white 16%, transparent);
+  }
+}
+
+/* 2) Strength variants (just the background plate) */
+.btn-glass       { @extend %btn-glass-common; }
+
+.btn-glass-soft  {
+  @extend %btn-glass-common;
+  background: linear-gradient(
+                  135deg,
+                  rgb(var(--glass-bg-soft)),
+                  color-mix(in oklab, rgb(var(--glass-bg-soft)) 70%, transparent)
+  );
+}
+
+.btn-glass-strong{
+  @extend %btn-glass-common;
+  background: linear-gradient(
+                  135deg,
+                  rgb(var(--glass-bg-strong)),
+                  color-mix(in oklab, rgb(var(--glass-bg-strong)) 70%, transparent)
+  );
+}
+
+/* keep your aliases */
+.btn-glass-card  { @extend .btn-glass; }
+.btn-glass-pane  { @extend .btn-glass-soft; }
+.btn-glass-panel { @extend .btn-glass-strong; }
+
+/* subtle perimeter glow line kept */
+.btn-glass-panel::after {
+  content:"";
+  position:absolute; inset:-1.5px;
+  border-radius: calc(var(--bs-btn-border-radius, .75rem) + 1.5px);
+  pointer-events:none;
+  background: linear-gradient(120deg, transparent 20%, color-mix(in oklab, var(--btn-glass-accent) 30%, transparent), transparent 80%);
+  mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  padding: 1.5px; z-index: -1;
+}
+
+/* 4) Bootstrap color variants: set the accent via CSS var */
+@mixin make-btn-glass-variant($name, $color) {
+  .btn-glass-#{$name} {
+    @extend .btn-glass;
+    --btn-glass-accent: #{$color};
+  }
+}
+@each $name, $color in $theme-colors {
+  @include make-btn-glass-variant($name, $color);
+}
+
+/* A11y prefs */
+@media (prefers-reduced-motion: reduce) {
+  .btn-glass, .btn-glass-soft, .btn-glass-strong { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .btn-glass, .btn-glass-soft, .btn-glass-strong {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--surface-2) !important;
+  }
+}

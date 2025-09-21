@@ -1,0 +1,39 @@
+/* One place defines how “glass” looks; variants reuse the mixin */
+.glass        { @include glass-surface(); }
+.glass--soft  { @include glass-surface(rgb(var(--glass-bg-soft))); }
+.glass--strong{ @include glass-surface(rgb(var(--glass-bg-strong))); }
+
+/* Component presets (opt-in via .glass) */
+.card.glass,
+.modal-content.glass,
+.dropdown-menu.glass {
+  @include glass-surface();
+  --bs-card-bg: transparent;
+  --bs-dropdown-bg: transparent;
+}
+
+.navbar.glass {
+  @include glass-surface();
+  --bs-navbar-padding-y: .6rem;
+  --bs-navbar-brand-font-weight: 600;
+  --bs-navbar-color: var(--color-text);
+  --bs-navbar-hover-color: var(--color-text);
+  overflow: hidden; /* contain glow */
+  border: 1px solid rgba(0,0,0,.1); /* light-mode border legibility */
+}
+
+/* Dark theme border tweak for navbar */
+[data-bs-theme="dark"] .navbar.glass,
+[data-theme="dark"]    .navbar.glass {
+  border: 1px solid rgba(var(--glass-border-dark));
+}
+
+/* A11y: solid fallback if user prefers no transparency */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass--soft, .glass--strong,
+  .navbar.glass, .card.glass, .modal-content.glass, .dropdown-menu.glass {
+    background: var(--surface-2) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
