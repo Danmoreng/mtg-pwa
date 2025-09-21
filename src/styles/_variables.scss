@@ -1,15 +1,14 @@
-// src/styles/bootstrap/_variables.scss
-
-// Enable CSS variables generation for many Bootstrap tokens.
+// Generate CSS custom properties for many BS tokens
 $enable-css-custom-properties: true;
+$enable-shadows: true;
 
-// Typography & radius (compile-time examples)
+// Typography & radii
 $font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-$border-radius: .375rem; // match your --radius-md
+$border-radius: .375rem; // ≈ --radius-md
 $border-radius-lg: .5rem;
 $border-radius-sm: .25rem;
 
-// Buttons (MD3 styles lean bold-ish and slightly taller)
+// Buttons
 $btn-font-weight: 600;
 $btn-padding-y: .6rem;
 $btn-padding-x: 1rem;

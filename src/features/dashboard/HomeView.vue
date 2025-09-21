@@ -5,7 +5,7 @@
         <h1 class="mb-4">MTG Collection Tracker</h1>
       </div>
       <div class="col-lg-9">
-        <div class="card glass-panel mb-4">
+        <div class="card mb-4">
           <div class="card-body">
             <h5 class="card-title">Portfolio Value Over Time</h5>
             <PortfolioValueChart />
@@ -13,22 +13,18 @@
         </div>
       </div>
       <div class="col-lg-3">
-        <div class="card glass-panel mb-4">
+        <div class="card mb-4">
           <div class="card-body">
             <h5 class="card-title">Price Updates</h5>
             <div class="small text-muted mb-1">
               Last: {{ formatDate(lastUpdate) }} | Next: {{ formatDate(nextUpdate) }}
             </div>
-            <div class="col-md-3">
-                <div class="d-flex justify-content-between">
-                  <button @click="refreshPrices" class="btn btn-glass-panel" :disabled="isUpdating">
+                  <button @click="refreshPrices" class="btn btn-glass-primary" :disabled="isUpdating">
                     {{ isUpdating ? 'Updating...' : 'Refresh Now' }}
                   </button>
-                </div>
-              </div>
           </div>
         </div>
-        <div class="card glass-panel">
+        <div class="card">
           <div class="card-body">
             <h5 class="card-title">Quick Stats</h5>
             <div class="small">
@@ -52,7 +48,7 @@
 
     <div class="row g-4">
       <div class="col-lg-3 col-md-6">
-        <div class="card glass-panel h-100">
+        <div class="card h-100">
           <div class="card-body">
             <h5 class="card-title">Unrealized P/L</h5>
             <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">{{ unrealizedPL }}</p>
@@ -60,7 +56,7 @@
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="card glass-panel h-100">
+        <div class="card h-100">
           <div class="card-body">
             <h5 class="card-title">Realized P/L</h5>
             <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">{{ realizedPL }}</p>
@@ -68,7 +64,7 @@
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="card glass-panel h-100">
+        <div class="card h-100">
           <div class="card-body">
             <h5 class="card-title">Total Revenue</h5>
             <p class="stat-value text-success">{{ totalRevenue }}</p>
@@ -76,7 +72,7 @@
         </div>
       </div>
       <div class="col-lg-3 col-md-6">
-        <div class="card glass-panel h-100">
+        <div class="card h-100">
           <div class="card-body">
             <h5 class="card-title">Total Costs</h5>
             <p class="stat-value text-danger">{{ totalCosts }}</p>
@@ -88,7 +84,7 @@
     <!-- Detailed breakdown section -->
     <div class="row mt-4">
       <div class="col-12">
-        <div class="card glass-panel">
+        <div class="card">
           <div class="card-body">
             <h5 class="card-title">Financial Breakdown</h5>
             <div class="row">

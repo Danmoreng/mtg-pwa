@@ -1,0 +1,33 @@
+/* Generic glass surface (uses runtime CSS variables) */
+@mixin glass-surface(
+  $bg: rgb(var(--glass-bg)),
+  $border-rgb: var(--glass-border-light),
+  $shadow: var(--glass-shadow-light)
+) {
+  background: $bg;
+  border: 1px solid rgba(#{$border-rgb});
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
+  box-shadow: $shadow;
+}
+
+/* Button base helper (keeps all glass button variants tiny) */
+@mixin glass-button-base {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+  border-radius: var(--bs-btn-border-radius, .75rem);
+  transition:
+          transform .22s cubic-bezier(.22,.61,.36,1),
+          box-shadow .22s cubic-bezier(.22,.61,.36,1),
+          background-color .18s ease,
+          border-color .18s ease,
+          opacity .2s ease;
+}
+
+/* Focus ring */
+@mixin focus-ring {
+  outline: 2px solid color-mix(in hsl, var(--bs-primary) 80%, transparent);
+  outline-offset: 2px;
+}

@@ -1,0 +1,27 @@
+/* Base reset (kept tiny; Bootstrap covers the rest) */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
+
+/* Layout primitives */
+.stack   { display:flex; flex-direction:column; gap:var(--space-md); }
+.cluster { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-md); }
+.grid    { display:grid; gap:var(--space-md); }
+
+.import-alerts { margin-top: var(--app-navbar-h); }
+
+/* Elevation utilities */
+.elevation-1 { box-shadow: var(--elev-1) !important; }
+.elevation-2 { box-shadow: var(--elev-2) !important; }
+.elevation-3 { box-shadow: var(--elev-3) !important; }
+.elevation-4 { box-shadow: var(--elev-4) !important; }
+.elevation-5 { box-shadow: var(--elev-5) !important; }

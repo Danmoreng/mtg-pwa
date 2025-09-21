@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glassmorphic Buttons – Plate + Neon Combo</title>
+  <style>
+    /* ------------------------------
+       Base & Theme
+    --------------------------------*/
+    :root {
+      /* glass core */
+      --glass-bg-1: rgba(255,255,255,.42);
+      --glass-bg-2: rgba(255,255,255,.12);
+      --glass-border: rgba(255,255,255,.45);
+      --glass-inner: rgba(255,255,255,.55);
+      --text: #0b1020;
+      --text-weak: #20273f;
+
+      /* accents */
+      --blue:  #3b82f6; /* 500 */
+      --pink:  #ec4899;
+      --violet:#8b5cf6;
+      --teal:  #14b8a6;
+      --amber: #f59e0b;
+
+      --blur: 14px;
+      --radius: 16px;
+      --ring: 6px; /* focus halo size */
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --glass-bg-1: rgba(255,255,255,.10);
+        --glass-bg-2: rgba(255,255,255,.06);
+        --glass-border: rgba(255,255,255,.22);
+        --glass-inner: rgba(255,255,255,.10);
+        --text: #eef2ff;
+        --text-weak: #c7d2fe;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font: 500 16px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 10%, rgba(59,130,246,.25), transparent 60%),
+                  radial-gradient(900px 600px at 90% 20%, rgba(236,72,153,.20), transparent 55%),
+                  radial-gradient(900px 700px at 30% 90%, rgba(20,184,166,.22), transparent 60%),
+                  linear-gradient(180deg, #0b1020 0%, #10162a 100%);
+      background-attachment: fixed;
+      /* subtle sparkle */
+      --spark: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1.2px);
+      background-image: var(--spark), var(--spark), var(--spark),
+                        radial-gradient(1200px 800px at 10% 10%, rgba(59,130,246,.25), transparent 60%),
+                        radial-gradient(900px 600px at 90% 20%, rgba(236,72,153,.20), transparent 55%),
+                        radial-gradient(900px 700px at 30% 90%, rgba(20,184,166,.22), transparent 60%),
+                        linear-gradient(180deg, #0b1020 0%, #10162a 100%);
+      background-size: 3px 3px, 5px 5px, 7px 7px, auto, auto, auto, auto;
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 56px 24px 80px; }
+
+    h1 {
+      font-size: clamp(28px, 2.4vw + 10px, 44px);
+      line-height: 1.1;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+      color: white;
+    }
+    p.lead { color: #c7d2fe; margin: 0 0 28px; }
+
+    section { margin: 28px 0 36px; }
+    h2 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: #a5b4fc; margin: 0 0 14px; }
+
+    .grid { display: grid; grid-template-columns: repeat( auto-fit, minmax(230px, 1fr) ); gap: 14px; }
+
+    /* ------------------------------
+       Button Core
+    --------------------------------*/
+    .btn {
+      --accent: var(--blue);
+      --tint: color-mix(in oklab, var(--accent) 20%, transparent);
+      --shadow: color-mix(in oklab, var(--accent) 35%, transparent);
+
+      position: relative;
+      display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+      padding: .85rem 1.1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--glass-border);
+      background: linear-gradient(135deg, var(--glass-bg-1), var(--glass-bg-2));
+      -webkit-backdrop-filter: blur(var(--blur)) saturate(130%);
+      backdrop-filter: blur(var(--blur)) saturate(130%);
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+      user-select: none;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+      box-shadow: inset 0 1px 0 var(--glass-inner),
+                  0 10px 24px -12px rgba(0,0,0,.6);
+      outline: none;
+      will-change: transform;
+    }
+
+    /* fallback if no backdrop-filter */
+    @supports not ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
+      .btn { background: color-mix(in oklab, white 16%, transparent); }
+    }
+
+    .btn .icon { width: 1.1em; height: 1.1em; display: inline-block; }
+    .btn svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 var(--glass-inner), 0 16px 34px -16px var(--shadow); }
+    .btn:active { transform: translateY(0); box-shadow: inset 0 1px 0 var(--glass-inner), 0 10px 24px -14px var(--shadow); }
+    .btn:focus-visible { box-shadow: inset 0 1px 0 var(--glass-inner), 0 0 0 2px color-mix(in oklab, var(--accent) 80%, white 10%), 0 0 0 calc(var(--ring)) color-mix(in oklab, var(--accent) 32%, transparent); }
+
+    /* glossy highlight */
+    .btn::after {
+      content: "";
+      position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 45%);
+      mix-blend-mode: screen; opacity: .35;
+    }
+
+    /* size utilities */
+    .btn.sm { padding: .65rem .9rem; font-size: .92rem; }
+    .btn.lg { padding: 1rem 1.2rem; font-size: 1.05rem; }
+
+    /* shape */
+    .pill { border-radius: 999px; }
+
+    /* Accents */
+    .accent-blue  { --accent: var(--blue); }
+    .accent-pink  { --accent: var(--pink); }
+    .accent-violet{ --accent: var(--violet); }
+    .accent-teal  { --accent: var(--teal); }
+    .accent-amber { --accent: var(--amber); }
+
+    /* ------------------------------
+       Variants
+    --------------------------------*/
+    /* classic glass */
+    .btn--glass { box-shadow: inset 0 1px 0 var(--glass-inner), 0 10px 24px -12px rgba(0,0,0,.6), 0 0 0 .8px color-mix(in oklab, var(--accent) 60%, transparent); }
+
+    /* tinted glass */
+    .btn--tint { background: linear-gradient(135deg, color-mix(in oklab, var(--tint), var(--glass-bg-1)), color-mix(in oklab, var(--tint), var(--glass-bg-2))); }
+
+    /* gradient border */
+    .btn--border { background: linear-gradient(135deg, var(--glass-bg-1), var(--glass-bg-2)); border-color: transparent; }
+    .btn--border::before {
+      content: ""; position: absolute; inset: 0; padding: 1px; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(120deg, color-mix(in oklab, var(--accent) 85%, white 10%), transparent 30%, color-mix(in oklab, var(--accent) 60%, white 10%));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+    }
+
+    /* neon glass */
+    .btn--neon { background: color-mix(in oklab, var(--tint), transparent 40%); }
+    .btn--neon:hover { box-shadow: inset 0 1px 0 var(--glass-inner), 0 0 0 1px color-mix(in oklab, var(--accent) 85%, white 10%), 0 10px 24px -14px var(--shadow), 0 0 28px -6px color-mix(in oklab, var(--accent) 80%, transparent); }
+
+    /* frost-plate */
+    .btn--plate { background: color-mix(in oklab, white 24%, var(--tint)); border: 1px solid color-mix(in oklab, var(--accent) 25%, var(--glass-border)); }
+
+    /* icon-only (circle) */
+    .btn.icon-only { width: 46px; height: 46px; padding: 0; border-radius: 999px; }
+
+    /* disabled */
+    .btn[aria-disabled="true"], .btn:disabled { opacity: .55; cursor: not-allowed; filter: grayscale(.2); }
+
+    /* ------------------------------------------
+       NEW: Frost‑Plate + Neon Glow (incl. icon‑only)
+       Usage: .btn.btn--plate-neon.accent-teal (optionally .icon-only or .pill)
+    -------------------------------------------*/
+    .btn--plate-neon {
+      background: color-mix(in oklab, white 24%, var(--tint));
+      border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--glass-border));
+    }
+    .btn--plate-neon:hover,
+    .btn--plate-neon:focus-visible {
+      box-shadow:
+        inset 0 1px 0 var(--glass-inner),
+        0 0 0 1px color-mix(in oklab, var(--accent) 85%, white 10%),
+        0 10px 24px -14px var(--shadow),
+        0 0 28px -6px color-mix(in oklab, var(--accent) 80%, transparent);
+    }
+
+    /* demo layout cards (glass panels) */
+    .panel { background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); border: 1px solid var(--glass-border); border-radius: 20px; padding: 18px; box-shadow: inset 0 1px 0 var(--glass-inner), 0 20px 44px -30px rgba(0,0,0,.8); }
+
+    .note { color: #a5b4fc; font-size: 13px; margin-top: 6px; }
+
+    .stack { display:flex; flex-wrap:wrap; gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Glassmorphic Buttons – Plate + Neon Combo</h1>
+    <p class="lead">A combined variant that keeps the frosted “plate” body but adds a neon border glow on hover/focus. Works with icon‑only and pill shapes.</p>
+
+    <section class="panel">
+      <h2>Plate + Neon (Text Buttons)</h2>
+      <div class="stack">
+        <button class="btn btn--plate-neon accent-teal pill">Accept</button>
+        <button class="btn btn--plate-neon accent-blue">Continue</button>
+        <button class="btn btn--plate-neon accent-violet">Settings</button>
+        <button class="btn btn--plate-neon accent-pink">Upload</button>
+        <button class="btn btn--plate-neon accent-amber" disabled aria-disabled="true">Disabled</button>
+      </div>
+      <div class="note">Frosted body with accent border & subtle neon glow on hover/focus.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Plate + Neon (Icon‑Only)</h2>
+      <div class="stack">
+        <button class="btn btn--plate-neon accent-blue icon-only" aria-label="Search">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          </span>
+        </button>
+        <button class="btn btn--plate-neon accent-pink icon-only" aria-label="Heart">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M20.8 8.6a5.5 5.5 0 0 0-9.1-2.1L12 7.2l.3-.7a5.5 5.5 0 0 0-9.1 2.1c-1.3 3.1.2 6 2.5 7.9L12 21l6.3-4.5c2.3-1.9 3.8-4.8 2.5-7.9Z"/></svg>
+          </span>
+        </button>
+        <button class="btn btn--plate-neon accent-violet icon-only" aria-label="Play">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+        </button>
+        <button class="btn btn--plate-neon accent-teal icon-only" aria-label="Download">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+          </span>
+        </button>
+      </div>
+      <div class="note">Icon‑only circles inherit the neon border glow from <code>.btn--plate-neon</code>.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Recipe</h2>
+      <div class="grid">
+        <div>
+          <code>.btn.btn--plate-neon.accent-teal</code>
+          <div class="note">Base combo variant.</div>
+        </div>
+        <div>
+          <code>.btn.btn--plate-neon.accent-blue.pill</code>
+          <div class="note">Pill silhouette keeps glow tight around the shape.</div>
+        </div>
+        <div>
+          <code>.btn.btn--plate-neon.accent-violet.icon-only</code>
+          <div class="note">Circle icon‑only with neon edge.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
