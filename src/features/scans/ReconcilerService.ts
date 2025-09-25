@@ -29,7 +29,7 @@ export async function remainingQty(lotId: string): Promise<number> {
  * @returns Promise<CardLot[]> - matching lots
  */
 export async function findLotsByIdentity(
-  identity: { cardId?: string; fingerprint: string; finish: string; lang: string },
+  identity: { cardId?: string; fingerprint: string; finish: string; lang?: string },
   at?: Date
 ): Promise<CardLot[]> {
   // Get all lots for this cardId
@@ -44,7 +44,7 @@ export async function findLotsByIdentity(
     
     // Filter by finish and language
     if (lot.finish !== identity.finish) return false;
-    if (lot.language !== identity.lang) return false;
+    if (lot.language !== (identity.lang || 'EN')) return false;  // Handle undefined lang with default
     
     return true;
   });
@@ -59,7 +59,7 @@ export async function findLotsByIdentity(
  * @returns Promise<CardLot> - the provisional lot
  */
 export async function findOrCreateProvisionalLot(
-  identity: { cardId?: string; fingerprint: string; finish: string; lang: string },
+  identity: { cardId?: string; fingerprint: string; finish: string; lang?: string },
   when: Date,
   source: string,
   acquisitionId?: string
@@ -67,6 +67,28 @@ export async function findOrCreateProvisionalLot(
   // Try to find an existing provisional lot
   const existingLots = await findLotsByIdentity(identity, when);
   const provisionalLot = existingLots.find(lot => lot.source === 'provisional');
+  
+  // If found, return it
+  if (provisionalLot) return provisionalLot;
+  
+  // Otherwise create a new provisional lot
+  const newLot: Omit<CardLot, 'id'> = {
+    cardId: identity.cardId || undefined, // Make sure it's undefined if not provided
+    cardFingerprint: identity.fingerprint,
+    finish: identity.finish,
+    language: identity.lang as string || 'EN', // Final attempt with type assertion
+    quantity: 0, // Starts with 0 quantity
+    purchasedAt: when,
+    source: 'provisional',
+    acquisitionId: acquisitionId || undefined, // Change null to undefined to match interface
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  
+  // Save the new lot to the repository
+  const savedLotId = await cardLotRepository.add(newLot as CardLot);
+  return await cardLotRepository.getById(savedLotId) as CardLot;
+}
 
 /**
  * Link scan to lot
@@ -115,7 +137,7 @@ export async function mergeLots(targetLotId: string, fromLotId: string): Promise
  * @param identity 
  */
 export async function reconcileScansToLots(
-  identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }
 ): Promise<void> {
   // Get all scans for this identity
   const scans = identity.cardId 
@@ -134,8 +156,9 @@ export async function reconcileScansToLots(
     let targetLot: CardLot | null = null;
     
     // Check if scan has acquisitionId property (it might not in older versions)
-    if ('acquisitionId' in scan && scan.acquisitionId) {
-      targetLot = lots.find(lot => lot.acquisitionId === scan.acquisitionId) || null;
+    // Since Scan interface doesn't define acquisitionId, we cast to any to check
+    if ((scan as any).acquisitionId) {
+      targetLot = lots.find(lot => lot.acquisitionId === (scan as any).acquisitionId) || null;
     }
     
     // Else near in time (± window, bidirectional)
@@ -152,10 +175,13 @@ export async function reconcileScansToLots(
     // If none exist: create provisional lot with purchasedAt = scan.scannedAt and source='scan'
     if (!targetLot) {
       targetLot = await findOrCreateProvisionalLot(
-        identity,
+        { 
+          ...identity, 
+          lang: identity.lang || 'EN'  // Ensure lang is defined
+        },
         scan.scannedAt,
         'scan',
-        'acquisitionId' in scan ? scan.acquisitionId : undefined
+        (scan as any).acquisitionId ? (scan as any).acquisitionId : undefined
       );
     }
     
@@ -169,7 +195,7 @@ export async function reconcileScansToLots(
  * @param identity 
  */
 export async function reconcileSellsToLots(
-  identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }
 ): Promise<void> {
   // Get all SELL transactions for this identity
   const sells = identity.cardId
@@ -203,7 +229,10 @@ export async function reconcileSellsToLots(
     // If none exist: create provisional lot (source='backfill', purchasedAt = happenedAt)
     if (!targetLot) {
       targetLot = await findOrCreateProvisionalLot(
-        identity,
+        { 
+          ...identity, 
+          lang: identity.lang || 'EN'  // Ensure lang is defined
+        },
         sell.happenedAt,
         'backfill'
       );
@@ -219,7 +248,7 @@ export async function reconcileSellsToLots(
  * @param identity 
  */
 export async function consolidateProvisionalLots(
-  identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }
 ): Promise<void> {
   // Get all lots for this identity
   const lots = await findLotsByIdentity(identity);
@@ -258,7 +287,7 @@ export async function consolidateProvisionalLots(
  * @param identity 
  */
 export async function runReconciler(
-  identity: { cardId?: string; fingerprint: string; finish: string; lang: string }
+  identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }
 ): Promise<void> {
   // 1. Scans → lots
   await reconcileScansToLots(identity);

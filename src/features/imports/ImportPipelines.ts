@@ -201,18 +201,28 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
     const deckIds: string[] = [];
     const deckCardIds: string[] = [];
     
-    // Insert decks (idempotent on deckId)
+    // Insert decks idempotently - check if a deck with the same name already exists
     for (const deck of decks) {
-      const existingDeck = await deckRepository.getById(deck.id);
+      // Get all decks to check for existing name
+      const allDecks = await deckRepository.getAll();
+      const existingDeck = allDecks.find(d => d.name === deck.name);
+      
       if (!existingDeck) {
+        // Generate a new ID for the new deck
+        const newDeckId = `deck_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         const newDeck: Deck = {
           ...deck,
-          id: deck.id,
+          id: newDeckId,
           createdAt: deck.createdAt || new Date(),
           updatedAt: deck.updatedAt || new Date()
         };
+        
         await deckRepository.add(newDeck);
         deckIds.push(newDeck.id);
+      } else {
+        // If deck exists, we still add its ID to the result
+        deckIds.push(existingDeck.id);
       }
     }
     

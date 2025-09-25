@@ -1,6 +1,7 @@
 // 7) Cost allocation service (per acquisition)
 
 import { acquisitionRepository, cardLotRepository, pricePointRepository } from '../../data/repos';
+import type { CardLot } from '../../data/db';
 import db from '../../data/db';
 
 type AllocationMethod = 'equal_per_card' | 'by_market_price' | 'manual' | 'by_rarity';
