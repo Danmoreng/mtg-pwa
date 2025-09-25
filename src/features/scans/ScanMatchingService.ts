@@ -9,6 +9,15 @@ import * as Reconciler from './ReconcilerService';
 export class ScanMatchingService {
   // Match scans to sales with lot tracking
   static async matchScansToSales(): Promise<void> {
+    // TODO: Remove this legacy method after full rollout of M3 reconciler
+    // Gate behind feature flag to prevent double-assignment conflicts
+    if (process.env.M3_RECONCILER_ONLY === 'true') {
+      // When flag is true, just run the new reconciler instead of the legacy matcher
+      console.warn('M3_RECONCILER_ONLY is enabled, skipping legacy matcher');
+      return;
+    }
+    
+    // else: legacy code path (temporary)
     try {
       // Get all scans that haven't been matched yet
       const unmatchedScans = await db.scans

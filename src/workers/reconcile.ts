@@ -37,19 +37,20 @@ async function runReconcilerWorker(): Promise<void> {
     // Process transactions
     for (const tx of transactions) {
       if (tx.cardId) {
-        // Get the card to get its fingerprint info
+        // Get the card to get its info
         const card = await db.cards.get(tx.cardId);
         if (card) {
-          // Extract finish and language from cardFingerprint if possible, otherwise use defaults
-          const fingerprintParts = scan.cardFingerprint.split(':');
-          const finish = fingerprintParts.length > 3 ? fingerprintParts[3] : 'nonfoil';
-          const lang = fingerprintParts.length > 2 ? fingerprintParts[2] : 'EN';
+          // Create a fingerprint from card properties since cardFingerprint doesn't exist on Card
+          // Format: game:set:number:finish:lang (simplified for this context)
+          const fingerprint = `mtg:${card.setCode}:${card.number}:${card.finish || 'nonfoil'}:${card.lang || 'EN'}`;
+          const finish = card.finish || 'nonfoil';
+          const lang = card.lang || 'EN';
           
-          const identityKey = `${scan.cardFingerprint}:${finish}:${lang}`;
+          const identityKey = `${fingerprint}:${finish}:${lang}`;
           identities.add(identityKey);
           identityMap.set(identityKey, {
-            cardId: scan.cardId,
-            fingerprint: scan.cardFingerprint,
+            cardId: tx.cardId,
+            fingerprint: fingerprint,
             finish: finish,
             lang: lang
           });

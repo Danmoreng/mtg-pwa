@@ -532,7 +532,7 @@ export class ImportService {
      * Import decks
      * Adapter that delegates to the new implementation
      */
-    static async importDecks(decks: Omit<ImportPipelines.Deck, 'id'>[], deckCards: ImportPipelines.DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
+    static async importDecks(decks: Omit<Deck, 'id'>[], deckCards: ImportPipelines.DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
       return await ImportPipelines.importDecks(decks, deckCards);
     }
 }
