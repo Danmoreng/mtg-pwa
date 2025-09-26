@@ -102,7 +102,9 @@ export interface Scan {
     cardFingerprint: string;
     cardId?: string;
     lotId?: string;
+    acquisitionId?: string;
     source: string;
+    externalRef?: string;
     scannedAt: Date;
     quantity: number;
     boosterPackId?: string;
@@ -439,8 +441,8 @@ class MtgTrackerDb extends Dexie {
                 '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
             transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, ' +
                 '[lotId+kind], [cardId+kind], [source+externalRef], happenedAt',
-            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, createdAt, updatedAt, ' +
-                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt]',
+            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, ' +
+                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
             decks: 'id, platform, name, importedAt, createdAt, updatedAt',
             deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
             // ensure provider index matches repository API (see §7.3)
@@ -449,7 +451,7 @@ class MtgTrackerDb extends Dexie {
             valuations: 'id, asOf, createdAt, [asOf+createdAt]',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score'
-        }).upgrade(async tx => {
+        }).upgrade(async (_tx) => {
             // Backfill scans.acquisitionId = null; leave existing data intact
             // Ensure disposedAt stays consistent (optional pass to set disposedAt where remaining==0)
         });

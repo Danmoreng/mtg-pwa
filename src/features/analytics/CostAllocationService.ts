@@ -101,18 +101,32 @@ async function allocateAcquisitionCosts(
     const weights = await computeWeights(lots, method, opts); // number[] same length as lots
     
     const sumW = weights.reduce((a, b) => a + b, 0) || 1;
-    // sum-preserving rounding
-    let allocated = 0;
+
+    // Largest Remainder Method (LRM) for fair rounding
+    const idealAllocations = lots.map((_, i) => total * (weights[i] / sumW));
+    const floorAllocations = idealAllocations.map(alloc => Math.floor(alloc));
+    const totalFloor = floorAllocations.reduce((a, b) => a + b, 0);
+    let remainder = total - totalFloor;
+
+    const remainders = idealAllocations.map((alloc, i) => alloc - floorAllocations[i]);
+    const lotsWithRemainders = lots
+      .map((lot, i) => ({ lot, remainder: remainders[i], originalIndex: i }))
+      .sort((a, b) => b.remainder - a.remainder);
+
+    const finalAllocations = [...floorAllocations];
+    for (let i = 0; i < remainder; i++) {
+      const lotToIncrement = lotsWithRemainders[i];
+      if (lotToIncrement) {
+        finalAllocations[lotToIncrement.originalIndex]++;
+      }
+    }
+
     for (let i = 0; i < lots.length; i++) {
-      const raw = Math.round(total * (weights[i] / sumW));
-      const isLast = i === lots.length - 1;
-      const alloc = isLast ? (total - allocated) : raw;
-      allocated += alloc;
-      
+      const alloc = finalAllocations[i];
       const unit = Math.floor(alloc / Math.max(1, lots[i].quantity));
       await cardLotRepository.update(lots[i].id, {
         totalAcquisitionCostCent: alloc,
-        unitCost: unit, // Use unitCost instead of unitCostCent
+        unitCost: unit,
         acquisitionPriceCent: alloc, // optional: keep quartet in sync
         updatedAt: new Date()
       });

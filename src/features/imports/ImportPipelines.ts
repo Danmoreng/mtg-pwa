@@ -78,11 +78,18 @@ export async function importManaboxScansWithBoxCost(
         finish: row.foil,
       });
       
+      const existingScan = await scanRepository.getByAcquisitionAndExternalRef(acquisitionId, row.externalRef);
+
+      if (existingScan) {
+        continue;
+      }
+
       const scan: Omit<Scan, 'id'> & { acquisitionId?: string } = {
         cardFingerprint: normalizedKey.fingerprint,
         cardId: row.id, // assuming row.id is the cardId
         acquisitionId,
         source: row.source,
+        externalRef: row.externalRef,
         scannedAt: row.scannedAt,
         quantity: row.quantity,
         createdAt: new Date(),
@@ -203,9 +210,9 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
     
     // Insert decks idempotently - check if a deck with the same name already exists
     for (const deck of decks) {
-      // Get all decks to check for existing name
+      // Idempotency check for decks: use a combination of name and platform for better uniqueness.
       const allDecks = await deckRepository.getAll();
-      const existingDeck = allDecks.find(d => d.name === deck.name);
+      const existingDeck = allDecks.find(d => d.name === deck.name && d.platform === deck.platform);
       
       if (!existingDeck) {
         // Generate a new ID for the new deck
@@ -226,14 +233,10 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
       }
     }
     
-    // Insert deck_cards (idempotent on deckId+cardId+addedAt)
+    // Insert deck_cards (idempotent on deckId+cardId)
     for (const deckCard of deckCards) {
-      // Check if this combination already exists
-      const existingDeckCards = await deckCardRepository.getByDeckId(deckCard.deckId);
-      const existingCard = existingDeckCards.find(dc => 
-        dc.cardId === deckCard.cardId && 
-        dc.addedAt.getTime() === deckCard.addedAt.getTime()
-      );
+      // Check if this combination already exists using the new repository method
+      const existingCard = await deckCardRepository.getByDeckIdAndCardId(deckCard.deckId, deckCard.cardId);
       
       if (!existingCard) {
         const newDeckCard: Omit<DeckCard, 'id'> = {
@@ -247,8 +250,12 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
           createdAt: deckCard.createdAt || new Date()
         };
         
-        await deckCardRepository.add(newDeckCard as DeckCard);
-        deckCardIds.push(newDeckCard.deckId + '-' + newDeckCard.cardId); // Using composite key as ID
+        // The id for deck_cards is not auto-incrementing, so we need to create one.
+        // A composite key is not a real primary key in Dexie, so we create a synthetic one.
+        const syntheticId = `${deckCard.deckId}-${deckCard.cardId}-${deckCard.addedAt.getTime()}`;
+
+        await deckCardRepository.add({ ...newDeckCard, id: syntheticId } as DeckCard);
+        deckCardIds.push(syntheticId);
       }
     }
     

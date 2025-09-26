@@ -43,15 +43,22 @@
 - Marked old services as deprecated with proper JSDoc comments
 - Created re-exports in services to maintain backward compatibility
 
-## Remaining Tasks from TODO.md
-
-### 7) Idempotency & Import Hardening
+### 7) Idempotency & Import Hardening ✅
 - Ensure unique index: (source, externalRef) on transactions & acquisitions
 - Repos: enforce getBySourceRef(source, externalRef) before create; use upsert semantics where appropriate
 
-### 8) Ensure mergeLots Exists & Is Correct
-- Locate/Implement mergeLots with proper rules
-- Update all callers
+### 8) Ensure mergeLots Exists & Is Correct ✅
+- Located mergeLots implementation in src/features/scans/ReconcilerService.ts
+- Verified implementation follows M3 specification:
+  - Merges scans and transactions from source to target lot
+  - Validates matching cardId between lots
+  - Sums quantities correctly
+  - Maintains earliest purchasedAt date
+  - Deletes source lot after migration
+- Function is properly exported and accessible
+- Identified need for unit tests (to be implemented)
+
+## Remaining Tasks from TODO.md
 
 ### 9) Deterministic Rounding for Cost Allocation
 - Implement Largest Remainder Method in CostAllocationService.ts
