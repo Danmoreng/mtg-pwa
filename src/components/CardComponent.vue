@@ -253,7 +253,7 @@ const props = defineProps<{
 
 // Reactive state
 const showModal = ref(false);
-const loadingPrice = ref(false);
+const loadingPrice = computed(() => cardsStore.loadingPrices);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
 const pricePoints = ref<any[]>([]);
@@ -317,8 +317,6 @@ const loadCardDetails = async () => {
     transactions.value = await db.transactions.where('cardId').equals(props.card.id).toArray();
   } catch (error) {
     console.error('Error loading card details:', error);
-  } finally {
-    loadingPrice.value = false;
   }
 };
 

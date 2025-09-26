@@ -96,9 +96,11 @@ export class PriceUpdateService {
           console.error(`Error syncing prices for batch starting at index ${i}:`, error);
           // Continue with the next batch even if one fails
           // Still update progress for the cards in this batch
-          processedCards += batch.length;
-          if (progressCallback) {
-            progressCallback(processedCards, totalCards);
+          for (let j = 0; j < batch.length; j++) {
+            processedCards++;
+            if (progressCallback) {
+              progressCallback(processedCards, totalCards);
+            }
           }
         }
       }

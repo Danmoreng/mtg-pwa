@@ -1,0 +1,33 @@
+"C:\Program Files\nodejs\npm.cmd" run build
+
+> mtg-pwa@0.1.0 build
+> vue-tsc -b && vite build --base=/mtg-pwa/
+
+src/data/db.ts:454:26 - error TS6133: 'tx' is declared but its value is never read.
+
+454         }).upgrade(async tx => {
+                             ~~
+
+src/features/scans/ReconcilerService.ts:64:3 - error TS6133: 'source' is declared but its value is never read.
+
+64   source: string,
+     ~~~~~~
+
+src/features/scans/ReconcilerService.ts:76:5 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+76     cardId: identity.cardId || undefined, // Make sure it's undefined if not provided
+       ~~~~~~
+
+  src/data/db.ts:46:5
+    46     cardId: string;
+           ~~~~~~
+    The expected type comes from property 'cardId' which is declared here on type 'Omit<CardLot, "id">'
+
+
+Found 3 errors.
+
+
+Process finished with exit code 2
+
+

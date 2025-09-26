@@ -169,6 +169,10 @@ export const scanRepository = {
     return await db.scans.where('acquisitionId').equals(acquisitionId).toArray();
   },
 
+  async getByAcquisitionAndExternalRef(acquisitionId: string, externalRef: string): Promise<Scan | undefined> {
+    return await db.scans.where('[acquisitionId+externalRef]').equals([acquisitionId, externalRef]).first();
+  },
+
   async update(id: string, scan: Partial<Scan>): Promise<number> {
     return await db.scans.update(id, scan);
   },
@@ -240,6 +244,10 @@ export const deckCardRepository = {
 
   async getByCardId(cardId: string): Promise<DeckCard[]> {
     return await db.deck_cards.where('cardId').equals(cardId).toArray();
+  },
+
+  async getByDeckIdAndCardId(deckId: string, cardId: string): Promise<DeckCard | undefined> {
+    return await db.deck_cards.where('[deckId+cardId]').equals([deckId, cardId]).first();
   },
 
   async getByLotId(lotId: string): Promise<DeckCard[]> {

@@ -39,6 +39,11 @@ const routes = [
         name: 'import-price-guide',
         component: PriceGuideUploadWizard,
       },
+      {
+        path: 'manabox',
+        name: 'import-manabox',
+        component: () => import('../features/imports/views/CsvImportView.vue'),
+      },
     ],
   },
   {

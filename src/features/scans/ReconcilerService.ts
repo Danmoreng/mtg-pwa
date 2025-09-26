@@ -1,7 +1,7 @@
 // 6) Reconciler (order-agnostic core)
 
 import { cardLotRepository, scanRepository, transactionRepository } from '../../data/repos';
-import type { CardLot } from '../../data/db';
+import db, { type CardLot } from '../../data/db';
 
 // 6.2 Helper APIs
 
@@ -61,7 +61,7 @@ export async function findLotsByIdentity(
 export async function findOrCreateProvisionalLot(
   identity: { cardId?: string; fingerprint: string; finish: string; lang?: string },
   when: Date,
-  source: string,
+  _source: string,
   acquisitionId?: string
 ): Promise<CardLot> {
   // Try to find an existing provisional lot
@@ -72,14 +72,20 @@ export async function findOrCreateProvisionalLot(
   if (provisionalLot) return provisionalLot;
   
   // Otherwise create a new provisional lot
+  if (!identity.cardId) {
+    throw new Error('Cannot create a CardLot without a cardId');
+  }
+  
   const newLot: Omit<CardLot, 'id'> = {
-    cardId: identity.cardId || undefined, // Make sure it's undefined if not provided
-    cardFingerprint: identity.fingerprint,
-    finish: identity.finish,
-    language: identity.lang as string || 'EN', // Final attempt with type assertion
+    cardId: identity.cardId,
     quantity: 0, // Starts with 0 quantity
-    purchasedAt: when,
+    unitCost: 0, // Default unit cost for provisional lots
+    condition: 'Near Mint', // Default condition
+    language: identity.lang as string || 'EN', // Final attempt with type assertion
+    foil: identity.finish === 'foil' || identity.finish === 'etched', // Set foil based on finish
+    finish: identity.finish,
     source: 'provisional',
+    purchasedAt: when,
     acquisitionId: acquisitionId || undefined, // Change null to undefined to match interface
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -113,21 +119,47 @@ export async function reassignSellToLot(transactionId: string, lotId: string): P
  * @param targetLotId 
  * @param fromLotId 
  */
-export async function mergeLots(targetLotId: string, fromLotId: string): Promise<void> {
-  // Move scans from fromLotId to targetLotId
-  const scans = await scanRepository.getByLotId(fromLotId);
-  for (const scan of scans) {
-    await scanRepository.update(scan.id, { lotId: targetLotId });
-  }
-  
-  // Move transactions from fromLotId to targetLotId
-  const transactions = await transactionRepository.getByLotId(fromLotId);
-  for (const transaction of transactions) {
-    await transactionRepository.update(transaction.id, { lotId: targetLotId });
-  }
-  
-  // Delete the source lot
-  await cardLotRepository.delete(fromLotId);
+export async function mergeLots(targetLotId: string, fromLotId:string): Promise<void> {
+  return db.transaction('rw', db.card_lots, db.scans, db.transactions, async () => {
+    const fromLot = await cardLotRepository.getById(fromLotId);
+    const targetLot = await cardLotRepository.getById(targetLotId);
+
+    if (!fromLot || !targetLot) {
+      console.error("Cannot merge lots: one or both lots not found.");
+      return;
+    }
+
+    // Ensure lots are for the same card identity
+    if (fromLot.cardId !== targetLot.cardId) {
+      console.error("Cannot merge lots: cardId mismatch.");
+      return;
+    }
+
+    // Merge logic: sum quantities, keep earliest date
+    const updatedQuantity = targetLot.quantity + fromLot.quantity;
+    const updatedPurchasedAt = fromLot.purchasedAt < targetLot.purchasedAt ? fromLot.purchasedAt : targetLot.purchasedAt;
+
+    await cardLotRepository.update(targetLotId, {
+      quantity: updatedQuantity,
+      purchasedAt: updatedPurchasedAt,
+      updatedAt: new Date(),
+    });
+
+    // Move scans from fromLotId to targetLotId
+    const scans = await scanRepository.getByLotId(fromLotId);
+    for (const scan of scans) {
+      await scanRepository.update(scan.id, { lotId: targetLotId });
+    }
+
+    // Move transactions from fromLotId to targetLotId
+    const transactions = await transactionRepository.getByLotId(fromLotId);
+    for (const transaction of transactions) {
+      await transactionRepository.update(transaction.id, { lotId: targetLotId });
+    }
+
+    // Delete the source lot
+    await cardLotRepository.delete(fromLotId);
+  });
 }
 
 // 6.3 Algorithm (per identity bucket)
@@ -282,6 +314,8 @@ export async function consolidateProvisionalLots(
   }
 }
 
+const reconcilerLocks = new Set<string>();
+
 /**
  * Run the full reconciler for an identity
  * @param identity 
@@ -289,12 +323,23 @@ export async function consolidateProvisionalLots(
 export async function runReconciler(
   identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }
 ): Promise<void> {
-  // 1. Scans → lots
-  await reconcileScansToLots(identity);
-  
-  // 2. SELLs → lots
-  await reconcileSellsToLots(identity);
-  
-  // 3. Consolidation
-  await consolidateProvisionalLots(identity);
+  const lockKey = identity.fingerprint || identity.cardId;
+  if (!lockKey || reconcilerLocks.has(lockKey)) {
+    if(lockKey) console.warn(`Reconciliation for ${lockKey} is already in progress.`);
+    return;
+  }
+
+  reconcilerLocks.add(lockKey);
+  try {
+    // 1. Scans → lots
+    await reconcileScansToLots(identity);
+    
+    // 2. SELLs → lots
+    await reconcileSellsToLots(identity);
+    
+    // 3. Consolidation
+    await consolidateProvisionalLots(identity);
+  } finally {
+    reconcilerLocks.delete(lockKey);
+  }
 }
