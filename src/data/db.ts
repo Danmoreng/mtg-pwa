@@ -186,6 +186,16 @@ export interface ScanSaleLink {
     createdAt: Date;
 }
 
+// 1.1 New: allocation of SELL transactions across CardLots
+export interface SellAllocation {
+    id: string; // ulid/uuid
+    transactionId: string; // SELL line id
+    lotId: string;
+    quantity: number;
+    unitCostCentAtSale?: number; // snapshot for P&L accuracy
+    createdAt: Date;
+}
+
 export default class MtgTrackerDb extends Dexie {
     cards!: EntityTable<Card, 'id'>;
     card_lots!: EntityTable<CardLot, 'id'>;
@@ -199,6 +209,7 @@ export default class MtgTrackerDb extends Dexie {
     valuations!: EntityTable<Valuation, 'id'>;
     settings!: EntityTable<Setting, 'k'>;
     scan_sale_links!: EntityTable<ScanSaleLink, 'id'>;
+    sell_allocations!: EntityTable<SellAllocation, 'id'>;
 
     constructor() {
         super('MtgTrackerDb');
@@ -419,6 +430,28 @@ export default class MtgTrackerDb extends Dexie {
         }).upgrade(async (_tx) => {
             // Backfill scans.acquisitionId = null; leave existing data intact
             // Ensure disposedAt stays consistent (optional pass to set disposedAt where remaining==0)
+        });
+
+        // Version 10 - Add sell_allocations store for M3 implementation
+        this.version(10).stores({
+            acquisitions: 'id, kind, source, externalRef, currency, happenedAt, createdAt, updatedAt, [source+externalRef]',
+            cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
+            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
+                '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
+            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
+                '[lotId+kind], [cardId+kind], [source+externalRef]',
+            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
+                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
+            deck_cards: '[deckId+cardId], lotId, addedAt, removedAt, createdAt, [lotId+addedAt]',
+            price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
+                '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
+            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
+            settings: 'k, createdAt, updatedAt',
+            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score',
+            sell_allocations: 'id, transactionId, lotId, quantity, unitCostCentAtSale, createdAt, ' +
+                '[transactionId+lotId], [lotId], [transactionId]'
+        }).upgrade(async (_tx) => {
+            // No-op upgrade as this is an additive change
         });
     }
 }
