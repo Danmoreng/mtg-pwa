@@ -2,12 +2,13 @@
 // This worker will run cost allocation for acquisitions
 
 import { allocateAcquisitionCosts } from '../features/analytics/CostAllocationService';
-import db from '../data/db';
+import { getDb } from '../data/init';
 
 // Run cost allocation for all acquisitions
 async function runAllocationWorker(): Promise<void> {
   try {
     // Get all acquisitions
+    const db = getDb();
     const acquisitions = await db.acquisitions.toArray();
     
     // Run allocation for each acquisition that has a method set

@@ -1,5 +1,5 @@
 // Scan matching service for matching ManaBox scans to Cardmarket sales with lot tracking
-import db from '../../data/db';
+import { getDb } from '../../data/init';
 import { cardLotRepository, transactionRepository, scanRepository } from '../../data/repos';
 import type { Scan, Transaction, CardLot } from '../../data/db';
 
@@ -9,8 +9,21 @@ import * as Reconciler from './ReconcilerService';
 export class ScanMatchingService {
   // Match scans to sales with lot tracking
   static async matchScansToSales(): Promise<void> {
+    // Gate behind feature flag to prevent double-assignment conflicts
+    if (process.env.M3_RECONCILER_ONLY === 'true') {
+      // When flag is true, run the new reconciler instead of the legacy matcher
+      console.info('M3_RECONCILER_ONLY is enabled, running new reconciler');
+      
+      // Run the full reconciler across all identities
+      // This will handle both scan-to-lot and sell-to-lot reconciliation
+      await Reconciler.runFullReconciler();
+      return;
+    }
+    
+    // else: legacy code path (temporary)
     try {
       // Get all scans that haven't been matched yet
+      const db = getDb();
       const unmatchedScans = await db.scans
         .where('cardId')
         .notEqual('')
@@ -100,6 +113,7 @@ export class ScanMatchingService {
   // Get scan status (sold or still owned)
   static async getScanStatus(scanId: string): Promise<'sold' | 'owned' | 'unknown'> {
     try {
+      const db = getDb();
       const scan = await db.scans.get(scanId);
       
       if (!scan) return 'unknown';
@@ -125,6 +139,7 @@ export class ScanMatchingService {
   // Get all scans for a specific lot
   static async getScansForLot(lotId: string): Promise<Scan[]> {
     try {
+      const db = getDb();
       return await db.scans.where('lotId').equals(lotId).toArray();
     } catch (error) {
       console.error(`Error getting scans for lot ${lotId}:`, error);
@@ -135,6 +150,7 @@ export class ScanMatchingService {
   // Get all scans for a specific card
   static async getScansForCard(cardId: string): Promise<Scan[]> {
     try {
+      const db = getDb();
       return await db.scans.where('cardId').equals(cardId).toArray();
     } catch (error) {
       console.error(`Error getting scans for card ${cardId}:`, error);
@@ -145,6 +161,7 @@ export class ScanMatchingService {
   // Get the lot associated with a scan
   static async getLotForScan(scanId: string): Promise<CardLot | undefined> {
     try {
+      const db = getDb();
       const scan = await db.scans.get(scanId);
       if (scan?.lotId) {
         return await cardLotRepository.getById(scan.lotId);
@@ -159,6 +176,7 @@ export class ScanMatchingService {
   // Get all sales for a specific card
   static async getSalesForCard(cardId: string): Promise<Transaction[]> {
     try {
+      const db = getDb();
       return await db.transactions
         .where('cardId')
         .equals(cardId)

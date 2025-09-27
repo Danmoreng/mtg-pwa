@@ -46,23 +46,7 @@
       </div>
     </div>
     
-    <div class="import-section">
-      <h2>ManaBox Scans</h2>
-      <p>Import your ManaBox scan data to track your physical collection.</p>
-      
-      <div class="mb-3">
-        <label for="manabox-csv" class="form-label">
-          Upload ManaBox CSV
-        </label>
-        <input 
-          id="manabox-csv" 
-          type="file" 
-          accept=".csv" 
-          @change="handleManaBoxFileUpload"
-          class="form-control"
-        />
-      </div>
-    </div>
+    
     
     <div v-if="importStatus" class="status-message" :class="importStatus.type">
       {{ importStatus.message }}
@@ -368,18 +352,7 @@ const handleArticlesFileUpload = async (event: Event) => {
   }
 };
 
-// Handle ManaBox file upload
-const handleManaBoxFileUpload = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  
-  if (!file) return;
-  
-  showStatus('success', 'ManaBox import functionality would be implemented here');
-  
-  // Reset file input
-  target.value = '';
-};
+
 </script>
 
 <style scoped>

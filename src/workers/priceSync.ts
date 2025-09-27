@@ -2,7 +2,7 @@
 // This worker will periodically sync prices for cards in the collection
 
 import { ScryfallProvider } from '../features/pricing/ScryfallProvider';
-import db from '../data/db';
+import { getDb } from '../data/init';
 
 // Sync prices for all cards in the collection
 async function syncPrices(): Promise<void> {
@@ -10,6 +10,7 @@ async function syncPrices(): Promise<void> {
     const now = new Date();
     
     // Get all cards with Scryfall IDs
+    const db = getDb();
     const cards = await db.cards.where('id').notEqual('').toArray();
     
     // Update prices for each card
@@ -36,6 +37,7 @@ async function syncPrices(): Promise<void> {
           };
           
           // Save price point (use put instead of add to handle updates)
+          const db = getDb();
           await db.price_points.put(pricePoint);
         }
       } catch (error) {

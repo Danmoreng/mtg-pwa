@@ -4,6 +4,7 @@ import DataImportView from '../features/imports/views/DataImportView.vue';
 import CardmarketImportWizard from '../features/imports/views/wizard/CardmarketImportWizard.vue';
 import MtgjsonImportWizard from '../features/imports/views/wizard/MtgjsonImportWizard.vue';
 import PriceGuideUploadWizard from '../features/imports/views/wizard/PriceGuideUploadWizard.vue';
+import ManaBoxImportWizard from '../features/imports/views/wizard/ManaBoxImportWizard.vue';
 import DeckImportView from '../features/decks/views/DeckImportView.vue';
 import DecksView from '../features/decks/views/DecksView.vue';
 import DeckDetailView from '../features/decks/views/DeckDetailView.vue';
@@ -38,6 +39,11 @@ const routes = [
         path: 'price-guide',
         name: 'import-price-guide',
         component: PriceGuideUploadWizard,
+      },
+      {
+        path: 'manabox',
+        name: 'import-manabox',
+        component: ManaBoxImportWizard,
       },
     ],
   },

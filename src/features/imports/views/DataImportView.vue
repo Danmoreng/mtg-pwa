@@ -19,6 +19,11 @@
           Cardmarket Price Guide
         </router-link>
       </li>
+      <li class="nav-item">
+        <router-link to="/import/manabox" class="nav-link" active-class="active">
+          ManaBox Scans
+        </router-link>
+      </li>
     </ul>
 
     <div class="tab-content pt-3">

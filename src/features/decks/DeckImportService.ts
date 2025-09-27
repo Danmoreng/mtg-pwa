@@ -2,7 +2,8 @@
 import {cardRepository, cardLotRepository} from '../../data/repos';
 import {EntityLinker} from '../linker/EntityLinker';
 import {ScryfallProvider} from '../pricing/ScryfallProvider';
-import db, {type Card} from '../../data/db';
+import {type Card} from '../../data/db';
+import { getDb } from '../../data/init';
 import {useImportStatusStore} from '../../stores/importStatus';
 import {v4 as uuidv4} from 'uuid';
 
@@ -55,6 +56,7 @@ export class DeckImportService {
             };
 
             // Save deck
+            const db = getDb();
             await db.decks.add(deck);
 
             // Process cards from text
@@ -176,6 +178,7 @@ export class DeckImportService {
                                         };
 
                                         // Save price point
+                                        const db = getDb();
                                         await db.price_points.put(pricePoint);
                                     }
                                 } catch (error) {
@@ -298,6 +301,7 @@ export class DeckImportService {
     }> {
         try {
             // Get all cards in the deck
+            const db = getDb();
             const deckCards = await db.deck_cards.where('deckId').equals(deckId).toArray();
 
             let totalCards = 0;

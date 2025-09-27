@@ -5,6 +5,7 @@ import { normalizeFingerprint } from '../../core/Normalization';
 import type { Transaction, Deck, DeckCard } from '../../data/db';
 import type { Scan } from '../../data/db';
 import { scanRepository } from '../../data/repos';
+import { ScanProcessingService } from '../scans/ScanProcessingService';
 
 // 5.1 Manabox scans with box cost
 // Input: CSV rows + total cost (price/fees/shipping) + date.
@@ -21,6 +22,7 @@ export interface ManaboxImportRow {
   scannedAt: Date;
   source: string;
   externalRef: string;
+  scryfallId?: string;
 }
 
 export interface BoxCost {
@@ -42,7 +44,8 @@ export async function importManaboxScansWithBoxCost(
   boxCost: BoxCost,
   happenedAt: Date,
   source: string,
-  externalRef: string
+  externalRef: string,
+  onProgress?: (processed: number, total: number) => void
 ): Promise<{ acquisitionId: string; scanIds: string[] }> {
   try {
     // 1. getOrCreate Acquisition by [source+externalRef]; persist total costs & happenedAt.
@@ -78,11 +81,18 @@ export async function importManaboxScansWithBoxCost(
         finish: row.foil,
       });
       
+      const existingScan = await scanRepository.getByAcquisitionAndExternalRef(acquisitionId, row.externalRef);
+
+      if (existingScan) {
+        continue;
+      }
+
       const scan: Omit<Scan, 'id'> & { acquisitionId?: string } = {
         cardFingerprint: normalizedKey.fingerprint,
-        cardId: row.id, // assuming row.id is the cardId
+        cardId: row.scryfallId, // Use scryfallId from the CSV if available
         acquisitionId,
         source: row.source,
+        externalRef: row.externalRef,
         scannedAt: row.scannedAt,
         quantity: row.quantity,
         createdAt: new Date(),
@@ -92,12 +102,23 @@ export async function importManaboxScansWithBoxCost(
       scans.push(scan);
     }
     
-    // Batch insert scans
+    // Batch insert scans with progress tracking
     const scanIds: string[] = [];
-    for (const scan of scans) {
-      const id = await scanRepository.add(scan as Scan);
+    for (let i = 0; i < scans.length; i++) {
+      const scan = scans[i];
+      const id = await scanRepository.add({
+        ...scan,
+        id: `scan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      } as Scan);
       scanIds.push(id);
+      
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress(i + 1, scans.length);
+      }
     }
+    
+    await ScanProcessingService.processScans(onProgress);
     
     return { acquisitionId, scanIds };
   } catch (error) {
@@ -201,32 +222,39 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
     const deckIds: string[] = [];
     const deckCardIds: string[] = [];
     
-    // Insert decks (idempotent on deckId)
+    // Insert decks idempotently - check if a deck with the same name already exists
     for (const deck of decks) {
-      const existingDeck = await deckRepository.getById(deck.id);
+      // Idempotency check for decks: use a combination of name and platform for better uniqueness.
+      const allDecks = await deckRepository.getAll();
+      const existingDeck = allDecks.find(d => d.name === deck.name && d.platform === deck.platform);
+      
       if (!existingDeck) {
+        // Generate a new ID for the new deck
+        const newDeckId = `deck_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         const newDeck: Deck = {
           ...deck,
-          id: deck.id,
+          id: newDeckId,
           createdAt: deck.createdAt || new Date(),
           updatedAt: deck.updatedAt || new Date()
         };
+        
         await deckRepository.add(newDeck);
         deckIds.push(newDeck.id);
+      } else {
+        // If deck exists, we still add its ID to the result
+        deckIds.push(existingDeck.id);
       }
     }
     
-    // Insert deck_cards (idempotent on deckId+cardId+addedAt)
+    // Insert deck_cards (idempotent on deckId+cardId)
     for (const deckCard of deckCards) {
-      // Check if this combination already exists
-      const existingDeckCards = await deckCardRepository.getByDeckId(deckCard.deckId);
-      const existingCard = existingDeckCards.find(dc => 
-        dc.cardId === deckCard.cardId && 
-        dc.addedAt.getTime() === deckCard.addedAt.getTime()
-      );
+      // Check if this combination already exists using the new repository method
+      const existingCard = await deckCardRepository.getByDeckIdAndCardId(deckCard.deckId, deckCard.cardId);
       
       if (!existingCard) {
-        const newDeckCard: Omit<DeckCard, 'id'> = {
+        const newDeckCard: DeckCard = {
+          id: `deckcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           deckId: deckCard.deckId,
           cardId: deckCard.cardId,
           lotId: deckCard.lotId,
@@ -236,9 +264,9 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
           removedAt: deckCard.removedAt,
           createdAt: deckCard.createdAt || new Date()
         };
-        
-        await deckCardRepository.add(newDeckCard as DeckCard);
-        deckCardIds.push(newDeckCard.deckId + '-' + newDeckCard.cardId); // Using composite key as ID
+
+        await deckCardRepository.add(newDeckCard);
+        deckCardIds.push(deckCard.cardId);
       }
     }
     
