@@ -2,8 +2,8 @@
 import { transactionRepository, cardLotRepository, cardRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import db from '../../data/db';
 import type { Card, CardLot } from '../../data/db';
+import { getDb } from '../../data/init';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
 import { FinanceService } from '../analytics/FinanceService';
@@ -49,6 +49,7 @@ export class ImportService {
                 const externalRef = `cardmarket:${transaction.reference}:${transaction.lineNumber}`;
 
                 // Check if transaction already exists
+                const db = getDb();
                 const existing = await db.transactions.where('externalRef').equals(externalRef).first();
                 if (existing) continue;
 
@@ -117,6 +118,7 @@ export class ImportService {
         const externalRef = `cardmarket:order:${order.orderId}:${order.lineNumber}`;
 
         // Check if order already exists
+        const db = getDb();
         const existing = await db.transactions.where('externalRef').equals(externalRef).first();
         if (existing) continue;
 
@@ -147,6 +149,7 @@ export class ImportService {
         // If this is a purchase order, update the associated card lots with enhanced financial tracking
         if (order.direction === 'purchase') {
           // Find all articles associated with this order
+          const db = getDb();
           const articles = await db.transactions
             .where('externalRef')
             .startsWith(`cardmarket:article:${order.orderId}:`)
@@ -190,6 +193,7 @@ export class ImportService {
         // If this is a sale order, update the associated card lots with sale financial details
         if (order.direction === 'sale') {
           // Find all articles associated with this order
+          const db = getDb();
           const articles = await db.transactions
             .where('externalRef')
             .startsWith(`cardmarket:article:${order.orderId}:`)
@@ -385,6 +389,7 @@ export class ImportService {
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       const pricePointId = `${cardId}:scryfall:${dateStr}`;
+      const db = getDb();
       const existingPricePoint = await db.price_points.get(pricePointId);
       if (!existingPricePoint) {
         const price = await ScryfallProvider.getPriceById(cardId);
@@ -400,6 +405,7 @@ export class ImportService {
             asOf: now, 
             createdAt: now 
           };
+          const db = getDb();
           await db.price_points.put(pricePoint);
         }
       }
@@ -460,6 +466,7 @@ export class ImportService {
 
   private static async createTransactionForArticle(article: any, cardId: string | null, lotId: string | undefined, price: Money, now: Date): Promise<void> {
     const transactionExternalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+    const db = getDb();
     const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
     if (existingTransaction) return;
 
@@ -493,6 +500,7 @@ export class ImportService {
             const externalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
 
             // Check if transaction already exists
+            const db = getDb();
             const existing = await db.transactions.where('externalRef').equals(externalRef).first();
 
             results.push({
@@ -517,7 +525,46 @@ export class ImportService {
       source: string,
       externalRef: string
     ): Promise<{ acquisitionId: string; scanIds: string[] }> {
-      return await ImportPipelines.importManaboxScansWithBoxCost(rows, boxCost, happenedAt, source, externalRef);
+      const importStatusStore = useImportStatusStore();
+
+      // Create import tracking
+      const importId = uuidv4();
+      importStatusStore.addImport({
+        id: importId,
+        type: 'manabox',
+        name: 'ManaBox Scans',
+        status: 'pending',
+        progress: 0,
+        totalItems: rows.length,
+        processedItems: 0
+      });
+
+      try {
+        // Call the pipeline function with progress tracking
+        const result = await ImportPipelines.importManaboxScansWithBoxCost(
+          rows, 
+          boxCost, 
+          happenedAt, 
+          source, 
+          externalRef,
+          (processed, total) => {
+            importStatusStore.updateImport(importId, {
+              status: 'processing',
+              processedItems: processed,
+              progress: Math.round((processed / total) * 100)
+            });
+          }
+        );
+
+        // Mark import as completed
+        importStatusStore.completeImport(importId);
+
+        return result;
+      } catch (error) {
+        console.error('Error importing Manabox scans with box cost:', error);
+        importStatusStore.completeImport(importId, (error as Error).message);
+        throw error;
+      }
     }
 
     /**
@@ -532,7 +579,7 @@ export class ImportService {
      * Import decks
      * Adapter that delegates to the new implementation
      */
-    static async importDecks(decks: Omit<ImportPipelines.Deck, 'id'>[], deckCards: ImportPipelines.DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
+    static async importDecks(decks: Omit<Deck, 'id'>[], deckCards: ImportPipelines.DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
       return await ImportPipelines.importDecks(decks, deckCards);
     }
 }

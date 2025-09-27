@@ -229,7 +229,7 @@
 
 <script setup lang="ts">
 import {computed, ref} from 'vue';
-import db from '../data/db';
+import { cardLotRepository, transactionRepository } from '../data/repos';
 import {Money} from '../core/Money';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 import PriceHistoryChart from './PriceHistoryChart.vue';
@@ -253,7 +253,7 @@ const props = defineProps<{
 
 // Reactive state
 const showModal = ref(false);
-const loadingPrice = ref(false);
+const loadingPrice = computed(() => cardsStore.loadingPrices);
 const lots = ref<any[]>([]);
 const transactions = ref<any[]>([]);
 const pricePoints = ref<any[]>([]);
@@ -313,12 +313,10 @@ const handleBackdropClick = (event: MouseEvent) => {
 const loadCardDetails = async () => {
   try{
     // ---- lots & transactions (as before) ----
-    lots.value = await db.card_lots.where('cardId').equals(props.card.id).toArray();
-    transactions.value = await db.transactions.where('cardId').equals(props.card.id).toArray();
+    lots.value = await cardLotRepository.getByCardId(props.card.id);
+    transactions.value = await transactionRepository.getByCardId(props.card.id);
   } catch (error) {
     console.error('Error loading card details:', error);
-  } finally {
-    loadingPrice.value = false;
   }
 };
 

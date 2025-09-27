@@ -1,7 +1,7 @@
 // Cardmarket Price Guide Sync Worker
 // This worker handles daily Cardmarket Price Guide ingestion in a background thread
 
-import db from '../data/db';
+import { getDb } from '../data/init';
 
 // Process Cardmarket Price Guide data for all cards
 async function syncPriceGuide(progressCallback?: (processed: number, total: number) => void): Promise<{ success: boolean; message?: string; processedCards?: number }> {
@@ -9,6 +9,7 @@ async function syncPriceGuide(progressCallback?: (processed: number, total: numb
     console.log('Starting Cardmarket Price Guide sync...');
     
     // Get all cards in the collection
+    const db = getDb();
     const cards = await db.cards.toArray();
     const totalCards = cards.length;
     let processedCards = 0;
@@ -75,6 +76,7 @@ async function processCardPriceGuideData(card: any): Promise<void> {
       pricePoint.avg30dCent = Math.round(pricePoint.priceCent * (0.85 + Math.random() * 0.3)); // ±15%
     }
     
+    const db = getDb();
     await db.price_points.put(pricePoint);
     
     // Occasionally create foil price point
@@ -92,6 +94,7 @@ async function processCardPriceGuideData(card: any): Promise<void> {
       foilPricePoint.avg7dCent = Math.round(foilPricePoint.priceCent * (0.9 + Math.random() * 0.2));
       foilPricePoint.avg30dCent = Math.round(foilPricePoint.priceCent * (0.85 + Math.random() * 0.3));
       
+      const db = getDb();
       await db.price_points.put(foilPricePoint);
     }
     

@@ -93,6 +93,8 @@ export interface Transaction {
     happenedAt: Date;
     notes?: string;
     relatedTransactionId?: string;
+    finish?: string;
+    language?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -102,9 +104,13 @@ export interface Scan {
     cardFingerprint: string;
     cardId?: string;
     lotId?: string;
+    acquisitionId?: string;
     source: string;
+    externalRef?: string;
     scannedAt: Date;
     quantity: number;
+    finish?: string;
+    language?: string;
     boosterPackId?: string;
     notes?: string;
     soldTransactionId?: string;
@@ -180,8 +186,7 @@ export interface ScanSaleLink {
     createdAt: Date;
 }
 
-// Create Dexie database
-class MtgTrackerDb extends Dexie {
+export default class MtgTrackerDb extends Dexie {
     cards!: EntityTable<Card, 'id'>;
     card_lots!: EntityTable<CardLot, 'id'>;
     acquisitions!: EntityTable<Acquisition, 'id'>;
@@ -204,7 +209,7 @@ class MtgTrackerDb extends Dexie {
             transactions: 'id, kind, cardId, source, externalRef, happenedAt',
             scans: 'id, cardFingerprint, cardId, source, scannedAt',
             decks: 'id, platform, name, importedAt',
-            deck_cards: '[deckId+cardId], deckId, cardId',
+            deck_cards: 'id, [deckId+cardId], deckId, cardId',
             price_points: 'id, cardId, provider, asOf',
             valuations: 'id, asOf',
             settings: 'k'
@@ -216,12 +221,12 @@ class MtgTrackerDb extends Dexie {
             transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
             scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
             decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: '[deckId+cardId], deckId, cardId, createdAt',
+            deck_cards: 'id, [deckId+cardId], deckId, cardId, createdAt',
             price_points: 'id, cardId, provider, asOf, createdAt',
             valuations: 'id, asOf, createdAt',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
-        }).upgrade(async tx => {
+        }).upgrade(async (tx) => {
             // Add createdAt and updatedAt to existing records
             const now = new Date();
 
@@ -278,7 +283,7 @@ class MtgTrackerDb extends Dexie {
             transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
             scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
             decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: '[deckId+cardId], deckId, cardId, createdAt',
+            deck_cards: 'id, [deckId+cardId], deckId, cardId, createdAt',
             price_points: 'id, cardId, provider, currency, asOf, createdAt, [cardId+asOf], [provider+asOf]',
             valuations: 'id, asOf, createdAt, [asOf+createdAt]',
             settings: 'k, createdAt, updatedAt',
@@ -297,45 +302,8 @@ class MtgTrackerDb extends Dexie {
             valuations: 'id, asOf, createdAt, [asOf+createdAt]',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
-        }).upgrade(async tx => {
+        }).upgrade(async (_tx) => {
             // Add missing fields to existing deck_cards records
-            const now = new Date();
-
-            // Update deck_cards
-            await tx.table('deck_cards').toCollection().modify(deckCard => {
-                try {
-                    // Add missing fields with default values
-                    if (!deckCard.id) {
-                        deckCard.id = `deckcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    }
-                    if (!deckCard.addedAt) {
-                        deckCard.addedAt = deckCard.createdAt || now;
-                    }
-                    if (!deckCard.role) {
-                        deckCard.role = 'main';
-                    }
-                    // Set cardId to a default value if it's missing or empty
-                    if (!deckCard.cardId || deckCard.cardId === '') {
-                        deckCard.cardId = 'unknown-card';
-                    }
-                    // Set deckId to a default value if it's missing
-                    if (!deckCard.deckId) {
-                        deckCard.deckId = 'unknown-deck';
-                    }
-                    // Set quantity to 1 if it's missing
-                    if (typeof deckCard.quantity !== 'number') {
-                        deckCard.quantity = 1;
-                    }
-                    // Set createdAt if it's missing
-                    if (!deckCard.createdAt) {
-                        deckCard.createdAt = now;
-                    }
-                } catch (error) {
-                    console.error('Error upgrading deck card:', error, deckCard);
-                    // If we can't upgrade the record, delete it
-                    return undefined;
-                }
-            });
         });
 
         // Version 5 - Add externalRef to card_lots for deduplication
@@ -437,25 +405,20 @@ class MtgTrackerDb extends Dexie {
             cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
             card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
                 '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, ' +
-                '[lotId+kind], [cardId+kind], [source+externalRef], happenedAt',
-            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, createdAt, updatedAt, ' +
-                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
+            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
+                '[lotId+kind], [cardId+kind], [source+externalRef]',
+            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
+                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
+            deck_cards: '[deckId+cardId], lotId, addedAt, removedAt, createdAt, [lotId+addedAt]',
             // ensure provider index matches repository API (see §7.3)
             price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
                 '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
             valuations: 'id, asOf, createdAt, [asOf+createdAt]',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score'
-        }).upgrade(async tx => {
+        }).upgrade(async (_tx) => {
             // Backfill scans.acquisitionId = null; leave existing data intact
             // Ensure disposedAt stays consistent (optional pass to set disposedAt where remaining==0)
         });
     }
 }
-
-const db = new MtgTrackerDb();
-
-export default db;
