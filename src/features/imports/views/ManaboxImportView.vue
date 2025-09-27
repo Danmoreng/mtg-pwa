@@ -82,7 +82,7 @@ const handleManaBoxFileUpload = async (event: Event) => {
   try {
     // Parse CSV file
     const text = await file.text();
-    const lines = text.split('\n');
+    const lines = text.split(/\r?\n/);
     const headers = lines[0].split(',').map(h => h.trim());
     
     // Parse rows according to ManaBox format
@@ -154,7 +154,7 @@ const handleManaBoxFileUpload = async (event: Event) => {
       }
       
       // Validate required fields
-      if (row.name && row.expansion && row.number) {
+      if (row.name && (row.expansion || row.scryfallId)) {
         rows.push({
           id: row.id || `manabox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           name: row.name,

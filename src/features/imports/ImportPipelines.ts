@@ -5,6 +5,7 @@ import { normalizeFingerprint } from '../../core/Normalization';
 import type { Transaction, Deck, DeckCard } from '../../data/db';
 import type { Scan } from '../../data/db';
 import { scanRepository } from '../../data/repos';
+import { ScanProcessingService } from '../scans/ScanProcessingService';
 
 // 5.1 Manabox scans with box cost
 // Input: CSV rows + total cost (price/fees/shipping) + date.
@@ -109,6 +110,8 @@ export async function importManaboxScansWithBoxCost(
       } as Scan);
       scanIds.push(id);
     }
+    
+    await ScanProcessingService.processScans();
     
     return { acquisitionId, scanIds };
   } catch (error) {
@@ -243,7 +246,8 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
       const existingCard = await deckCardRepository.getByDeckIdAndCardId(deckCard.deckId, deckCard.cardId);
       
       if (!existingCard) {
-        const newDeckCard: Omit<DeckCard, 'id'> = {
+        const newDeckCard: DeckCard = {
+          id: `deckcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           deckId: deckCard.deckId,
           cardId: deckCard.cardId,
           lotId: deckCard.lotId,
@@ -254,7 +258,7 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
           createdAt: deckCard.createdAt || new Date()
         };
 
-        await deckCardRepository.add(newDeckCard as DeckCard);
+        await deckCardRepository.add(newDeckCard);
         deckCardIds.push(deckCard.cardId);
       }
     }

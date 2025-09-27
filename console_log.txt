@@ -1,0 +1,18 @@
+Error checking if price update is needed:
+Object { name: "DatabaseClosedError", message: "UpgradeError Not yet support for changing primary key", inner: {…}, stack: "" }
+AutomaticPriceUpdateService.ts:26:15
+Error syncing prices:
+Object { name: "DatabaseClosedError", message: "UpgradeError Not yet support for changing primary key", inner: {…}, stack: "" }
+PriceUpdateService.ts:116:15
+Error updating prices:
+Object { name: "DatabaseClosedError", message: "UpgradeError Not yet support for changing primary key", inner: {…}, stack: "" }
+AutomaticPriceUpdateService.ts:86:15
+Error scheduling price update:
+Object { name: "DatabaseClosedError", message: "UpgradeError Not yet support for changing primary key", inner: {…}, stack: "" }
+AutomaticPriceUpdateService.ts:43:15
+Uncaught (in promise)
+Object { name: "DatabaseClosedError", message: "UpgradeError Not yet support for changing primary key", inner: {…}, stack: "" }
+main.ts:30:41
+
+​
+
