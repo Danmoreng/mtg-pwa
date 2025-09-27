@@ -525,7 +525,46 @@ export class ImportService {
       source: string,
       externalRef: string
     ): Promise<{ acquisitionId: string; scanIds: string[] }> {
-      return await ImportPipelines.importManaboxScansWithBoxCost(rows, boxCost, happenedAt, source, externalRef);
+      const importStatusStore = useImportStatusStore();
+
+      // Create import tracking
+      const importId = uuidv4();
+      importStatusStore.addImport({
+        id: importId,
+        type: 'manabox',
+        name: 'ManaBox Scans',
+        status: 'pending',
+        progress: 0,
+        totalItems: rows.length,
+        processedItems: 0
+      });
+
+      try {
+        // Call the pipeline function with progress tracking
+        const result = await ImportPipelines.importManaboxScansWithBoxCost(
+          rows, 
+          boxCost, 
+          happenedAt, 
+          source, 
+          externalRef,
+          (processed, total) => {
+            importStatusStore.updateImport(importId, {
+              status: 'processing',
+              processedItems: processed,
+              progress: Math.round((processed / total) * 100)
+            });
+          }
+        );
+
+        // Mark import as completed
+        importStatusStore.completeImport(importId);
+
+        return result;
+      } catch (error) {
+        console.error('Error importing Manabox scans with box cost:', error);
+        importStatusStore.completeImport(importId, (error as Error).message);
+        throw error;
+      }
     }
 
     /**

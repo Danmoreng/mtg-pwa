@@ -3,12 +3,13 @@ import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import type { Card, CardLot } from '../../data/db';
 
 export class ScanProcessingService {
-  static async processScans(): Promise<void> {
+  static async processScans(onProgress?: (processed: number, total: number) => void): Promise<void> {
     console.log("Starting processScans...");
     const unprocessedScans = await scanRepository.getAll();
     console.log(`Found ${unprocessedScans.length} unprocessed scans`);
 
-    for (const scan of unprocessedScans) {
+    for (let i = 0; i < unprocessedScans.length; i++) {
+      const scan = unprocessedScans[i];
       console.log(`Processing scan: ${scan.id}, fingerprint: ${scan.cardFingerprint}`);
       
       if (scan.cardId) {
@@ -16,6 +17,10 @@ export class ScanProcessingService {
         const existingCard = await cardRepository.getById(scan.cardId);
         if (existingCard) {
           console.log(`Scan ${scan.id} already has cardId: ${scan.cardId} with existing card, skipping`);
+          // Still update progress
+          if (onProgress) {
+            onProgress(i + 1, unprocessedScans.length);
+          }
           continue;
         } else {
           // CardId exists but card doesn't exist in DB, so we need to process
@@ -130,7 +135,7 @@ export class ScanProcessingService {
         console.log(`Creating card lot for card: ${cardId}, scan: ${scan.id}`);
         const newLot: CardLot = {
           id: `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          cardId: cardId, // OK: CardLot.cardId is string and we’re in the branch where cardId is truthy
+          cardId: cardId, // OK: CardLot.cardId is string and we're in the branch where cardId is truthy
           acquisitionId: scan.acquisitionId,
           quantity: scan.quantity,
           unitCost: 0,
@@ -154,6 +159,11 @@ export class ScanProcessingService {
         console.log(`Updated scan ${scan.id} with cardId: ${cardId} and lotId: ${lotId}`);
       } else {
         console.log(`No card found or created for scan: ${scan.id}, skipping lot creation`);
+      }
+      
+      // Update progress after processing each scan
+      if (onProgress) {
+        onProgress(i + 1, unprocessedScans.length);
       }
     }
     console.log("Completed processScans");
