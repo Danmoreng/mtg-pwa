@@ -103,7 +103,10 @@ export async function importManaboxScansWithBoxCost(
     // Batch insert scans
     const scanIds: string[] = [];
     for (const scan of scans) {
-      const id = await scanRepository.add(scan as Scan);
+      const id = await scanRepository.add({
+        ...scan,
+        id: `scan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      } as Scan);
       scanIds.push(id);
     }
     
@@ -250,13 +253,9 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
           removedAt: deckCard.removedAt,
           createdAt: deckCard.createdAt || new Date()
         };
-        
-        // The id for deck_cards is not auto-incrementing, so we need to create one.
-        // A composite key is not a real primary key in Dexie, so we create a synthetic one.
-        const syntheticId = `${deckCard.deckId}-${deckCard.cardId}-${deckCard.addedAt.getTime()}`;
 
-        await deckCardRepository.add({ ...newDeckCard, id: syntheticId } as DeckCard);
-        deckCardIds.push(syntheticId);
+        await deckCardRepository.add(newDeckCard as DeckCard);
+        deckCardIds.push(deckCard.cardId);
       }
     }
     

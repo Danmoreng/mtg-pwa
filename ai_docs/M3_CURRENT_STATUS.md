@@ -150,6 +150,10 @@ Based on the detailed progress tracking, the following tasks have been completed
 - [6] Consolidate to features/* as Source of Truth: Consolidated services to single location
 - [7] Idempotency & Import Hardening: Added unique constraints and idempotency checks
 - [8] Ensure mergeLots Exists & Is Correct: Verified implementation matches M3 spec
+- [x] Fixed runtime error in Manabox import by adding a unique ID to each scan.
+- [x] Fixed build errors in `ManaboxImportView.vue` by fixing a typo in a comment.
+- [x] Fixed build errors in `ReconcilerService.ts` by adding `finish` and `language` to `Scan` and `Transaction` interfaces.
+- [x] Refactored deck import to use composite primary key `[deckId+cardId]` for `deck_cards` table.
 
 ### 🔄 Currently In Progress
 - [9] Deterministic Rounding for Cost Allocation: Implement Largest Remainder Method

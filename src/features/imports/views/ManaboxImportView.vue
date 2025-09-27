@@ -80,7 +80,7 @@ const handleManaBoxFileUpload = async (event: Event) => {
   if (!file) return;
   
   try {
-    // Parse CSV file\
+    // Parse CSV file
     const text = await file.text();
     const lines = text.split('\n');
     const headers = lines[0].split(',').map(h => h.trim());

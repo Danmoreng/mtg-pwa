@@ -93,6 +93,8 @@ export interface Transaction {
     happenedAt: Date;
     notes?: string;
     relatedTransactionId?: string;
+    finish?: string;
+    language?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -107,6 +109,8 @@ export interface Scan {
     externalRef?: string;
     scannedAt: Date;
     quantity: number;
+    finish?: string;
+    language?: string;
     boosterPackId?: string;
     notes?: string;
     soldTransactionId?: string;
@@ -129,7 +133,7 @@ export interface Deck {
 }
 
 export interface DeckCard {
-    id: string;
+    id?: string;
     deckId: string;
     cardId: string;
     lotId?: string;
@@ -439,12 +443,11 @@ class MtgTrackerDb extends Dexie {
             cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
             card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
                 '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, ' +
+            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
                 '[lotId+kind], [cardId+kind], [source+externalRef], happenedAt',
-            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, ' +
+            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
                 '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
+            deck_cards: '[deckId+cardId], lotId, addedAt, removedAt, createdAt, [lotId+addedAt]',
             // ensure provider index matches repository API (see §7.3)
             price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
                 '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
