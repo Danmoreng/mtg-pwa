@@ -207,11 +207,8 @@ export const deckRepository = {
 
 // DeckCard repository
 export const deckCardRepository = {
-  async add(deckCard: DeckCard): Promise<void> {
+  async add(deckCard: DeckCard): Promise<[string, string]> {
     // Validate required fields
-    if (!deckCard.id) {
-      throw new Error('DeckCard id is required');
-    }
     if (!deckCard.deckId) {
       throw new Error('DeckCard deckId is required');
     }
@@ -231,7 +228,7 @@ export const deckCardRepository = {
       throw new Error('DeckCard createdAt is required');
     }
     
-    await db.deck_cards.add(deckCard);
+    return await db.deck_cards.add(deckCard);
   },
 
   async getById(id: string): Promise<DeckCard | undefined> {

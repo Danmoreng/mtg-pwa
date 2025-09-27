@@ -2,6 +2,46 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-27 16:00 — fix(build): Fix build errors in ReconcilerService
+- **Author**: AI (Gemini)
+- **Scope**: src/data/db.ts, src/features/scans/ReconcilerService.ts
+- **Type**: fix
+- **Summary**: Fixed build errors in `ReconcilerService` by adding `finish` and `language` properties to the `Scan` and `Transaction` interfaces and database schema.
+- **Details**:
+  - Added `finish` and `language` properties to the `Scan` and `Transaction` interfaces in `src/data/db.ts`.
+  - Updated the database schema in `src/data/db.ts` to include the new properties in the `scans` and `transactions` tables.
+  - This resolves the build errors in `src/features/scans/ReconcilerService.ts` where these properties were being accessed but did not exist.
+- **Impact/Risks**: This is a database schema change and will require a migration.
+- **Verification Steps**: The project should now build successfully.
+- **Linked Task/Issue**: build_errors.txt
+
+## 2025-09-27 15:00 — fix(import): Use composite primary key for deck_cards
+- **Author**: AI (Gemini)
+- **Scope**: src/data/db.ts, src/data/repos.ts, src/features/imports/ImportPipelines.ts
+- **Type**: fix
+- **Summary**: Changed the primary key of the `deck_cards` table to a composite key `[deckId+cardId]` to enforce uniqueness and simplify deck import logic.
+- **Details**:
+  - The `deck_cards` table in `src/data/db.ts` was modified to use `[deckId+cardId]` as the primary key.
+  - The `id` property in the `DeckCard` interface was made optional.
+  - The `deckCardRepository.add` method was updated to remove the `id` validation.
+  - The `importDecks` function in `src/features/imports/ImportPipelines.ts` was updated to work with the new composite primary key, removing the generation of a synthetic `id`.
+- **Impact/Risks**: This is a database schema change. It will require a database migration. However, since the `id` was not used consistently, this change should not have any major impact.
+- **Verification Steps**: Manually import a deck. The import should complete successfully.
+- **Linked Task/Issue**: -
+
+## 2025-09-27 14:00 — fix(import): Fix Manabox import due to missing scan ID
+- **Author**: AI (Gemini)
+- **Scope**: src/features/imports/ImportPipelines.ts
+- **Type**: fix
+- **Summary**: Fixed a bug in the Manabox import process that caused a `DataError` due to a missing `id` property on `Scan` objects.
+- **Details**:
+  - The `importManaboxScansWithBoxCost` function in `src/features/imports/ImportPipelines.ts` was attempting to add `Scan` objects to the database without an `id`.
+  - The database schema for the `scans` table requires an `id`, but it is not auto-incrementing.
+  - The fix generates a unique `id` for each `Scan` object before it is added to the database.
+- **Impact/Risks**: This change fixes a critical bug in the Manabox import feature. There are no known risks.
+- **Verification Steps**: Manually import a Manabox CSV file. The import should now complete successfully without any errors in the console.
+- **Linked Task/Issue**: runtime_error.txt
+
 ## 2025-09-20 16:00 — feat: Continue M3 implementation with service integration and adapter patterns
 - **Author**: AI (Qwen)
 - **Scope**: src/core/Normalization.ts, src/features/imports/ImportPipelines.ts, src/features/scans/ReconcilerService.ts, src/features/analytics/CostAllocationService.ts, src/features/analytics/PnLService.ts, src/features/acquisitions/AcquisitionService.ts, src/workers/reconcile.ts, src/workers/allocate.ts, src/workers/WorkerManager.ts, tests/NormalizationGateway.test.ts, tests/ReconcilerService.test.ts, tests/CostAllocationService.test.ts, tests/PnLService.test.ts
@@ -317,7 +357,7 @@ A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in
     - Added deck deletion functionality with confirmation
     - Updated deck data model to include faceCardId field
     - Enhanced UI with visual indicators for face card selection
-    - Added proper error handling and user feedback
+    -- Added proper error handling and user feedback
 - **Impact/Risks**: New feature with no breaking changes. Adds valuable deck management capabilities.
 - **Verification Steps**: Users can now click on deck titles to edit them, select a face card from their deck cards, and delete decks entirely.
 
