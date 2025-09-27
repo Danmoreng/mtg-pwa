@@ -314,6 +314,48 @@ export async function consolidateProvisionalLots(
   }
 }
 
+/**
+ * Run the full reconciler for all identities
+ */
+export async function runFullReconciler(): Promise<void> {
+  // Get all unique card identities from scans and transactions
+  const allScans = await scanRepository.getAll();
+  const allTransactions = await transactionRepository.getAll();
+  
+  // Create a set of all unique identities
+  const identities = new Set<string>();
+  
+  // Add identities from scans
+  for (const scan of allScans) {
+    if (scan.cardId) {
+      identities.add(`${scan.cardId}-normal-EN`); // Using defaults since Scan interface doesn't have finish/language
+    }
+  }
+  
+  // Add identities from transactions
+  for (const tx of allTransactions) {
+    if (tx.cardId) {
+      // Using defaults since Transaction interface doesn't have finish/language
+      identities.add(`${tx.cardId}-normal-EN`);
+    }
+  }
+  
+  // Process each unique identity
+  for (const identityStr of identities) {
+    const [cardId, finish, lang] = identityStr.split('-');
+    if (cardId) {
+      const identity = {
+        cardId,
+        fingerprint: identityStr, // Use the combined string as fingerprint for uniqueness
+        finish,
+        lang
+      };
+      
+      await runReconciler(identity);
+    }
+  }
+}
+
 const reconcilerLocks = new Set<string>();
 
 /**

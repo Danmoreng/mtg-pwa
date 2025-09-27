@@ -3,29 +3,53 @@
 > mtg-pwa@0.1.0 build
 > vue-tsc -b && vite build --base=/mtg-pwa/
 
-src/data/db.ts:454:26 - error TS6133: 'tx' is declared but its value is never read.
+src/features/imports/views/ManaboxImportView.vue:87:25 - error TS2304: Cannot find name 'lines'.
 
-454         }).upgrade(async tx => {
-                             ~~
+87     for (let i = 1; i < lines.length; i++) {
+                           ~~~~~
 
-src/features/scans/ReconcilerService.ts:64:3 - error TS6133: 'source' is declared but its value is never read.
+src/features/imports/views/ManaboxImportView.vue:88:20 - error TS2304: Cannot find name 'lines'.
 
-64   source: string,
-     ~~~~~~
+88       const line = lines[i].trim();
+                      ~~~~~
 
-src/features/scans/ReconcilerService.ts:76:5 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
-  Type 'undefined' is not assignable to type 'string'.
+src/features/imports/views/ManaboxImportView.vue:93:27 - error TS2304: Cannot find name 'headers'.
 
-76     cardId: identity.cardId || undefined, // Make sure it's undefined if not provided
-       ~~~~~~
+93       if (values.length < headers.length) continue;
+                             ~~~~~~~
 
-  src/data/db.ts:46:5
-    46     cardId: string;
-           ~~~~~~
-    The expected type comes from property 'cardId' which is declared here on type 'Omit<CardLot, "id">'
+src/features/imports/views/ManaboxImportView.vue:96:27 - error TS2304: Cannot find name 'headers'.
+
+96       for (let j = 0; j < headers.length; j++) {
+                             ~~~~~~~
+
+src/features/imports/views/ManaboxImportView.vue:97:24 - error TS2304: Cannot find name 'headers'.
+
+97         const header = headers[j].toLowerCase();
+                          ~~~~~~~
+
+src/features/scans/ReconcilerService.ts:331:45 - error TS2339: Property 'finish' does not exist on type 'Scan'.
+
+331       identities.add(`${scan.cardId}-${scan.finish || 'normal'}-${scan.language || 'EN'}`);
+                                                ~~~~~~
+
+src/features/scans/ReconcilerService.ts:331:72 - error TS2339: Property 'language' does not exist on type 'Scan'.
+
+331       identities.add(`${scan.cardId}-${scan.finish || 'normal'}-${scan.language || 'EN'}`);
+                                                                           ~~~~~~~~
+
+src/features/scans/ReconcilerService.ts:338:25 - error TS2339: Property 'finish' does not exist on type 'Transaction'.
+
+338       const finish = tx.finish || 'normal';
+                            ~~~~~~
+
+src/features/scans/ReconcilerService.ts:339:23 - error TS2339: Property 'language' does not exist on type 'Transaction'.
+
+339       const lang = tx.language || 'EN';
+                          ~~~~~~~~
 
 
-Found 3 errors.
+Found 9 errors.
 
 
 Process finished with exit code 2

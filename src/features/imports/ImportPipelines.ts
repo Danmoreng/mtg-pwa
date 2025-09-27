@@ -21,6 +21,7 @@ export interface ManaboxImportRow {
   scannedAt: Date;
   source: string;
   externalRef: string;
+  scryfallId?: string;
 }
 
 export interface BoxCost {
@@ -86,7 +87,7 @@ export async function importManaboxScansWithBoxCost(
 
       const scan: Omit<Scan, 'id'> & { acquisitionId?: string } = {
         cardFingerprint: normalizedKey.fingerprint,
-        cardId: row.id, // assuming row.id is the cardId
+        cardId: row.scryfallId, // Use scryfallId from the CSV if available
         acquisitionId,
         source: row.source,
         externalRef: row.externalRef,
