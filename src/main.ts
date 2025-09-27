@@ -27,7 +27,7 @@ async function initApp() {
     await dbPromise;
   } catch (error) {
     // If there's an upgrade error related to schema changes, try deleting the database and recreating it
-    if (error.name === 'UpgradeError' && error.message.includes('Not yet support for changing primary key')) {
+    if (error instanceof Error && error.name === 'UpgradeError' && error.message.includes('Not yet support for changing primary key')) {
       console.warn('Database schema error detected. Attempting to recreate database...');
       
       // Delete the existing database
@@ -50,7 +50,7 @@ async function initApp() {
       await AutomaticPriceUpdateService.schedulePriceUpdate();
     }, 1000);
   } catch (error) {
-    console.error('Error initializing automatic price updates:', error);
+    console.error('Error initializing automatic price updates:', error instanceof Error ? error : new Error(String(error)));
   }
 }
 

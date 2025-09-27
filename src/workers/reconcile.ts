@@ -2,12 +2,13 @@
 // This worker will run the reconciler to match scans to lots and sells to lots
 
 import { runReconciler } from '../features/scans/ReconcilerService';
-import db from '../data/db';
+import { getDb } from '../data/init';
 
 // Run the reconciler for all identities
 async function runReconcilerWorker(): Promise<void> {
   try {
     // Get all unique card identities from scans and transactions
+    const db = getDb();
     const scans = await db.scans.toArray();
     const transactions = await db.transactions.toArray();
     
@@ -38,6 +39,7 @@ async function runReconcilerWorker(): Promise<void> {
     for (const tx of transactions) {
       if (tx.cardId) {
         // Get the card to get its info
+        const db = getDb();
         const card = await db.cards.get(tx.cardId);
         if (card) {
           // Create a fingerprint from card properties since cardFingerprint doesn't exist on Card

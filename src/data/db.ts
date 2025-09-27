@@ -226,7 +226,7 @@ export default class MtgTrackerDb extends Dexie {
             valuations: 'id, asOf, createdAt',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
-        }).upgrade(async tx => {
+        }).upgrade(async (tx) => {
             // Add createdAt and updatedAt to existing records
             const now = new Date();
 
@@ -302,10 +302,8 @@ export default class MtgTrackerDb extends Dexie {
             valuations: 'id, asOf, createdAt, [asOf+createdAt]',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
-        }).upgrade(async tx => {
+        }).upgrade(async (_tx) => {
             // Add missing fields to existing deck_cards records
-            const now = new Date();
-
         });
 
         // Version 5 - Add externalRef to card_lots for deduplication
