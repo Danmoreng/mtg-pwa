@@ -1,6 +1,6 @@
 // Scan matching service for matching ManaBox scans to Cardmarket sales with lot tracking
 import { getDb } from '../../data/init';
-import { cardLotRepository, transactionRepository, scanRepository } from '../../data/repos';
+import { cardLotRepository } from '../../data/repos';
 import type { Scan, Transaction, CardLot } from '../../data/db';
 
 // Import the new reconciler service
@@ -9,105 +9,11 @@ import * as Reconciler from './ReconcilerService';
 export class ScanMatchingService {
   // Match scans to sales with lot tracking
   static async matchScansToSales(): Promise<void> {
-    // Gate behind feature flag to prevent double-assignment conflicts
-    if (process.env.M3_RECONCILER_ONLY === 'true') {
-      // When flag is true, run the new reconciler instead of the legacy matcher
-      console.info('M3_RECONCILER_ONLY is enabled, running new reconciler');
-      
-      // Run the full reconciler across all identities
-      // This will handle both scan-to-lot and sell-to-lot reconciliation
-      await Reconciler.runFullReconciler();
-      return;
-    }
-    
-    // else: legacy code path (temporary)
-    try {
-      // Get all scans that haven't been matched yet
-      const db = getDb();
-      const unmatchedScans = await db.scans
-        .where('cardId')
-        .notEqual('')
-        .and(scan => !scan.soldTransactionId)
-        .toArray();
-      
-      // Get all SELL transactions
-      const sellTransactions = await transactionRepository.getByKind('SELL');
-      
-      // For each sale, track how many items have been assigned to scans
-      const saleAssignments: Record<string, number> = {};
-      
-      // Initialize assignment tracking for all sales
-      for (const sale of sellTransactions) {
-        saleAssignments[sale.id] = 0;
-      }
-      
-      // Match scans to sales
-      for (const scan of unmatchedScans) {
-        // Find matching sales transactions
-        const matchingSales = sellTransactions.filter(tx => {
-          // Match by card ID
-          if (tx.cardId && tx.cardId === scan.cardId) {
-            // Check if sale happened after scan
-            return tx.happenedAt >= scan.scannedAt;
-          }
-          
-          // If no card ID, match by fingerprint
-          if (!tx.cardId && scan.cardFingerprint) {
-            // In a real implementation, we would compare fingerprints here
-            // For now, we'll skip this as it's more complex
-            return false;
-          }
-          
-          return false;
-        });
-        
-        // Sort by date (earliest first)
-        matchingSales.sort((a, b) => a.happenedAt.getTime() - b.happenedAt.getTime());
-        
-        // Greedily assign scans to earliest eligible sales
-        let remainingQuantity = scan.quantity;
-        
-        for (const sale of matchingSales) {
-          if (remainingQuantity <= 0) break;
-          
-          // Calculate how many items from this sale are still available
-          const assignedQuantity = saleAssignments[sale.id] || 0;
-          const availableQuantity = sale.quantity - assignedQuantity;
-          
-          if (availableQuantity <= 0) continue;
-          
-          const soldQuantity = Math.min(remainingQuantity, availableQuantity);
-          
-          // Update scan with sale information
-          await scanRepository.update(scan.id, {
-            soldTransactionId: sale.id,
-            soldAt: sale.happenedAt,
-            soldQuantity: soldQuantity
-          });
-          
-          // Update assignment tracking
-          saleAssignments[sale.id] = assignedQuantity + soldQuantity;
-          
-          // If the scan is linked to a lot, update the lot's disposal information
-          if (scan.lotId) {
-            const lot = await cardLotRepository.getById(scan.lotId);
-            if (lot) {
-              // Update the lot with disposal information
-              await cardLotRepository.update(scan.lotId, {
-                disposedAt: sale.happenedAt,
-                disposedQuantity: (lot.disposedQuantity || 0) + soldQuantity,
-                saleTransactionId: sale.id
-              });
-            }
-          }
-          
-          remainingQuantity -= soldQuantity;
-        }
-      }
-    } catch (error) {
-      console.error('Error matching scans to sales:', error);
-      throw error;
-    }
+    // Run the full reconciler across all identities
+    // This will handle both scan-to-lot and sell-to-lot reconciliation
+    console.info('Running new M3 reconciler');
+    await Reconciler.runFullReconciler();
+    return;
   }
 
   // Get scan status (sold or still owned)
