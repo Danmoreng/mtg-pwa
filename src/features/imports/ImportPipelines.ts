@@ -44,7 +44,8 @@ export async function importManaboxScansWithBoxCost(
   boxCost: BoxCost,
   happenedAt: Date,
   source: string,
-  externalRef: string
+  externalRef: string,
+  onProgress?: (processed: number, total: number) => void
 ): Promise<{ acquisitionId: string; scanIds: string[] }> {
   try {
     // 1. getOrCreate Acquisition by [source+externalRef]; persist total costs & happenedAt.
@@ -101,17 +102,23 @@ export async function importManaboxScansWithBoxCost(
       scans.push(scan);
     }
     
-    // Batch insert scans
+    // Batch insert scans with progress tracking
     const scanIds: string[] = [];
-    for (const scan of scans) {
+    for (let i = 0; i < scans.length; i++) {
+      const scan = scans[i];
       const id = await scanRepository.add({
         ...scan,
         id: `scan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       } as Scan);
       scanIds.push(id);
+      
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress(i + 1, scans.length);
+      }
     }
     
-    await ScanProcessingService.processScans();
+    await ScanProcessingService.processScans(onProgress);
     
     return { acquisitionId, scanIds };
   } catch (error) {

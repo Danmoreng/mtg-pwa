@@ -3,7 +3,7 @@ import { ref } from 'vue';
 
 export interface ImportStatus {
   id: string;
-  type: 'deck' | 'cardmarket' | 'pricing';
+  type: 'deck' | 'cardmarket' | 'pricing' | 'manabox';
   name: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
