@@ -42,7 +42,7 @@ const routes = [
       {
         path: 'manabox',
         name: 'import-manabox',
-        component: () => import('../features/imports/views/CsvImportView.vue'),
+        component: () => import('../features/imports/views/ManaboxImportView.vue'),
       },
     ],
   },

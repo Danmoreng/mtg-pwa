@@ -1,28 +1,28 @@
 <template>
-  <div class=\"manabox-import\">
+  <div class="manabox-import">
     <h2>ManaBox Scans Import</h2>
     <p>Import your ManaBox scan data to track your physical collection.</p>
     
-    <div class=\"mb-3\">
-      <label for=\"manabox-csv\" class=\"form-label\">
+    <div class="mb-3">
+      <label for="manabox-csv" class="form-label">
         Upload ManaBox CSV
       </label>
       <input 
-        id=\"manabox-csv\" 
-        type=\"file\" 
-        accept=\".csv\" 
-        @change=\"handleManaBoxFileUpload\"
-        class=\"form-control\"
+        id="manabox-csv" 
+        type="file" 
+        accept=".csv" 
+        @change="handleManaBoxFileUpload"
+        class="form-control"
       />
     </div>
     
-    <div v-if=\"importStatus\" class=\"status-message\" :class=\"importStatus.type\">
+    <div v-if="importStatus" class="status-message" :class="importStatus.type">
       {{ importStatus.message }}
     </div>
   </div>
 </template>
 
-<script setup lang=\"ts\">
+<script setup lang="ts">
 import { ref } from 'vue';
 import { ImportService } from '../ImportService';
 import * as ImportPipelines from '../ImportPipelines';
@@ -38,6 +38,40 @@ const showStatus = (type: 'success' | 'error', message: string) => {
   }, 5000);
 };
 
+// Helper function to parse CSV lines that may contain commas within quoted values
+const parseCSVLine = (line: string): string[] => {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = i < line.length - 1 ? line[i + 1] : '';
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Double quotes inside a quoted field are treated as a single quote
+        current += '"';
+        i++; // Skip the next quote
+      } else {
+        // Toggle the inQuotes flag
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Comma outside quotes separates fields
+      result.push(current);
+      current = '';
+    } else {
+      // Add character to current field
+      current += char;
+    }
+  }
+
+  // Add the last field
+  result.push(current);
+  return result;
+};
+
 // Handle ManaBox file upload
 const handleManaBoxFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement;
@@ -46,59 +80,75 @@ const handleManaBoxFileUpload = async (event: Event) => {
   if (!file) return;
   
   try {
-    // Parse CSV file
+    // Parse CSV file\
     const text = await file.text();
-    const lines = text.split('\\n');
-    const headers = lines[0].split(';').map(h => h.trim());
+    const lines = text.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
     
     // Parse rows according to ManaBox format
     const rows: ImportPipelines.ManaboxImportRow[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(';').map(v => v.trim());
+      const line = lines[i].trim();
+      if (!line) continue; // Skip empty lines
+      
+      // Handle potential comma within quoted values using regex
+      const values = parseCSVLine(line);
       if (values.length < headers.length) continue;
       
       const row: any = {};
       for (let j = 0; j < headers.length; j++) {
         const header = headers[j].toLowerCase();
-        const value = values[j];
+        const value = values[j] ? values[j].trim() : '';
         
         switch (header) {
-          case 'id':
-            row.id = value;
-            break;
           case 'name':
-          case 'card name':
             row.name = value;
             break;
+          case 'set code':
           case 'set':
           case 'expansion':
             row.expansion = value;
             break;
+          case 'collector number':
           case 'number':
           case 'card number':
             row.number = value;
             break;
           case 'language':
           case 'sprache':
-            row.language = value || 'EN';
+            row.language = value || 'en';
             break;
           case 'foil':
-          case 'foil?':
-            row.foil = value.toLowerCase() === 'true' || value.toLowerCase() === 'yes' || value === '1';
+            row.foil = value.toLowerCase() === 'foil' || value.toLowerCase() === 'true' || value.toLowerCase() === 'yes';
             break;
           case 'quantity':
+          case 'qty':
           case 'anzahl':
             row.quantity = parseInt(value) || 1;
             break;
-          case 'scanned at':
-          case 'gescannt am':
-            row.scannedAt = new Date(value);
+          case 'manabox id':
+            row.id = value || `manabox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             break;
-          case 'source':
-            row.source = value || 'manabox';
+          case 'scryfall id':
+            row.scryfallId = value;
             break;
-          case 'external ref':
-            row.externalRef = value;
+          case 'condition':
+            row.condition = value;
+            break;
+          case 'purchase price':
+            row.purchasePrice = value;
+            break;
+          case 'misprint':
+            row.misprint = value.toLowerCase() === 'true';
+            break;
+          case 'altered':
+            row.altered = value.toLowerCase() === 'true';
+            break;
+          case 'purchase price currency':
+            row.currency = value || 'EUR';
+            break;
+          case 'rarity':
+            row.rarity = value;
             break;
         }
       }
@@ -110,12 +160,13 @@ const handleManaBoxFileUpload = async (event: Event) => {
           name: row.name,
           expansion: row.expansion,
           number: row.number,
-          language: row.language || 'EN',
+          language: row.language || 'en',
           foil: row.foil || false,
           quantity: row.quantity || 1,
-          scannedAt: row.scannedAt || new Date(),
-          source: row.source || 'manabox',
-          externalRef: row.externalRef || `manabox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          scannedAt: new Date(), // Using current date since the CSV doesn't have a scan date
+          source: 'manabox',
+          externalRef: `manabox-${row.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          scryfallId: row.scryfallId
         });
       }
     }

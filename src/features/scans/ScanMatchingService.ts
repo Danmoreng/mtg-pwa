@@ -9,11 +9,14 @@ import * as Reconciler from './ReconcilerService';
 export class ScanMatchingService {
   // Match scans to sales with lot tracking
   static async matchScansToSales(): Promise<void> {
-    // TODO: Remove this legacy method after full rollout of M3 reconciler
     // Gate behind feature flag to prevent double-assignment conflicts
     if (process.env.M3_RECONCILER_ONLY === 'true') {
-      // When flag is true, just run the new reconciler instead of the legacy matcher
-      console.warn('M3_RECONCILER_ONLY is enabled, skipping legacy matcher');
+      // When flag is true, run the new reconciler instead of the legacy matcher
+      console.info('M3_RECONCILER_ONLY is enabled, running new reconciler');
+      
+      // Run the full reconciler across all identities
+      // This will handle both scan-to-lot and sell-to-lot reconciliation
+      await Reconciler.runFullReconciler();
       return;
     }
     

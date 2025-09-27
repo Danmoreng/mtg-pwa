@@ -1,0 +1,18 @@
+Error importing Manabox scans with box cost:
+Object { name: "DataError", message: "Data provided to an operation does not meet requirements.\n DataError: Data provided to an operation does not meet requirements.", inner: DOMException, stack: "", … }
+​
+inner: DOMException: Data provided to an operation does not meet requirements.
+​
+message: "Data provided to an operation does not meet requirements.\n DataError: Data provided to an operation does not meet requirements."
+​
+name: "DataError"
+​
+stack:
+​
+<get stack()>: function get()​
+<prototype>: Object { stack: "", … }
+ImportPipelines.ts:111:13
+Error importing ManaBox scans:
+Object { name: "DataError", message: "Data provided to an operation does not meet requirements.\n DataError: Data provided to an operation does not meet requirements.", inner: DOMException, stack: "", … }
+ManaboxImportView.vue:195:13
+    handleManaBoxFileUpload Ma
