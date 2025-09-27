@@ -3,8 +3,10 @@ import './styles/main.scss'
 import App from './App.vue'
 import router from './app/router'
 import { createPinia } from 'pinia'
+import Dexie from 'dexie'
 import { AutomaticPriceUpdateService } from './features/pricing/AutomaticPriceUpdateService'
 import { registerSW } from 'virtual:pwa-register'
+import { dbPromise } from './data/init'
 
 registerSW({
     immediate: true,
@@ -20,13 +22,26 @@ app.use(pinia)
 
 // Initialize automatic price updates in the background (non-blocking)
 async function initApp() {
-  // Mount the app immediately without waiting for price updates
-  import { dbPromise } from './data/init';
-
-// Init App
-const b_=wx(uk),wL=D1();b_.use(wL);async function xL(){
-  await dbPromise; // Wait for the database to initialize
-  b_.use(bL).mount("#app");try{setTimeout(async()=>{await fi.schedulePriceUpdate()},1e3)}catch(t){console.error("Error initializing automatic price updates:",t)}}xL();export{el as I,gn as _,w as a,ke as b,J as c,Ze as d,At as n,U as o,pe as r,oe as t};
+  try {
+    // Wait for the database to initialize
+    await dbPromise;
+  } catch (error) {
+    // If there's an upgrade error related to schema changes, try deleting the database and recreating it
+    if (error.name === 'UpgradeError' && error.message.includes('Not yet support for changing primary key')) {
+      console.warn('Database schema error detected. Attempting to recreate database...');
+      
+      // Delete the existing database
+      await Dexie.delete('MtgTrackerDb');
+      
+      // Reinitialize the database
+      await dbPromise;
+    } else {
+      throw error; // Re-throw if it's a different error
+    }
+  }
+  
+  // Mount the app
+  app.use(router).mount('#app');
   
   // Schedule price updates in the background after app is mounted
   try {
