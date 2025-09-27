@@ -1,6 +1,6 @@
 // Price update service for syncing card prices
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import db from '../../data/db';
+import { getDb } from '../../data/init';
 import { cardRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
 import { PriceQueryService } from '../pricing/PriceQueryService';
@@ -58,6 +58,7 @@ export class PriceUpdateService {
                 };
                 
                 // Save price point (use put to update if exists)
+                const db = getDb();
                 await db.price_points.put(pricePoint);
               }
               
@@ -82,6 +83,7 @@ export class PriceUpdateService {
                 };
                 
                 // Save price point (use put to update if exists)
+                const db = getDb();
                 await db.price_points.put(pricePoint);
               }
               
@@ -159,6 +161,7 @@ export class PriceUpdateService {
           };
           
           // Save price point (use put to update if exists)
+          const db = getDb();
           await db.price_points.put(pricePoint);
         }
         
@@ -183,6 +186,7 @@ export class PriceUpdateService {
           };
           
           // Save price point (use put to update if exists)
+          const db = getDb();
           await db.price_points.put(pricePoint);
         }
       }
@@ -196,6 +200,7 @@ export class PriceUpdateService {
   static async needsPriceUpdate(): Promise<boolean> {
     try {
       // Get the most recent price point
+      const db = getDb();
       const latestPricePoint = await db.price_points.orderBy('asOf').last();
       
       if (!latestPricePoint) {

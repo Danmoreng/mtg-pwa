@@ -182,7 +182,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import db from '../../../data/db';
+import { getDb } from '../../../data/init';
 import CardComponent from '../../../components/CardComponent.vue';
 
 type Deck = {
@@ -267,6 +267,7 @@ const saveTitle = async () => {
   if (!next || next === deck.value.name) { isEditingTitle.value = false; return; }
 
   try {
+    const db = getDb();
     await db.decks.update(deck.value.id, { name: next });
     deck.value.name = next;
   } catch (err) {
@@ -295,6 +296,7 @@ const handleFaceCardSelection = async (cardId: string) => {
 const selectFaceCard = async (cardId: string) => {
   if (!deck.value) return;
   try {
+    const db = getDb();
     await db.decks.update(deck.value.id, { faceCardId: cardId });
     deck.value.faceCardId = cardId;
   } catch (err) {
@@ -306,6 +308,7 @@ const selectFaceCard = async (cardId: string) => {
 const clearFaceCard = async () => {
   if (!deck.value) return;
   try {
+    const db = getDb();
     await db.decks.update(deck.value.id, { faceCardId: undefined });
     deck.value.faceCardId = undefined;
   } catch (err) {
@@ -323,6 +326,7 @@ const confirmDelete = async () => {
   if (!deck.value || deleting.value) return;
   deleting.value = true;
   try {
+    const db = getDb();
     await db.deck_cards.where('deckId').equals(deck.value.id).delete();
     await db.decks.delete(deck.value.id);
     closeDeleteModal();
@@ -341,6 +345,7 @@ const loadDeck = async () => {
   try {
     const deckId = route.params.id as string;
 
+    const db = getDb();
     const deckData = await db.decks.get(deckId);
     if (!deckData) return;
 

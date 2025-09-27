@@ -2,7 +2,7 @@
 
 import { acquisitionRepository, cardLotRepository, pricePointRepository } from '../../data/repos';
 import type { CardLot } from '../../data/db';
-import db from '../../data/db';
+import { getDb } from '../../data/init';
 
 type AllocationMethod = 'equal_per_card' | 'by_market_price' | 'manual' | 'by_rarity';
 
@@ -92,6 +92,7 @@ async function allocateAcquisitionCosts(
   method: AllocationMethod,
   opts?: AllocationOptions
 ): Promise<void> {
+  const db = getDb();
   return db.transaction('rw', db.card_lots, db.acquisitions, db.price_points, async () => {
     const A = await acquisitionRepository.getById(acquisitionId);
     if (!A) throw new Error('Acquisition not found');
@@ -106,6 +107,7 @@ async function allocateAcquisitionCosts(
     const idealAllocations = lots.map((_, i) => total * (weights[i] / sumW));
     const floorAllocations = idealAllocations.map(alloc => Math.floor(alloc));
     const totalFloor = floorAllocations.reduce((a, b) => a + b, 0);
+
     let remainder = total - totalFloor;
 
     const remainders = idealAllocations.map((alloc, i) => alloc - floorAllocations[i]);

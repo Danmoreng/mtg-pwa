@@ -1,7 +1,8 @@
 // 6) Reconciler (order-agnostic core)
 
 import { cardLotRepository, scanRepository, transactionRepository } from '../../data/repos';
-import db, { type CardLot } from '../../data/db';
+import { type CardLot } from '../../data/db';
+import { getDb } from '../../data/init';
 
 // 6.2 Helper APIs
 
@@ -120,6 +121,7 @@ export async function reassignSellToLot(transactionId: string, lotId: string): P
  * @param fromLotId 
  */
 export async function mergeLots(targetLotId: string, fromLotId:string): Promise<void> {
+  const db = getDb();
   return db.transaction('rw', db.card_lots, db.scans, db.transactions, async () => {
     const fromLot = await cardLotRepository.getById(fromLotId);
     const targetLot = await cardLotRepository.getById(targetLotId);

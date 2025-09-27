@@ -206,7 +206,7 @@ export const deckRepository = {
 
 // DeckCard repository
 export const deckCardRepository = {
-  async add(deckCard: DeckCard): Promise<[string, string]> {
+  async add(deckCard: DeckCard): Promise<string> {
     // Validate required fields
     if (!deckCard.deckId) {
       throw new Error('DeckCard deckId is required');

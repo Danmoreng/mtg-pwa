@@ -1,6 +1,6 @@
 import { scanRepository, cardRepository, cardLotRepository } from '../../data/repos';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import type { Card, CardLot, Scan } from '../../data/db';
+import type { Card, CardLot } from '../../data/db';
 
 export class ScanProcessingService {
   static async processScans(): Promise<void> {
@@ -23,12 +23,13 @@ export class ScanProcessingService {
         }
       }
 
-      let cardId = scan.cardId; // Use the cardId from the scan
+      let cardId: string | undefined = scan.cardId;
       let card: Card | undefined;
 
       if (cardId) {
         console.log(`Using existing cardId: ${cardId}`);
-        card = await cardRepository.getById(cardId);
+        // Safe because we just checked cardId truthiness
+        card = await cardRepository.getById(cardId!);
       }
 
       if (!card) {
@@ -38,34 +39,33 @@ export class ScanProcessingService {
         const parts = scan.cardFingerprint.split(':');
         console.log(`Fingerprint parts: ${JSON.stringify(parts)}`);
 
-        if (scan.cardFingerprint.startsWith('name:')) {
+        if (scan.cardFingerprint.startsWith('name:') && parts.length >= 2) {
           // Format: name:{name}:{lang}:{finish}
-          const name = parts[1].replace(/-/g, ' ');
+          const name = parts[1]?.replace(/-/g, ' ') || '';
           console.log(`Processing name-based fingerprint with name: ${name}`);
-          const resolvedCardId = await ScryfallProvider.hydrateCard({
-            name: name
-          });
-          
-          if (resolvedCardId) {
-            console.log(`Successfully resolved card by name: ${resolvedCardId.name}`);
-            cardId = resolvedCardId.id;
-            card = await cardRepository.getById(cardId);
+          const resolved = await ScryfallProvider.hydrateCard({ name });
+
+          if (resolved?.id) {                     // <-- guard the id
+            const id: string = resolved.id;       // <-- now a definite string
+            console.log(`Successfully resolved card by name: ${resolved.name || 'Unknown'}`);
+            cardId = id;
+            card = await cardRepository.getById(id);
 
             if (!card) {
               console.log(`Card not in DB, creating new card entry`);
-              const image = await ScryfallProvider.getImageUrlById(cardId);
+              const image = await ScryfallProvider.getImageUrlById(id);
               const newCard: Card = {
-                id: cardId,
-                name: resolvedCardId.name,
-                set: resolvedCardId.set_name,
-                setCode: resolvedCardId.set,
-                number: resolvedCardId.collector_number,
-                lang: resolvedCardId.lang,
+                id,                                // <-- use definite string
+                name: resolved.name || '',
+                set: resolved.set_name || '',
+                setCode: resolved.set || '',
+                number: resolved.collector_number || '',
+                lang: resolved.lang || 'en',
                 finish: scan.finish || 'nonfoil',
                 layout: image?.layout,
                 imageUrl: image?.front,
                 imageUrlBack: image?.back,
-                cardmarketId: resolvedCardId.cardmarket_id,
+                cardmarketId: resolved.cardmarket_id,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               };
@@ -74,41 +74,42 @@ export class ScanProcessingService {
               card = newCard;
             }
           } else {
-            console.error(`Failed to resolve card by name: ${name}`);
+            console.error(`Failed to resolve card by name: ${name} (no id returned)`);
           }
+
         } else if (parts.length >= 4) {
           // Format: {setCode}:{number}:{lang}:{finish}
           // Get the setCode and number from the fingerprint
-          const setCode = parts[0];
-          const collectorNumber = parts[1];
+          const setCode = parts[0] || '';
+          const collectorNumber = parts[1] || '';
           console.log(`Processing setCode/number-based fingerprint with setCode: ${setCode}, number: ${collectorNumber}`);
-          
-          // Try to hydrate card using setCode and collector number
-          const resolvedCardId = await ScryfallProvider.hydrateCard({
-            setCode: setCode,
-            collectorNumber: collectorNumber
+
+          const resolved = await ScryfallProvider.hydrateCard({
+            setCode,
+            collectorNumber
           });
-          
-          if (resolvedCardId) {
-            console.log(`Successfully resolved card by setCode and number: ${resolvedCardId.name}`);
-            cardId = resolvedCardId.id;
-            card = await cardRepository.getById(cardId);
+
+          if (resolved?.id) {                     // <-- guard the id
+            const id: string = resolved.id;       // <-- now a definite string
+            console.log(`Successfully resolved card by setCode and number: ${resolved.name || 'Unknown'}`);
+            cardId = id;
+            card = await cardRepository.getById(id);
 
             if (!card) {
               console.log(`Card not in DB, creating new card entry`);
-              const image = await ScryfallProvider.getImageUrlById(cardId);
+              const image = await ScryfallProvider.getImageUrlById(id);
               const newCard: Card = {
-                id: cardId,
-                name: resolvedCardId.name,
-                set: resolvedCardId.set_name,
-                setCode: resolvedCardId.set,
-                number: resolvedCardId.collector_number,
-                lang: resolvedCardId.lang,
+                id,                                // <-- use definite string
+                name: resolved.name || '',
+                set: resolved.set_name || '',
+                setCode: resolved.set || '',
+                number: resolved.collector_number || '',
+                lang: resolved.lang || 'en',
                 finish: scan.finish || 'nonfoil',
                 layout: image?.layout,
                 imageUrl: image?.front,
                 imageUrlBack: image?.back,
-                cardmarketId: resolvedCardId.cardmarket_id,
+                cardmarketId: resolved.cardmarket_id,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               };
@@ -117,8 +118,9 @@ export class ScanProcessingService {
               card = newCard;
             }
           } else {
-            console.error(`Failed to resolve card by setCode: ${setCode} and number: ${collectorNumber}`);
+            console.error(`Failed to resolve card by setCode: ${setCode} and number: ${collectorNumber} (no id returned)`);
           }
+
         } else {
           console.error(`Unexpected fingerprint format: ${scan.cardFingerprint}`);
         }
@@ -128,10 +130,10 @@ export class ScanProcessingService {
         console.log(`Creating card lot for card: ${cardId}, scan: ${scan.id}`);
         const newLot: CardLot = {
           id: `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          cardId: cardId,
+          cardId: cardId, // OK: CardLot.cardId is string and we’re in the branch where cardId is truthy
           acquisitionId: scan.acquisitionId,
           quantity: scan.quantity,
-          unitCost: 0, // This should be updated later based on acquisition cost
+          unitCost: 0,
           condition: 'near_mint',
           language: scan.language || 'en',
           foil: scan.finish === 'foil',
