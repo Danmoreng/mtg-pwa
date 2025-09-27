@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { findOrCreateProvisionalLot } from '../src/features/scans/ReconcilerService';
+import { findOrCreateProvisionalLot, findLotsByIdentity } from '../src/features/scans/ReconcilerService';
 import { cardLotRepository } from '../src/data/repos';
 import type { CardLot } from '../src/data/db';
 
 // Mock the repository
 vi.mock('../src/data/repos', () => ({
   cardLotRepository: {
-    create: vi.fn(),
+    add: vi.fn(),
+    getById: vi.fn(),
     getByCardId: vi.fn(),
   }
 }));
@@ -27,45 +28,48 @@ describe('findOrCreateProvisionalLot', () => {
     // Setup: Simulate that no lot exists for this identity
     (cardLotRepository.getByCardId as vi.Mock).mockResolvedValue([]);
     
-    // Mock the create function to return a new lot
-    const expectedNewLot = {
-      id: 'lot_mock_id',
+    // Mock the add and getById function to return a new lot
+    const expectedNewLotId = 'lot_mock_id';
+    const expectedNewLot: CardLot = {
+      id: expectedNewLotId,
       cardId: 'card123',
-      cardFingerprint: 'mtg:dom:1:nonfoil:en',
       finish: 'nonfoil',
       language: 'en',
       quantity: 0,
-      purchasedAt: new Date('2023-01-01'),
+      unitCost: 0,
+      condition: 'Near Mint',
+      foil: false,
       source: 'provisional',
-      acquisitionId: null,
+      purchasedAt: new Date('2023-01-01'),
+      acquisitionId: undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     
-    (cardLotRepository.create as vi.Mock).mockResolvedValue(expectedNewLot);
+    (cardLotRepository.add as vi.Mock).mockResolvedValue(expectedNewLotId);
+    (cardLotRepository.getById as vi.Mock).mockResolvedValue(expectedNewLot);
 
     // Call the function
     const result = await findOrCreateProvisionalLot(
       mockIdentity,
       new Date('2023-01-01'),
       'provisional',
-      null
+      undefined
     );
 
     // Verify
-    expect(cardLotRepository.getByCardId).toHaveBeenCalledWith('card123');
-    expect(cardLotRepository.create).toHaveBeenCalledWith(
+    expect(cardLotRepository.add).toHaveBeenCalledWith(
       expect.objectContaining({
         cardId: 'card123',
-        cardFingerprint: 'mtg:dom:1:nonfoil:en',
         finish: 'nonfoil',
         language: 'en',
         quantity: 0,
         purchasedAt: new Date('2023-01-01'),
         source: 'provisional',
-        acquisitionId: null,
+        acquisitionId: undefined,
       })
     );
+    expect(cardLotRepository.getById).toHaveBeenCalledWith(expectedNewLotId);
     expect(result).toEqual(expectedNewLot);
   });
 
@@ -74,13 +78,15 @@ describe('findOrCreateProvisionalLot', () => {
     const existingLot: CardLot = {
       id: 'existing_lot_id',
       cardId: 'card123',
-      cardFingerprint: 'mtg:dom:1:nonfoil:en',
       finish: 'nonfoil',
       language: 'en',
       quantity: 0,
-      purchasedAt: new Date('2023-01-01'),
+      unitCost: 0,
+      condition: 'Near Mint',
+      foil: false,
       source: 'provisional',
-      acquisitionId: null,
+      purchasedAt: new Date('2023-01-01'),
+      acquisitionId: undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -92,11 +98,11 @@ describe('findOrCreateProvisionalLot', () => {
       mockIdentity,
       new Date('2023-01-02'), // Different date but should find the existing one
       'provisional',
-      null
+      undefined
     );
 
     // Verify that no new lot was created
-    expect(cardLotRepository.create).not.toHaveBeenCalled();
+    expect(cardLotRepository.add).not.toHaveBeenCalled();
     expect(result).toEqual(existingLot);
   });
 });
