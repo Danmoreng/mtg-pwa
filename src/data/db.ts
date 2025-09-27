@@ -408,7 +408,7 @@ export default class MtgTrackerDb extends Dexie {
             card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
                 '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
             transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
-                '[lotId+kind], [cardId+kind], [source+externalRef], happenedAt',
+                '[lotId+kind], [cardId+kind], [source+externalRef]',
             scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
                 '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
             deck_cards: '[deckId+cardId], lotId, addedAt, removedAt, createdAt, [lotId+addedAt]',
