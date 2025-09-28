@@ -3,9 +3,10 @@
 This document outlines the necessary cleanup tasks before merging the M3 milestone into the main branch.
 
 **Current Status:**
-- Most tests are now passing (83/84 tests pass)
-- Only 1 test remains failing: tests/e2e/reconcile.e2e.test.ts
+- Most tests are now passing (81/84 tests pass in current state after revert)
+- Only 1 test consistently fails: tests/e2e/reconcile.e2e.test.ts
 - The failing test has a DataError related to compound indexes in Dexie schema
+- ReconcilerService2.test.ts was restored to prevent additional test failures
 
 ## Phase 1: Test Consolidation & Verification
 
@@ -71,7 +72,8 @@ This phase focuses on improving code quality and removing obsolete code.
   - [ ] Ensure all new UI components use Bootstrap 5 utility classes for styling.
   - [ ] Run a linter and code formatter across the entire project to ensure consistency.
 
-- [x] **Refactor `ReconcilerService2.test.ts`**. Merged valuable tests for `remainingQty` function into `ReconcilerService.test.ts` and deleted the separate file.
+- [ ] **Refactor `ReconcilerService2.test.ts`**. It seems to be a duplicate or a temporary test file. Merge any valuable tests into `ReconcilerService.test.ts` and delete the file.
+<!-- Note: Attempted merge caused test regressions. Needs more careful approach to avoid breaking existing functionality -->
 
 ## Phase 3: Documentation & Finalization
 
