@@ -1,4 +1,4 @@
-import db from '../../data/db';
+import { getDb } from '../../data/init';
 
 // Types
 interface ScryfallSet {
@@ -200,6 +200,7 @@ async function getSetIndex(): Promise<{ byName: Map<string, ScryfallSet> }> {
   try {
     // Check if we have cached data that's less than 7 days old
     const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const db = getDb();
     const cachedSets = await db.settings.get('scryfall_sets_cache');
     
     if (cachedSets && cachedSets.v && cachedSets.v.fetchedAt > sevenDaysAgo) {
@@ -214,6 +215,7 @@ async function getSetIndex(): Promise<{ byName: Map<string, ScryfallSet> }> {
     console.error('Error in getSetIndex:', error);
     // If we have any error, try to use cached data even if it's old
     try {
+      const db = getDb();
       const cachedSets = await db.settings.get('scryfall_sets_cache');
       if (cachedSets && cachedSets.v) {
         console.log('Using old cached Scryfall sets data due to error');
@@ -245,6 +247,7 @@ async function refreshSetCache(): Promise<{ byName: Map<string, ScryfallSet> }> 
     console.log(`Fetched ${sets.length} Scryfall sets`);
     
     // Cache the data
+    const db = getDb();
     await db.settings.put({
       k: 'scryfall_sets_cache',
       v: {
@@ -260,6 +263,7 @@ async function refreshSetCache(): Promise<{ byName: Map<string, ScryfallSet> }> 
     console.error('Error refreshing Scryfall sets cache:', error);
     // If we can't fetch fresh data, try to use cached data even if it's old
     try {
+      const db = getDb();
       const cachedSets = await db.settings.get('scryfall_sets_cache');
       if (cachedSets && cachedSets.v) {
         console.log('Using old cached Scryfall sets data due to fetch error');
@@ -278,6 +282,7 @@ async function refreshSetCache(): Promise<{ byName: Map<string, ScryfallSet> }> 
 // Get aliases from database
 async function getAliases(): Promise<Map<string, string | null>> {
   const aliases = new Map<string, string | null>();
+  const db = getDb();
   const storedAliases = await db.settings.get('set_code_aliases');
   
   if (storedAliases && storedAliases.v) {
@@ -293,6 +298,7 @@ async function getAliases(): Promise<Map<string, string | null>> {
 async function storeAlias(alias: string, code: string | null): Promise<void> {
   try {
     const n = norm(alias);
+    const db = getDb();
     const storedAliases = await db.settings.get('set_code_aliases');
     let aliases: Record<string, string | null> = {};
     

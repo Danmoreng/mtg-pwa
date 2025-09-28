@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia';
-import { cardRepository, settingRepository } from '../data/repos';
+import { cardRepository, settingRepository, pricePointRepository } from '../data/repos';
 import { Money } from '../core/Money';
 import type { Card, PricePoint } from '../data/db';
-import db from '../data/db';
 
 type Finish = 'nonfoil' | 'foil';
 
@@ -116,7 +115,7 @@ export const useCardsStore = defineStore('cards', {
       if (!card) return;
 
       // Query only by Scryfall ID since all price points now use Scryfall IDs
-      const rows = await db.price_points.where('cardId').equals(cardId).toArray();
+      const rows = await pricePointRepository.getByCardId(cardId);
       const canonical = rows.map((pp) => ({
         date: pp.date,
         asOf: pp.asOf,
@@ -168,7 +167,7 @@ export const useCardsStore = defineStore('cards', {
       // Query only by Scryfall ID since all price points now use Scryfall IDs
       const toISO = (d: any) => { try { return new Date(d).toISOString().slice(0, 10); } catch { return undefined; } };
 
-      const rows = await db.price_points.where('cardId').equals(cardId).toArray();
+      const rows = await pricePointRepository.getByCardId(cardId);
       return rows
         .map((pp) => ({ ...pp, date: pp.date ?? (pp.asOf ? toISO(pp.asOf) : undefined) }))
         .filter((pp) => typeof pp.date === 'string')
