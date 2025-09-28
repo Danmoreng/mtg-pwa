@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['tests/**/*.test.ts'],
     
     // run in a single thread to avoid Dexie DB name collisions
     poolOptions: { threads: { singleThread: true } },
