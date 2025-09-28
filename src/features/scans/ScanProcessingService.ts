@@ -1,8 +1,79 @@
 import { scanRepository, cardRepository, cardLotRepository } from '../../data/repos';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import type { Card, CardLot } from '../../data/db';
+import { getDb } from '../../data/init';
 
 export class ScanProcessingService {
+  private static async updatePriceForCard(cardId: string): Promise<void> {
+    try {
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const db = getDb();
+
+        const prices = await ScryfallProvider.getPricesForCard(cardId);
+
+        if (prices.nonfoil) {
+            const pricePointId = `${cardId}:scryfall:nonfoil:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'nonfoil' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.nonfoil.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+
+        if (prices.foil) {
+            const pricePointId = `${cardId}:scryfall:foil:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'foil' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.foil.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+        
+        if (prices.etched) {
+            const pricePointId = `${cardId}:scryfall:etched:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'etched' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.etched.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+
+    } catch (error) {
+        console.error(`Error checking/updating price for existing card ${cardId}:`, error);
+    }
+  }
+
   static async processScans(onProgress?: (processed: number, total: number) => void): Promise<void> {
     console.log("Starting processScans...");
     const unprocessedScans = await scanRepository.getAll();
@@ -17,6 +88,7 @@ export class ScanProcessingService {
         const existingCard = await cardRepository.getById(scan.cardId);
         if (existingCard) {
           console.log(`Scan ${scan.id} already has cardId: ${scan.cardId} with existing card, skipping`);
+          await this.updatePriceForCard(scan.cardId);
           // Still update progress
           if (onProgress) {
             onProgress(i + 1, unprocessedScans.length);
@@ -78,6 +150,7 @@ export class ScanProcessingService {
               console.log(`Added new card with id: ${cardIdAdded}`);
               card = newCard;
             }
+            await this.updatePriceForCard(id);
           } else {
             console.error(`Failed to resolve card by name: ${name} (no id returned)`);
           }
@@ -122,6 +195,7 @@ export class ScanProcessingService {
               console.log(`Added new card with id: ${cardIdAdded}`);
               card = newCard;
             }
+            await this.updatePriceForCard(id);
           } else {
             console.error(`Failed to resolve card by setCode: ${setCode} and number: ${collectorNumber} (no id returned)`);
           }

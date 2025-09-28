@@ -1,6 +1,6 @@
 // 8) Per-box analytics (P&L)
 
-import { acquisitionRepository, cardLotRepository, transactionRepository } from '../../data/repos';
+import { acquisitionRepository, cardLotRepository, transactionRepository, sellAllocationRepository } from '../../data/repos';
 import { PriceQueryService } from '../../features/pricing/PriceQueryService';
 // import { parseIdentity } from '../../shared/identity'; // Not currently used in this file, removing unused import
 
@@ -48,11 +48,7 @@ async function getAcquisitionPnL(
 
   // Process each lot
   for (const lot of lots) {
-    // 8.1 Realized P&L (sold)
-    const sellTransactions = await transactionRepository.getByLotId(lot.id);
-    const relevantSells = sellTransactions.filter(tx => 
-      tx.kind === 'SELL' && tx.happenedAt <= asOf
-    );
+    const allocations = await sellAllocationRepository.getByLotId(lot.id);
 
     let revenue_t = 0;
     let cogs_t = 0;
@@ -60,26 +56,25 @@ async function getAcquisitionPnL(
     let shipping_t = 0;
     let realized_pnl_t = 0;
 
-    for (const sell of relevantSells) {
-      // revenue_t = t.quantity * t.unitPrice - t.fees + t.shipping
-      revenue_t += sell.quantity * sell.unitPrice - (sell.fees || 0) + (sell.shipping || 0);
-      
-      // cogs_t = t.quantity * lot.unitCostCent
-      const acquisitionCost = lot.totalAcquisitionCostCent || 
-        (lot.unitCost * lot.quantity);
-      cogs_t += (acquisitionCost / lot.quantity) * sell.quantity;
-      
-      fees_t += sell.fees || 0;
-      shipping_t += sell.shipping || 0;
-    }
+    for (const alloc of allocations) {
+        const sell = await transactionRepository.getById(alloc.transactionId);
+        if (!sell || sell.happenedAt > asOf) continue;
 
+        const proportion = alloc.quantity / sell.quantity;
+
+        revenue_t += proportion * (sell.quantity * sell.unitPrice - (sell.fees || 0) + (sell.shipping || 0));
+        cogs_t += alloc.quantity * (alloc.unitCostCentAtSale ?? lot.unitCost);
+        fees_t += proportion * (sell.fees || 0);
+        shipping_t += proportion * (sell.shipping || 0);
+    }
     realized_pnl_t = revenue_t - cogs_t;
+
     totalRevenueCent += revenue_t;
     realizedPnLCent += realized_pnl_t;
 
     // 8.2 Unrealized P&L (remaining)
-    const remainingQuantity = lot.quantity - 
-      relevantSells.reduce((sum, sell) => sum + sell.quantity, 0);
+    const soldQuantity = allocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+    const remainingQuantity = lot.quantity - soldQuantity;
     
     if (remainingQuantity > 0) {
       // Get current market price for the card

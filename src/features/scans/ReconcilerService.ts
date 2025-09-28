@@ -1,8 +1,9 @@
 // 6) Reconciler (order-agnostic core)
 
-import { cardLotRepository, scanRepository, transactionRepository } from '../../data/repos';
+import { cardLotRepository, scanRepository, transactionRepository, sellAllocationRepository } from '../../data/repos';
 import { type CardLot } from '../../data/db';
 import { getDb } from '../../data/init';
+import { v4 as uuidv4 } from 'uuid';
 
 // 6.2 Helper APIs
 
@@ -14,12 +15,10 @@ import { getDb } from '../../data/init';
 export async function remainingQty(lotId: string): Promise<number> {
   const lot = await cardLotRepository.getById(lotId);
   if (!lot) return 0;
-  
-  const sellTransactions = await transactionRepository.getByLotId(lotId);
-  const totalSold = sellTransactions
-    .filter(tx => tx.kind === 'SELL')
-    .reduce((sum, tx) => sum + (tx.quantity || 0), 0);
-  
+
+  const allocations = await sellAllocationRepository.getByLotId(lotId);
+  const totalSold = allocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0);
+
   return Math.max(0, lot.quantity - totalSold);
 }
 
@@ -224,6 +223,54 @@ export async function reconcileScansToLots(
   }
 }
 
+async function snapshotUnitCost(lotId: string, _when: Date): Promise<number> {
+  const lot = await cardLotRepository.getById(lotId);
+  return lot?.unitCost ?? 0;
+}
+
+async function allocateSellAcrossLots(sell: import("../../data/db").Transaction, lots: CardLot[], identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }) {
+  let remaining = sell.quantity;
+
+  // clear prior allocations (re-import idempotency)
+  await sellAllocationRepository.deleteByTransactionId(sell.id);
+
+  for (const lot of lots) {
+    const free = await remainingQty(lot.id);
+    if (free <= 0) continue;
+    const take = Math.min(free, remaining);
+
+    await sellAllocationRepository.add({
+      id: uuidv4(),
+      transactionId: sell.id,
+      lotId: lot.id,
+      quantity: take,
+      unitCostCentAtSale: await snapshotUnitCost(lot.id, sell.happenedAt),
+      createdAt: new Date()
+    });
+
+    remaining -= take;
+    if (remaining === 0) break;
+  }
+
+  // If still >0, create provisional lot as you do today and allocate the remainder from it
+  if (remaining > 0) {
+    const prov = await findOrCreateProvisionalLot(identity, sell.happenedAt, 'backfill');
+    await sellAllocationRepository.add({
+        id: uuidv4(),
+        transactionId: sell.id,
+        lotId: prov.id,
+        quantity: remaining,
+        unitCostCentAtSale: await snapshotUnitCost(prov.id, sell.happenedAt),
+        createdAt: new Date()
+    });
+  }
+
+  // (Backward compat) keep sell.lotId:
+  // - set to the first allocated lotId (or null if none)
+  const first = (await sellAllocationRepository.getByTransactionId(sell.id))[0];
+  await transactionRepository.update(sell.id, { lotId: first?.lotId ?? null });
+}
+
 /**
  * Reconcile SELLs to lots
  * @param identity 
@@ -235,45 +282,27 @@ export async function reconcileSellsToLots(
   const sells = identity.cardId
     ? await transactionRepository.getSellTransactionsByCardId(identity.cardId)
     : [];
-  
-  // Process each SELL without lotId
+
   for (const sell of sells) {
-    if (sell.lotId) continue;
-    
     // Pick a lot with remainingQty > 0 and nearest purchasedAt ≤ or near happenedAt
     const lots = await findLotsByIdentity(identity, sell.happenedAt);
     const availableLots = [];
-    
+
     for (const lot of lots) {
       const remaining = await remainingQty(lot.id);
       if (remaining > 0) {
         availableLots.push({ lot, remaining });
       }
     }
-    
+
     // Sort by proximity to happenedAt
     availableLots.sort((a, b) => {
       const timeA = Math.abs(a.lot.purchasedAt.getTime() - sell.happenedAt.getTime());
       const timeB = Math.abs(b.lot.purchasedAt.getTime() - sell.happenedAt.getTime());
       return timeA - timeB;
     });
-    
-    let targetLot = availableLots[0]?.lot || null;
-    
-    // If none exist: create provisional lot (source='backfill', purchasedAt = happenedAt)
-    if (!targetLot) {
-      targetLot = await findOrCreateProvisionalLot(
-        { 
-          ...identity, 
-          lang: identity.lang || 'EN'  // Ensure lang is defined
-        },
-        sell.happenedAt,
-        'backfill'
-      );
-    }
-    
-    // Attach the SELL to the lot
-    await reassignSellToLot(sell.id, targetLot.id);
+
+    await allocateSellAcrossLots(sell, availableLots.map(l => l.lot), identity);
   }
 }
 

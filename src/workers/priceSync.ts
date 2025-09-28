@@ -7,8 +7,6 @@ import { getDb } from '../data/init';
 // Sync prices for all cards in the collection
 async function syncPrices(): Promise<void> {
   try {
-    const now = new Date();
-    
     // Get all cards with Scryfall IDs
     const db = getDb();
     const cards = await db.cards.where('id').notEqual('').toArray();
@@ -16,29 +14,58 @@ async function syncPrices(): Promise<void> {
     // Update prices for each card
     for (const card of cards) {
       try {
-        // Get price from Scryfall
-        const price = await ScryfallProvider.getPriceById(card.id);
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const db = getDb();
+
+        const prices = await ScryfallProvider.getPricesForCard(card.id);
+
+        if (prices.nonfoil) {
+            const pricePointId = `${card.id}:scryfall:nonfoil:${dateStr}`;
+            const pricePoint = {
+                id: pricePointId,
+                cardId: card.id,
+                provider: 'scryfall' as const,
+                finish: 'nonfoil' as const,
+                date: dateStr,
+                currency: 'EUR' as const,
+                priceCent: prices.nonfoil.getCents(),
+                asOf: now,
+                createdAt: now
+            };
+            await db.price_points.put(pricePoint);
+        }
+
+        if (prices.foil) {
+            const pricePointId = `${card.id}:scryfall:foil:${dateStr}`;
+            const pricePoint = {
+                id: pricePointId,
+                cardId: card.id,
+                provider: 'scryfall' as const,
+                finish: 'foil' as const,
+                date: dateStr,
+                currency: 'EUR' as const,
+                priceCent: prices.foil.getCents(),
+                asOf: now,
+                createdAt: now
+            };
+            await db.price_points.put(pricePoint);
+        }
         
-        if (price) {
-          // Create price point ID with date
-          const dateStr = now.toISOString().split('T')[0];
-          
-          // Create price point
-          const pricePoint = {
-            id: `${card.id}:scryfall:nonfoil:${dateStr}`,
-            cardId: card.id,
-            provider: 'scryfall' as const,
-            finish: 'nonfoil' as const,
-            date: dateStr,
-            currency: 'EUR' as const,
-            priceCent: price.getCents(),
-            asOf: new Date(),
-            createdAt: now
-          };
-          
-          // Save price point (use put instead of add to handle updates)
-          const db = getDb();
-          await db.price_points.put(pricePoint);
+        if (prices.etched) {
+            const pricePointId = `${card.id}:scryfall:etched:${dateStr}`;
+            const pricePoint = {
+                id: pricePointId,
+                cardId: card.id,
+                provider: 'scryfall' as const,
+                finish: 'etched' as const,
+                date: dateStr,
+                currency: 'EUR' as const,
+                priceCent: prices.etched.getCents(),
+                asOf: now,
+                createdAt: now
+            };
+            await db.price_points.put(pricePoint);
         }
       } catch (error) {
         console.error(`Error syncing price for card ${card.id}:`, error);
