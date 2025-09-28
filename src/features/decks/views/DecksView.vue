@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import db from '../../../data/db';
+import { getDb } from '../../../data/init';
 
 type Deck = {
   id: string;
@@ -82,6 +82,7 @@ const getFaceCard = (deckId: string) => faceCards.value[deckId];
 
 const loadDecks = async () => {
   try {
+    const db = getDb();
     const allDecks = (await db.decks.toArray()) as Deck[];
     decks.value = allDecks;
 

@@ -2,12 +2,18 @@
 import { transactionRepository, cardLotRepository, cardRepository } from '../../data/repos';
 import { Money } from '../../core/Money';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
-import { resolveSetCode } from '../pricing/SetCodeResolver';
-import db from '../../data/db';
 import type { Card, CardLot } from '../../data/db';
+import { getDb } from '../../data/init';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
-import { FinanceService } from '../analytics/FinanceService';
+
+
+// Use the new normalization gateway
+import { NormalizationGateway } from '../../core/Normalization';
+const { resolveSetCode } = NormalizationGateway;
+
+import * as ImportPipelines from './ImportPipelines';
+import type { Deck } from '../../data/db';
 
 export class ImportService {
     // Import Cardmarket transactions
@@ -43,6 +49,7 @@ export class ImportService {
                 const externalRef = `cardmarket:${transaction.reference}:${transaction.lineNumber}`;
 
                 // Check if transaction already exists
+                const db = getDb();
                 const existing = await db.transactions.where('externalRef').equals(externalRef).first();
                 if (existing) continue;
 
@@ -108,115 +115,37 @@ export class ImportService {
         });
 
         // Create external reference to avoid duplicates
-        const externalRef = `cardmarket:order:${order.orderId}:${order.lineNumber}`;
+        const externalRef = `cardmarket:order:${order.orderId}`;
 
         // Check if order already exists
+        const db = getDb();
         const existing = await db.transactions.where('externalRef').equals(externalRef).first();
         if (existing) continue;
 
         // Parse values as Money
-        const merchandiseValue = Money.parse(order.merchandiseValue, 'EUR');
-        const shipmentCosts = Money.parse(order.shipmentCosts, 'EUR');
         const commission = Money.parse(order.commission, 'EUR');
+        const shipmentCosts = Money.parse(order.shipmentCosts, 'EUR');
 
         // Create transaction record
         const transactionRecord = {
-          id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: uuidv4(),
           kind: order.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
-          quantity: parseInt(order.articleCount) || 1,
-          unitPrice: Math.round(merchandiseValue.getCents() / (parseInt(order.articleCount) || 1)),
+          cardId: null,
+          quantity: 0,
+          unitPrice: 0,
           fees: commission.getCents(),
           shipping: shipmentCosts.getCents(),
           currency: 'EUR',
           source: 'cardmarket',
           externalRef,
           happenedAt: new Date(order.dateOfPurchase),
+          relatedTransactionId: null,
           createdAt: now,
           updatedAt: now
         };
 
         // Save transaction
         await transactionRepository.add(transactionRecord);
-
-        // If this is a purchase order, update the associated card lots with enhanced financial tracking
-        if (order.direction === 'purchase') {
-          // Find all articles associated with this order
-          const articles = await db.transactions
-            .where('externalRef')
-            .startsWith(`cardmarket:article:${order.orderId}:`)
-            .toArray();
-
-          // Update each associated card lot with the financial details
-          for (const article of articles) {
-            if (article.lotId) {
-              // Get the lot
-              const lot = await cardLotRepository.getById(article.lotId);
-              if (lot) {
-                // Calculate proportional costs for this article
-                const articleCountInOrder = parseInt(order.articleCount) || 1;
-                const proportion = article.quantity / articleCountInOrder;
-
-                // Calculate financial details
-                const unitAcquisitionCostCent = FinanceService.calculateTrueAcquisitionCost(
-                  merchandiseValue.getCents() / 100,
-                  shipmentCosts.getCents() / 100,
-                  commission.getCents() / 100,
-                  articleCountInOrder
-                );
-                
-                const unitShippingCostCent = Math.round((shipmentCosts.getCents() * proportion) / article.quantity);
-                const unitCommissionCent = Math.round((commission.getCents() * proportion) / article.quantity);
-
-                // Update the lot with enhanced financial tracking
-                await cardLotRepository.update(lot.id, {
-                  // Enhanced financial tracking
-                  acquisitionPriceCent: unitAcquisitionCostCent,
-                  acquisitionFeesCent: unitCommissionCent,
-                  acquisitionShippingCent: unitShippingCostCent,
-                  totalAcquisitionCostCent: unitAcquisitionCostCent + unitCommissionCent + unitShippingCostCent,
-                  updatedAt: now
-                });
-              }
-            }
-          }
-        }
-        
-        // If this is a sale order, update the associated card lots with sale financial details
-        if (order.direction === 'sale') {
-          // Find all articles associated with this order
-          const articles = await db.transactions
-            .where('externalRef')
-            .startsWith(`cardmarket:article:${order.orderId}:`)
-            .toArray();
-
-          // Update each associated card lot with the sale financial details
-          for (const article of articles) {
-            if (article.lotId) {
-              // Get the lot
-              const lot = await cardLotRepository.getById(article.lotId);
-              if (lot) {
-                // Calculate proportional revenue for this article
-                const articleCountInOrder = parseInt(order.articleCount) || 1;
-                const proportion = article.quantity / articleCountInOrder;
-
-                // Calculate sale financial details
-                const unitSalePriceCent = Math.round(merchandiseValue.getCents() / articleCountInOrder);
-                const unitSaleFeesCent = Math.round((commission.getCents() * proportion) / article.quantity);
-                const unitSaleShippingCent = Math.round((shipmentCosts.getCents() * proportion) / article.quantity);
-
-                // Update the lot with sale financial tracking
-                await cardLotRepository.update(lot.id, {
-                  // Sale financial tracking
-                  salePriceCent: unitSalePriceCent,
-                  saleFeesCent: unitSaleFeesCent,
-                  saleShippingCent: unitSaleShippingCent,
-                  totalSaleRevenueCent: unitSalePriceCent - unitSaleFeesCent + unitSaleShippingCent,
-                  updatedAt: now
-                });
-              }
-            }
-          }
-        }
       }
 
       // Mark import as completed
@@ -376,29 +305,71 @@ export class ImportService {
 
   private static async updatePriceForCard(cardId: string): Promise<void> {
     try {
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const pricePointId = `${cardId}:scryfall:${dateStr}`;
-      const existingPricePoint = await db.price_points.get(pricePointId);
-      if (!existingPricePoint) {
-        const price = await ScryfallProvider.getPriceById(cardId);
-        if (price) {
-          const pricePoint = { 
-            id: pricePointId, 
-            cardId: cardId, 
-            provider: 'scryfall' as const, 
-            finish: 'nonfoil' as const,
-            date: now.toISOString().split('T')[0],
-            currency: 'EUR' as const, 
-            priceCent: price.getCents(), 
-            asOf: now, 
-            createdAt: now 
-          };
-          await db.price_points.put(pricePoint);
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const db = getDb();
+
+        const prices = await ScryfallProvider.getPricesForCard(cardId);
+
+        if (prices.nonfoil) {
+            const pricePointId = `${cardId}:scryfall:nonfoil:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'nonfoil' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.nonfoil.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
         }
-      }
+
+        if (prices.foil) {
+            const pricePointId = `${cardId}:scryfall:foil:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'foil' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.foil.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+        
+        if (prices.etched) {
+            const pricePointId = `${cardId}:scryfall:etched:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'etched' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.etched.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+
     } catch (error) {
-      console.error(`Error checking/updating price for existing card ${cardId}:`, error);
+        console.error(`Error checking/updating price for existing card ${cardId}:`, error);
     }
   }
 
@@ -453,12 +424,16 @@ export class ImportService {
   }
 
   private static async createTransactionForArticle(article: any, cardId: string | null, lotId: string | undefined, price: Money, now: Date): Promise<void> {
-    const transactionExternalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+    const headerExternalRef = `cardmarket:order:${article.shipmentId}`;
+    const header = await transactionRepository.getBySourceRef('cardmarket', headerExternalRef).then(res => res[0]);
+
+    const transactionExternalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
+    const db = getDb();
     const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
     if (existingTransaction) return;
 
     const transactionRecord = {
-      id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: uuidv4(),
       kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
       cardId: cardId || undefined,
       lotId: lotId,
@@ -469,6 +444,7 @@ export class ImportService {
       currency: 'EUR',
       source: 'cardmarket',
       externalRef: transactionExternalRef,
+      relatedTransactionId: header?.id,
       happenedAt: new Date(article.dateOfPurchase),
       createdAt: now,
       updatedAt: now
@@ -484,9 +460,10 @@ export class ImportService {
 
         for (const article of articles) {
             // Create external reference to check for duplicates
-            const externalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+            const externalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
 
             // Check if transaction already exists
+            const db = getDb();
             const existing = await db.transactions.where('externalRef').equals(externalRef).first();
 
             results.push({
@@ -496,5 +473,76 @@ export class ImportService {
         }
 
         return results;
+    }
+    
+    // Adapter methods for the new M3 import pipelines
+    
+    /**
+     * Import Manabox scans with box cost
+     * Adapter that delegates to the new implementation
+     */
+    static async importManaboxScansWithBoxCost(
+      rows: ImportPipelines.ManaboxImportRow[],
+      boxCost: ImportPipelines.BoxCost,
+      happenedAt: Date,
+      source: string,
+      externalRef: string
+    ): Promise<{ acquisitionId: string; scanIds: string[] }> {
+      const importStatusStore = useImportStatusStore();
+
+      // Create import tracking
+      const importId = uuidv4();
+      importStatusStore.addImport({
+        id: importId,
+        type: 'manabox',
+        name: 'ManaBox Scans',
+        status: 'pending',
+        progress: 0,
+        totalItems: rows.length,
+        processedItems: 0
+      });
+
+      try {
+        // Call the pipeline function with progress tracking
+        const result = await ImportPipelines.importManaboxScansWithBoxCost(
+          rows, 
+          boxCost, 
+          happenedAt, 
+          source, 
+          externalRef,
+          (processed, total) => {
+            importStatusStore.updateImport(importId, {
+              status: 'processing',
+              processedItems: processed,
+              progress: Math.round((processed / total) * 100)
+            });
+          }
+        );
+
+        // Mark import as completed
+        importStatusStore.completeImport(importId);
+
+        return result;
+      } catch (error) {
+        console.error('Error importing Manabox scans with box cost:', error);
+        importStatusStore.completeImport(importId, (error as Error).message);
+        throw error;
+      }
+    }
+
+    /**
+     * Import Cardmarket SELLs
+     * Adapter that delegates to the new implementation
+     */
+    static async importCardmarketSells(orderLines: ImportPipelines.CardmarketSellOrderLine[]): Promise<string[]> {
+      return await ImportPipelines.importCardmarketSells(orderLines);
+    }
+
+    /**
+     * Import decks
+     * Adapter that delegates to the new implementation
+     */
+    static async importDecks(decks: Omit<Deck, 'id'>[], deckCards: ImportPipelines.DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
+      return await ImportPipelines.importDecks(decks, deckCards);
     }
 }

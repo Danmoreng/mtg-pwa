@@ -2,7 +2,8 @@
 import {cardRepository, cardLotRepository} from '../../data/repos';
 import {EntityLinker} from '../linker/EntityLinker';
 import {ScryfallProvider} from '../pricing/ScryfallProvider';
-import db, {type Card} from '../../data/db';
+import {type Card} from '../../data/db';
+import { getDb } from '../../data/init';
 import {useImportStatusStore} from '../../stores/importStatus';
 import {v4 as uuidv4} from 'uuid';
 
@@ -55,6 +56,7 @@ export class DeckImportService {
             };
 
             // Save deck
+            const db = getDb();
             await db.decks.add(deck);
 
             // Process cards from text
@@ -156,28 +158,69 @@ export class DeckImportService {
 
                                 // Fetch and save price data for the new card
                                 try {
-                                    const price = await ScryfallProvider.getPriceById(cardId);
-                                    if (price) {
-                                        // Create price point ID with date
-                                        const dateStr = now.toISOString().split('T')[0];
-                                        const pricePointId = `${cardId}:scryfall:${dateStr}`;
+                                    const now = new Date();
+                                    const dateStr = now.toISOString().split('T')[0];
+                                    const db = getDb();
 
-                                        // Create price point
-                                        const pricePoint = {
-                                            id: pricePointId,
-                                            cardId: cardId,
-                                            provider: 'scryfall' as const,
-                                            finish: 'nonfoil' as const,
-                                            date: now.toISOString().split('T')[0],
-                                            currency: 'EUR' as const,
-                                            priceCent: price.getCents(),
-                                            asOf: now,
-                                            createdAt: now
-                                        };
+                                    const prices = await ScryfallProvider.getPricesForCard(cardId);
 
-                                        // Save price point
-                                        await db.price_points.put(pricePoint);
+                                    if (prices.nonfoil) {
+                                        const pricePointId = `${cardId}:scryfall:nonfoil:${dateStr}`;
+                                        const existingPricePoint = await db.price_points.get(pricePointId);
+                                        if (!existingPricePoint) {
+                                            const pricePoint = {
+                                                id: pricePointId,
+                                                cardId: cardId,
+                                                provider: 'scryfall' as const,
+                                                finish: 'nonfoil' as const,
+                                                date: dateStr,
+                                                currency: 'EUR' as const,
+                                                priceCent: prices.nonfoil.getCents(),
+                                                asOf: now,
+                                                createdAt: now
+                                            };
+                                            await db.price_points.put(pricePoint);
+                                        }
                                     }
+
+                                    if (prices.foil) {
+                                        const pricePointId = `${cardId}:scryfall:foil:${dateStr}`;
+                                        const existingPricePoint = await db.price_points.get(pricePointId);
+                                        if (!existingPricePoint) {
+                                            const pricePoint = {
+                                                id: pricePointId,
+                                                cardId: cardId,
+                                                provider: 'scryfall' as const,
+                                                finish: 'foil' as const,
+                                                date: dateStr,
+                                                currency: 'EUR' as const,
+                                                priceCent: prices.foil.getCents(),
+                                                asOf: now,
+                                                createdAt: now
+                                            };
+                                            await db.price_points.put(pricePoint);
+                                        }
+                                    }
+                                    
+                                    if (prices.etched) {
+                                        const pricePointId = `${cardId}:scryfall:etched:${dateStr}`;
+                                        const existingPricePoint = await db.price_points.get(pricePointId);
+                                        if (!existingPricePoint) {
+                                            const pricePoint = {
+                                                id: pricePointId,
+                                                cardId: cardId,
+                                                provider: 'scryfall' as const,
+                                                finish: 'etched' as const,
+                                                date: dateStr,
+                                                currency: 'EUR' as const,
+                                                priceCent: prices.etched.getCents(),
+                                                asOf: now,
+                                                createdAt: now
+                                            };
+                                            await db.price_points.put(pricePoint);
+                                        }
+                                    }
+
                                 } catch (error) {
                                     console.error(`Error fetching price for new card ${cardId}:`, error);
                                 }
@@ -298,6 +341,7 @@ export class DeckImportService {
     }> {
         try {
             // Get all cards in the deck
+            const db = getDb();
             const deckCards = await db.deck_cards.where('deckId').equals(deckId).toArray();
 
             let totalCards = 0;

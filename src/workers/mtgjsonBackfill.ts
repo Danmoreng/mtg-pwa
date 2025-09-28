@@ -1,12 +1,13 @@
 // MTGJSON Backfill Worker
 // This worker processes MTGJSON AllPricesToday.json(.gz) files to backfill historical prices
 
-import db from '../data/db';
+import { getDb } from '../data/init';
 
 // Process MTGJSON data and backfill historical prices
 async function processMTGJSONBackfill(data: any, progressCallback?: (processed: number, total: number) => void): Promise<{ success: boolean; message?: string; processedPoints?: number }> {
   try {
     // Get all cards in the collection
+    const db = getDb();
     const cards = await db.cards.toArray();
     
     // Keep track of processed points
@@ -51,6 +52,7 @@ async function processMTGJSONBackfill(data: any, progressCallback?: (processed: 
                 };
                 
                 // Save price point
+                const db = getDb();
                 await db.price_points.put(pricePoint);
                 processedPoints++;
               }
@@ -79,6 +81,7 @@ async function processMTGJSONBackfill(data: any, progressCallback?: (processed: 
                 };
                 
                 // Save price point
+                const db = getDb();
                 await db.price_points.put(pricePoint);
                 processedPoints++;
               }

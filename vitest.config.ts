@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [vue()],
@@ -7,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['tests/**/*.test.ts'],
     
     // run in a single thread to avoid Dexie DB name collisions
     poolOptions: { threads: { singleThread: true } },
@@ -18,7 +19,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': './src'
+      '@': resolve(__dirname, './src')
     }
   }
 })

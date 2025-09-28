@@ -1,11 +1,12 @@
 // Backup service for exporting and importing data
-import db from '../../data/db';
+import { getDb } from '../../data/init';
 
 export class BackupService {
   // Export all data as JSON
   static async exportData(): Promise<string> {
     try {
       // Get all data from each table
+      const db = getDb();
       const data: any = {};
       
       data.cards = await db.cards.toArray();
@@ -35,6 +36,7 @@ export class BackupService {
       const data = JSON.parse(jsonData);
       
       // Clear existing data
+      const db = getDb();
       await db.cards.clear();
       
       await db.transactions.clear();
