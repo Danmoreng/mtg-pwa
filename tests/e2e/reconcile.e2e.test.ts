@@ -1,12 +1,139 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import db from '../src/data/db';
-import { runReconciler } from '../src/features/scans/ReconcilerService';
-import { allocateAcquisitionCosts } from '../src/features/analytics/CostAllocationService';
-import { getAcquisitionPnL } from '../src/features/analytics/PnLService';
-import { normalizeFingerprint } from '../src/core/Normalization';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { runReconciler } from '@/features/scans/ReconcilerService';
+import { allocateAcquisitionCosts } from '@/features/analytics/CostAllocationService';
+import { getAcquisitionPnL } from '@/features/analytics/PnLService';
+import { normalizeFingerprint } from '@/core/Normalization';
+
+// Mock the database
+vi.mock('@/data/db', async () => {
+  const actual = await vi.importActual('@/data/db');
+  return {
+    __esModule: true,
+    ...actual,
+    default: {
+      acquisitions: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            first: vi.fn().mockResolvedValue(null)
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null),
+        bulkAdd: vi.fn().mockResolvedValue(['mock-id-1', 'mock-id-2'])
+      },
+      card_lots: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([]),
+            first: vi.fn().mockResolvedValue(null)
+          })),
+          and: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null),
+        count: vi.fn().mockResolvedValue(0),
+        bulkAdd: vi.fn().mockResolvedValue(['mock-id-1', 'mock-id-2'])
+      },
+      scans: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        bulkAdd: vi.fn().mockResolvedValue(['mock-id-1', 'mock-id-2']),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          })),
+          and: vi.fn(() => ({
+            first: vi.fn().mockResolvedValue(null)
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null),
+        count: vi.fn().mockResolvedValue(0)
+      },
+      transactions: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        get: vi.fn().mockResolvedValue(null),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([]),
+            first: vi.fn().mockResolvedValue(null)
+          })),
+          and: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        count: vi.fn().mockResolvedValue(0)
+      },
+      price_points: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          })),
+          and: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null)
+      },
+      scan_sale_links: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          })),
+          and: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null)
+      },
+      sell_allocations: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          })),
+          and: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        bulkAdd: vi.fn().mockResolvedValue(['mock-id-1', 'mock-id-2'])
+      },
+      settings: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        get: vi.fn().mockResolvedValue(null)
+      },
+      valuations: {
+        clear: vi.fn().mockResolvedValue(undefined),
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          })),
+          and: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        get: vi.fn().mockResolvedValue(null),
+        add: vi.fn().mockResolvedValue('mock-id'),
+        getAll: vi.fn().mockResolvedValue([])
+      },
+      transaction: vi.fn()
+    }
+  };
+});
 
 describe('E2E Reconciliation Flow', () => {
   beforeEach(async () => {
+    const db = (await import('@/data/db')).default;
     await db.acquisitions.clear();
     await db.card_lots.clear();
     await db.scans.clear();
@@ -15,6 +142,8 @@ describe('E2E Reconciliation Flow', () => {
   });
 
   it('should correctly process scans, sells, allocate costs, and calculate P&L idempotently', async () => {
+    const db = (await import('@/data/db')).default;
+    
     // 1. Setup
     const cardIdentity = {
       cardId: 'c1',

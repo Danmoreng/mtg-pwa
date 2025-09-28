@@ -1,23 +1,30 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { remainingQty } from '../src/features/scans/ReconcilerService';
-import MtgTrackerDb from '../src/data/db';
-import { cardLotRepository, sellAllocationRepository } from '../src/data/repos';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { remainingQty } from '@/features/scans/ReconcilerService';
 
-describe('ReconcilerService2', () => {
-  let db: MtgTrackerDb;
+// Mock repositories
+vi.mock('@/data/repos', async () => {
+  const actual = await vi.importActual('@/data/repos');
+  return {
+    ...actual,
+    cardLotRepository: {
+      add: vi.fn().mockResolvedValue('mock-id'),
+      getById: vi.fn().mockResolvedValue(null)
+    },
+    sellAllocationRepository: {
+      add: vi.fn().mockResolvedValue('mock-id'),
+      getByLotId: vi.fn().mockResolvedValue([])
+    }
+  };
+});
 
-  beforeEach(async () => {
-    // Use an in-memory database for testing
-    db = new MtgTrackerDb();
-    await db.open();
-    // Clear test data
-    await db.card_lots.clear();
-    await db.sell_allocations.clear();
+describe('ReconcilerService2 - remainingQty function', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
   });
 
   describe('remainingQty', () => {
     it('should return the initial quantity when there are no allocations', async () => {
-      const lot = {
+      const mockLot = {
         id: 'lot1',
         cardId: 'card1',
         quantity: 10,
@@ -31,39 +38,49 @@ describe('ReconcilerService2', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      await cardLotRepository.add(lot as any);
+      
+      // Mock the cardLotRepository to return the lot
+      const { cardLotRepository } = await import('@/data/repos');
+      (cardLotRepository.getById as vi.Mock).mockResolvedValue(mockLot);
 
       const remaining = await remainingQty('lot1');
       expect(remaining).toBe(10);
     });
 
     it('should subtract the allocated quantity', async () => {
-        const lot = {
-            id: 'lot1',
-            cardId: 'card1',
-            quantity: 10,
-            unitCost: 100,
-            condition: 'NM',
-            language: 'en',
-            foil: false,
-            finish: 'nonfoil',
-            source: 'test',
-            purchasedAt: new Date(),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-        await cardLotRepository.add(lot as any);
+      const mockLot = {
+        id: 'lot1',
+        cardId: 'card1',
+        quantity: 10,
+        unitCost: 100,
+        condition: 'NM',
+        language: 'en',
+        foil: false,
+        finish: 'nonfoil',
+        source: 'test',
+        purchasedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Mock the allocations
+      const mockAllocations = [
+        {
+          id: 'alloc1',
+          transactionId: 'tx1',
+          lotId: 'lot1',
+          quantity: 3,
+          createdAt: new Date(),
+        }
+      ];
+      
+      // Mock repositories
+      const { cardLotRepository, sellAllocationRepository } = await import('@/data/repos');
+      (cardLotRepository.getById as vi.Mock).mockResolvedValue(mockLot);
+      (sellAllocationRepository.getByLotId as vi.Mock).mockResolvedValue(mockAllocations);
 
-        await sellAllocationRepository.add({
-            id: 'alloc1',
-            transactionId: 'tx1',
-            lotId: 'lot1',
-            quantity: 3,
-            createdAt: new Date(),
-        } as any);
-
-        const remaining = await remainingQty('lot1');
-        expect(remaining).toBe(7);
+      const remaining = await remainingQty('lot1');
+      expect(remaining).toBe(7);
     });
   });
 });

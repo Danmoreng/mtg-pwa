@@ -1,21 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { AutomaticPriceUpdateService } from '../features/pricing/AutomaticPriceUpdateService';
-import { settingRepository } from '../data/repos';
-import { PriceUpdateService } from '../features/pricing/PriceUpdateService';
+import { AutomaticPriceUpdateService } from '@/features/pricing/AutomaticPriceUpdateService';
+import { settingRepository } from '@/data/repos';
+import { PriceUpdateService } from '@/features/pricing/PriceUpdateService';
 
 // Mock the dependencies
-vi.mock('../data/repos', () => ({
-  settingRepository: {
-    get: vi.fn(),
-    set: vi.fn()
-  },
-  valuationRepository: {
-    getAll: vi.fn(),
-    add: vi.fn()
-  }
-}));
+vi.mock('@/data/repos', () => {
+  const actual = vi.importActual('@/data/repos');
+  return {
+    settingRepository: {
+      get: vi.fn(),
+      set: vi.fn()
+    },
+    valuationRepository: {
+      getAll: vi.fn(),
+      add: vi.fn()
+    },
+    sellAllocationRepository: {
+      getByLotId: vi.fn()
+    },
+    cardLotRepository: {
+      getByAcquisitionId: vi.fn()
+    },
+    transactionRepository: {
+      getById: vi.fn()
+    },
+    ...actual
+  };
+});
 
-vi.mock('../features/pricing/PriceUpdateService', () => ({
+vi.mock('@/features/pricing/PriceUpdateService', () => ({
   PriceUpdateService: {
     syncPrices: vi.fn()
   }
@@ -24,8 +37,8 @@ vi.mock('../features/pricing/PriceUpdateService', () => ({
 // Simple mock for the import status store
 let mockImportStatusStore: any;
 
-vi.mock('../stores/importStatus', async () => {
-  const actual = await vi.importActual('../stores/importStatus');
+vi.mock('@/stores/importStatus', async () => {
+  const actual = await vi.importActual('@/stores/importStatus');
   return {
     ...actual,
     useImportStatusStore: () => mockImportStatusStore

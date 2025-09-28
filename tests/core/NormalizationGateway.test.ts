@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NormalizationGateway } from '../src/core/Normalization';
+import { NormalizationGateway } from '@/core/Normalization';
 
 describe('NormalizationGateway', () => {
   describe('normalizeFingerprint', () => {

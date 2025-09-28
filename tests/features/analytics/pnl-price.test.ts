@@ -1,22 +1,30 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getAcquisitionPnL } from '../src/features/analytics/PnLService';
-import { acquisitionRepository, cardLotRepository, transactionRepository } from '../src/data/repos';
-import { PriceQueryService } from '../src/features/pricing/PriceQueryService';
+import { getAcquisitionPnL } from '@/features/analytics/PnLService';
+import * as repos from '@/data/repos';
+import { PriceQueryService } from '@/features/pricing/PriceQueryService';
 
 // Mock the repositories
-vi.mock('../src/data/repos', () => ({
-  acquisitionRepository: {
-    getById: vi.fn()
-  },
-  cardLotRepository: {
-    getByAcquisitionId: vi.fn()
-  },
-  transactionRepository: {
-    getByLotId: vi.fn()
-  }
-}));
+vi.mock('@/data/repos', async () => {
+  const actual = await vi.importActual('@/data/repos');
+  return {
+    ...actual,
+    acquisitionRepository: {
+      getById: vi.fn()
+    },
+    cardLotRepository: {
+      getByAcquisitionId: vi.fn()
+    },
+    transactionRepository: {
+      getById: vi.fn(),
+      getByLotId: vi.fn()
+    },
+    sellAllocationRepository: {
+      getByLotId: vi.fn()
+    }
+  };
+});
 
-vi.mock('../src/features/pricing/PriceQueryService', () => ({
+vi.mock('@/features/pricing/PriceQueryService', () => ({
   PriceQueryService: {
     getLatestPriceForCard: vi.fn()
   }
@@ -60,6 +68,7 @@ describe('PnL Service with Price Integration', () => {
 
   it('should calculate P&L correctly when current market price is available', async () => {
     // Setup
+    const { acquisitionRepository, cardLotRepository, transactionRepository } = await import('@/data/repos');
     (acquisitionRepository.getById as vi.Mock).mockResolvedValue(mockAcquisition);
     (cardLotRepository.getByAcquisitionId as vi.Mock).mockResolvedValue([mockLot]);
     (transactionRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellTransaction]);
@@ -85,6 +94,7 @@ describe('PnL Service with Price Integration', () => {
 
   it('should handle P&L calculation gracefully when no current market price is available', async () => {
     // Setup
+    const { acquisitionRepository, cardLotRepository, transactionRepository } = await import('@/data/repos');
     (acquisitionRepository.getById as vi.Mock).mockResolvedValue(mockAcquisition);
     (cardLotRepository.getByAcquisitionId as vi.Mock).mockResolvedValue([mockLot]);
     (transactionRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellTransaction]);

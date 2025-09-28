@@ -18,9 +18,44 @@ export function mapFinish(sourceFinish: string): 'nonfoil' | 'foil' | 'etched' {
 
 // For normalizeLang, we'll create a function based on the new normalization utility
 export function normalizeLang(sourceLang: string): 'EN' | 'DE' | 'FR' | 'IT' | 'ES' | 'JA' | 'KO' | 'PT' | 'RU' | 'ZH' | 'HE' | 'LA' | 'GR' | 'AR' | 'UNKNOWN' {
-  // Use the logic from the new normalizeFingerprint function
-  const normalizedKey = newNormalizeFingerprint({ lang: sourceLang });
-  return normalizedKey.lang;
+  // Use the logic from the normalization utility directly
+  if (!sourceLang) return 'UNKNOWN';
+  
+  const normalizedLang = sourceLang.trim().toUpperCase();
+  const LANGUAGE_ALIASES: Record<string, 'EN' | 'DE' | 'FR' | 'IT' | 'ES' | 'JA' | 'KO' | 'PT' | 'RU' | 'ZH' | 'HE' | 'LA' | 'GR' | 'AR' | 'UNKNOWN'> = {
+    'ENGLISH': 'EN',
+    'GERMAN': 'DE',
+    'FRENCH': 'FR',
+    'ITALIAN': 'IT',
+    'SPANISH': 'ES',
+    'JAPANESE': 'JA',
+    'KOREAN': 'KO',
+    'PORTUGUESE': 'PT',
+    'RUSSIAN': 'RU',
+    'CHINESE': 'ZH',
+    'HEBREW': 'HE',
+    'LATIN': 'LA',
+    'GREEK': 'GR',
+    'ARABIC': 'AR'
+  };
+  
+  // Check if it's directly a language code
+  if (Object.values(LANGUAGE_ALIASES).includes(normalizedLang as any)) {
+    return normalizedLang as any;
+  }
+  
+  // Check if it's an alias
+  if (LANGUAGE_ALIASES[normalizedLang]) {
+    return LANGUAGE_ALIASES[normalizedLang];
+  }
+  
+  // Check for lowercase aliases
+  const lowerAlias = LANGUAGE_ALIASES[normalizedLang.toLowerCase()];
+  if (lowerAlias) {
+    return lowerAlias;
+  }
+  
+  return 'UNKNOWN';
 }
 
 // Wrap the existing resolveSetCode function

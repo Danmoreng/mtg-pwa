@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getAcquisitionPnL } from '../src/features/analytics/PnLService';
-import db from '../src/data/db';
+import { getAcquisitionPnL } from '@/features/analytics/PnLService';
+import { getDb } from '@/data/init';
+
+let db: any;
+
+beforeAll(() => {
+  db = getDb();
+});
 
 describe('PnLService', () => {
   beforeEach(async () => {

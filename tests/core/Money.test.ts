@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Money } from './Money';
+import { Money } from '@/core/Money';
 
 describe('Money', () => {
   it('should create a Money object with correct cents', () => {

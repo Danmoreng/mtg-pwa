@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { findOrCreateProvisionalLot, findLotsByIdentity } from '../src/features/scans/ReconcilerService';
-import { cardLotRepository } from '../src/data/repos';
-import type { CardLot } from '../src/data/db';
+import { findOrCreateProvisionalLot, findLotsByIdentity } from '@/features/scans/ReconcilerService';
+import { cardLotRepository } from '@/data/repos';
+import type { CardLot } from '@/data/db';
 
 // Mock the repository
-vi.mock('../src/data/repos', () => ({
+vi.mock('@/data/repos', () => ({
   cardLotRepository: {
     add: vi.fn(),
     getById: vi.fn(),

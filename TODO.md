@@ -26,6 +26,8 @@ The goal of this phase is to unify the test file structure and ensure all tests 
 
 - [x] **Update `vitest.config.ts`** to reflect the new test file locations. The `include` pattern should be changed to `['tests/**/*.test.ts']`.
 
+### IMPORTANT: tests are always run by the human user and results are provided inside ./test_results.txt. If you need to re-run the tests, ask the human user for running them and he will confirm that the updated run is inside test_results.txt.
+
 - [ ] **Run all tests** and ensure they pass after the move.
 
 - [ ] **Review and improve test coverage for M3 features.**

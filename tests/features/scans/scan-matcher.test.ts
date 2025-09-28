@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ScanMatchingService } from '../src/features/scans/ScanMatchingService';
-import * as Reconciler from '../src/features/scans/ReconcilerService';
+import { ScanMatchingService } from '@/features/scans/ScanMatchingService';
+import * as Reconciler from '@/features/scans/ReconcilerService';
 
 // Mock the reconciler service
-vi.mock('../src/features/scans/ReconcilerService', () => ({
+vi.mock('@/features/scans/ReconcilerService', () => ({
   runFullReconciler: vi.fn()
 }));
 

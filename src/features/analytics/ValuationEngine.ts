@@ -184,6 +184,10 @@ export class ValuationEngine {
       today.setHours(0, 0, 0, 0);
       
       const existingSnapshots = await valuationRepository.getAll();
+      if (!existingSnapshots || !Array.isArray(existingSnapshots)) {
+        console.log('No existing snapshots found');
+        return;
+      }
       const todaySnapshot = existingSnapshots.find(snapshot => {
         const snapshotDate = new Date(snapshot.asOf);
         snapshotDate.setHours(0, 0, 0, 0);

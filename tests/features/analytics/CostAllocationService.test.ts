@@ -1,9 +1,49 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { allocateAcquisitionCosts } from '../src/features/analytics/CostAllocationService';
-import db from '../src/data/db';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { allocateAcquisitionCosts } from '@/features/analytics/CostAllocationService';
+
+// Mock the database
+vi.mock('@/data/init', async () => {
+  return {
+    getDb: vi.fn(() => ({
+      acquisitions: {
+        get: vi.fn().mockResolvedValue(null), // Return null for non-existent acquisition
+        clear: vi.fn().mockResolvedValue(undefined)
+      },
+      card_lots: {
+        where: vi.fn(() => ({
+          equals: vi.fn(() => ({
+            toArray: vi.fn().mockResolvedValue([])
+          }))
+        })),
+        update: vi.fn().mockResolvedValue(1),
+        clear: vi.fn().mockResolvedValue(undefined)
+      },
+      price_points: {
+        clear: vi.fn().mockResolvedValue(undefined)
+      },
+      transaction: vi.fn()
+    }))
+  };
+});
+
+vi.mock('@/data/repos', async () => {
+  const actual = await vi.importActual('@/data/repos');
+  return {
+    ...actual,
+    acquisitionRepository: {
+      getById: vi.fn().mockResolvedValue(null) // Return null for non-existent acquisition
+    },
+    cardLotRepository: {
+      getByAcquisitionId: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(1)
+    }
+  };
+});
 
 describe('CostAllocationService', () => {
   beforeEach(async () => {
+    const { getDb } = await import('@/data/init');
+    const db = getDb();
     // Clear test data
     await db.acquisitions.clear();
     await db.card_lots.clear();

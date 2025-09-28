@@ -17,6 +17,9 @@ export async function remainingQty(lotId: string): Promise<number> {
   if (!lot) return 0;
 
   const allocations = await sellAllocationRepository.getByLotId(lotId);
+  if (!allocations || !Array.isArray(allocations)) {
+    return Math.max(0, lot.quantity);
+  }
   const totalSold = allocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0);
 
   return Math.max(0, lot.quantity - totalSold);

@@ -56,7 +56,7 @@ async function getAcquisitionPnL(
     let shipping_t = 0;
     let realized_pnl_t = 0;
 
-    for (const alloc of allocations) {
+    for (const alloc of (allocations || [])) {
         const sell = await transactionRepository.getById(alloc.transactionId);
         if (!sell || sell.happenedAt > asOf) continue;
 
@@ -73,7 +73,7 @@ async function getAcquisitionPnL(
     realizedPnLCent += realized_pnl_t;
 
     // 8.2 Unrealized P&L (remaining)
-    const soldQuantity = allocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+    const soldQuantity = (allocations || []).reduce((sum, alloc) => sum + alloc.quantity, 0);
     const remainingQuantity = lot.quantity - soldQuantity;
     
     if (remainingQuantity > 0) {
