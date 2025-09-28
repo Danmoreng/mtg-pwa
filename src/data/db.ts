@@ -81,7 +81,7 @@ export interface CardLot {
 export interface Transaction {
     id: string;
     kind: 'BUY' | 'SELL';
-    cardId?: string;
+    cardId?: string | null;
     lotId?: string;
     quantity: number;
     unitPrice: number; // in cents
@@ -92,7 +92,7 @@ export interface Transaction {
     externalRef: string;
     happenedAt: Date;
     notes?: string;
-    relatedTransactionId?: string;
+    relatedTransactionId?: string | null;
     finish?: string;
     language?: string;
     createdAt: Date;

@@ -6,7 +6,7 @@ import type { Card, CardLot } from '../../data/db';
 import { getDb } from '../../data/init';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
-import { FinanceService } from '../analytics/FinanceService';
+
 
 // Use the new normalization gateway
 import { NormalizationGateway } from '../../core/Normalization';
@@ -115,7 +115,7 @@ export class ImportService {
         });
 
         // Create external reference to avoid duplicates
-        const externalRef = `cardmarket:order:${order.orderId}:${order.lineNumber}`;
+        const externalRef = `cardmarket:order:${order.orderId}`;
 
         // Check if order already exists
         const db = getDb();
@@ -123,110 +123,29 @@ export class ImportService {
         if (existing) continue;
 
         // Parse values as Money
-        const merchandiseValue = Money.parse(order.merchandiseValue, 'EUR');
-        const shipmentCosts = Money.parse(order.shipmentCosts, 'EUR');
         const commission = Money.parse(order.commission, 'EUR');
+        const shipmentCosts = Money.parse(order.shipmentCosts, 'EUR');
 
         // Create transaction record
         const transactionRecord = {
-          id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: uuidv4(),
           kind: order.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
-          quantity: parseInt(order.articleCount) || 1,
-          unitPrice: Math.round(merchandiseValue.getCents() / (parseInt(order.articleCount) || 1)),
+          cardId: null,
+          quantity: 0,
+          unitPrice: 0,
           fees: commission.getCents(),
           shipping: shipmentCosts.getCents(),
           currency: 'EUR',
           source: 'cardmarket',
           externalRef,
           happenedAt: new Date(order.dateOfPurchase),
+          relatedTransactionId: null,
           createdAt: now,
           updatedAt: now
         };
 
         // Save transaction
         await transactionRepository.add(transactionRecord);
-
-        // If this is a purchase order, update the associated card lots with enhanced financial tracking
-        if (order.direction === 'purchase') {
-          // Find all articles associated with this order
-          const db = getDb();
-          const articles = await db.transactions
-            .where('externalRef')
-            .startsWith(`cardmarket:article:${order.orderId}:`)
-            .toArray();
-
-          // Update each associated card lot with the financial details
-          for (const article of articles) {
-            if (article.lotId) {
-              // Get the lot
-              const lot = await cardLotRepository.getById(article.lotId);
-              if (lot) {
-                // Calculate proportional costs for this article
-                const articleCountInOrder = parseInt(order.articleCount) || 1;
-                const proportion = article.quantity / articleCountInOrder;
-
-                // Calculate financial details
-                const unitAcquisitionCostCent = FinanceService.calculateTrueAcquisitionCost(
-                  merchandiseValue.getCents() / 100,
-                  shipmentCosts.getCents() / 100,
-                  commission.getCents() / 100,
-                  articleCountInOrder
-                );
-                
-                const unitShippingCostCent = Math.round((shipmentCosts.getCents() * proportion) / article.quantity);
-                const unitCommissionCent = Math.round((commission.getCents() * proportion) / article.quantity);
-
-                // Update the lot with enhanced financial tracking
-                await cardLotRepository.update(lot.id, {
-                  // Enhanced financial tracking
-                  acquisitionPriceCent: unitAcquisitionCostCent,
-                  acquisitionFeesCent: unitCommissionCent,
-                  acquisitionShippingCent: unitShippingCostCent,
-                  totalAcquisitionCostCent: unitAcquisitionCostCent + unitCommissionCent + unitShippingCostCent,
-                  updatedAt: now
-                });
-              }
-            }
-          }
-        }
-        
-        // If this is a sale order, update the associated card lots with sale financial details
-        if (order.direction === 'sale') {
-          // Find all articles associated with this order
-          const db = getDb();
-          const articles = await db.transactions
-            .where('externalRef')
-            .startsWith(`cardmarket:article:${order.orderId}:`)
-            .toArray();
-
-          // Update each associated card lot with the sale financial details
-          for (const article of articles) {
-            if (article.lotId) {
-              // Get the lot
-              const lot = await cardLotRepository.getById(article.lotId);
-              if (lot) {
-                // Calculate proportional revenue for this article
-                const articleCountInOrder = parseInt(order.articleCount) || 1;
-                const proportion = article.quantity / articleCountInOrder;
-
-                // Calculate sale financial details
-                const unitSalePriceCent = Math.round(merchandiseValue.getCents() / articleCountInOrder);
-                const unitSaleFeesCent = Math.round((commission.getCents() * proportion) / article.quantity);
-                const unitSaleShippingCent = Math.round((shipmentCosts.getCents() * proportion) / article.quantity);
-
-                // Update the lot with sale financial tracking
-                await cardLotRepository.update(lot.id, {
-                  // Sale financial tracking
-                  salePriceCent: unitSalePriceCent,
-                  saleFeesCent: unitSaleFeesCent,
-                  saleShippingCent: unitSaleShippingCent,
-                  totalSaleRevenueCent: unitSalePriceCent - unitSaleFeesCent + unitSaleShippingCent,
-                  updatedAt: now
-                });
-              }
-            }
-          }
-        }
       }
 
       // Mark import as completed
@@ -386,31 +305,71 @@ export class ImportService {
 
   private static async updatePriceForCard(cardId: string): Promise<void> {
     try {
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const pricePointId = `${cardId}:scryfall:${dateStr}`;
-      const db = getDb();
-      const existingPricePoint = await db.price_points.get(pricePointId);
-      if (!existingPricePoint) {
-        const price = await ScryfallProvider.getPriceById(cardId);
-        if (price) {
-          const pricePoint = { 
-            id: pricePointId, 
-            cardId: cardId, 
-            provider: 'scryfall' as const, 
-            finish: 'nonfoil' as const,
-            date: now.toISOString().split('T')[0],
-            currency: 'EUR' as const, 
-            priceCent: price.getCents(), 
-            asOf: now, 
-            createdAt: now 
-          };
-          const db = getDb();
-          await db.price_points.put(pricePoint);
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const db = getDb();
+
+        const prices = await ScryfallProvider.getPricesForCard(cardId);
+
+        if (prices.nonfoil) {
+            const pricePointId = `${cardId}:scryfall:nonfoil:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'nonfoil' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.nonfoil.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
         }
-      }
+
+        if (prices.foil) {
+            const pricePointId = `${cardId}:scryfall:foil:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'foil' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.foil.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+        
+        if (prices.etched) {
+            const pricePointId = `${cardId}:scryfall:etched:${dateStr}`;
+            const existingPricePoint = await db.price_points.get(pricePointId);
+            if (!existingPricePoint) {
+                const pricePoint = {
+                    id: pricePointId,
+                    cardId: cardId,
+                    provider: 'scryfall' as const,
+                    finish: 'etched' as const,
+                    date: dateStr,
+                    currency: 'EUR' as const,
+                    priceCent: prices.etched.getCents(),
+                    asOf: now,
+                    createdAt: now
+                };
+                await db.price_points.put(pricePoint);
+            }
+        }
+
     } catch (error) {
-      console.error(`Error checking/updating price for existing card ${cardId}:`, error);
+        console.error(`Error checking/updating price for existing card ${cardId}:`, error);
     }
   }
 
@@ -465,13 +424,16 @@ export class ImportService {
   }
 
   private static async createTransactionForArticle(article: any, cardId: string | null, lotId: string | undefined, price: Money, now: Date): Promise<void> {
-    const transactionExternalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+    const headerExternalRef = `cardmarket:order:${article.shipmentId}`;
+    const header = await transactionRepository.getBySourceRef('cardmarket', headerExternalRef).then(res => res[0]);
+
+    const transactionExternalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
     const db = getDb();
     const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
     if (existingTransaction) return;
 
     const transactionRecord = {
-      id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: uuidv4(),
       kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
       cardId: cardId || undefined,
       lotId: lotId,
@@ -482,6 +444,7 @@ export class ImportService {
       currency: 'EUR',
       source: 'cardmarket',
       externalRef: transactionExternalRef,
+      relatedTransactionId: header?.id,
       happenedAt: new Date(article.dateOfPurchase),
       createdAt: now,
       updatedAt: now
@@ -497,7 +460,7 @@ export class ImportService {
 
         for (const article of articles) {
             // Create external reference to check for duplicates
-            const externalRef = `cardmarket:article:${article.shipmentId}:${article.lineNumber}`;
+            const externalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
 
             // Check if transaction already exists
             const db = getDb();

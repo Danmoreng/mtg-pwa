@@ -10,7 +10,8 @@ import type {
   PricePoint, 
   Valuation, 
   Setting,
-  ScanSaleLink
+  ScanSaleLink,
+  SellAllocation
 } from './db';
 
 // Card repository
@@ -385,5 +386,16 @@ export const scanSaleLinkRepository = {
 
   async delete(id: string): Promise<void> {
     await getDb().scan_sale_links.delete(id);
+  }
+};
+
+export const sellAllocationRepository = {
+  async add(a: SellAllocation) { return getDb().sell_allocations.add(a); },
+  async bulkAdd(rows: SellAllocation[]) { return getDb().sell_allocations.bulkAdd(rows); },
+  async getByTransactionId(txId: string) { return getDb().sell_allocations.where('transactionId').equals(txId).toArray(); },
+  async getByLotId(lotId: string) { return getDb().sell_allocations.where('lotId').equals(lotId).toArray(); },
+  async deleteByTransactionId(txId: string) {
+    const rows = await getDb().sell_allocations.where('transactionId').equals(txId).toArray();
+    await getDb().sell_allocations.bulkDelete(rows.map(r => r.id));
   }
 };
