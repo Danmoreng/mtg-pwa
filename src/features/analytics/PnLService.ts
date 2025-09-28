@@ -81,16 +81,20 @@ async function getAcquisitionPnL(
       const latestPrice = await PriceQueryService.getLatestPriceForCard(lot.cardId);
       const currentPriceCent = latestPrice ? latestPrice.price.getCents() : 0;
       
-      // mtm_lot = remaining_q * current_price(cardId, finish)
-      const mtm_lot = remainingQuantity * currentPriceCent;
-      
-      // unrealized_pnl_lot = mtm_lot - (remaining_q * lot.unitCostCent)
-      const acquisitionCost = lot.totalAcquisitionCostCent || 
-        (lot.unitCost * lot.quantity);
-      const unitCostCent = acquisitionCost / lot.quantity;
-      const unrealized_pnl_lot = mtm_lot - (remainingQuantity * unitCostCent);
-      
-      unrealizedPnLCent += unrealized_pnl_lot;
+      // Only calculate unrealized P&L if we have a current market price
+      if (latestPrice) {
+        // mtm_lot = remaining_q * current_price(cardId, finish)
+        const mtm_lot = remainingQuantity * currentPriceCent;
+        
+        // unrealized_pnl_lot = mtm_lot - (remaining_q * lot.unitCostCent)
+        const acquisitionCost = lot.totalAcquisitionCostCent || 
+          (lot.unitCost * lot.quantity);
+        const unitCostCent = acquisitionCost / lot.quantity;
+        const unrealized_pnl_lot = mtm_lot - (remainingQuantity * unitCostCent);
+        
+        unrealizedPnLCent += unrealized_pnl_lot;
+      }
+      // If no current market price is available, unrealized P&L remains unchanged (0 for this lot)
     }
 
     // Add to lot P&L details
