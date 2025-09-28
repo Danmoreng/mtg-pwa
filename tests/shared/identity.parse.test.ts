@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseIdentity } from '../src/shared/identity';
+import { parseIdentity } from '../../src/shared/identity';
 
 describe('identity parsing', () => {
   it('should parse basic fingerprint correctly', () => {

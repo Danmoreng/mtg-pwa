@@ -2,12 +2,22 @@
 
 // Map a source finish string to our standard finish types
 export function mapFinish(sourceFinish: string): 'nonfoil' | 'foil' | 'etched' {
-  const normalized = sourceFinish.toLowerCase();
+  const normalized = sourceFinish.toLowerCase().trim();
   
-  if (normalized.includes('foil') && !normalized.includes('etched')) {
+  // Handle boolean values first
+  if (normalized === 'true') {
     return 'foil';
-  } else if (normalized.includes('etched')) {
+  } else if (normalized === 'false') {
+    return 'nonfoil';
+  }
+  
+  // Handle specific keywords in order of priority
+  if (normalized.includes('etched')) {
     return 'etched';
+  } else if (normalized.includes('non-foil') || normalized.includes('nonfoil')) {
+    return 'nonfoil';
+  } else if (normalized.includes('foil')) {
+    return 'foil';
   } else {
     return 'nonfoil';
   }

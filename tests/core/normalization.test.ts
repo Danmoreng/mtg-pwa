@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeFingerprint, type NormalizedKey } from '../src/utils/normalization';
+import { normalizeFingerprint, type NormalizedKey } from '@/utils/normalization';
 
 describe('Normalization Utilities', () => {
   describe('normalizeFingerprint', () => {
