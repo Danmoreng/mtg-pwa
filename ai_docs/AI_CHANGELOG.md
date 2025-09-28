@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-09-28 15:00 — feat: Implement sell allocations and enhance price handling
+- **Author**: AI (Gemini)
+- **Scope**: `src/data/db.ts`, `src/data/repos.ts`, `src/features/scans/ReconcilerService.ts`, `src/features/imports/ImportService.ts`, `src/features/analytics/PnLService.ts`, `src/features/pricing/ScryfallProvider.ts`, `src/features/decks/DeckImportService.ts`, `src/workers/priceSync.ts`, `src/data/init.ts`
+- **Type**: feat
+- **Summary**: Implements sell allocations, order grouping, and enhanced price handling.
+- **Details**:
+    - Implemented the sell allocation system for more accurate P&L and inventory tracking.
+    - Updated the Cardmarket importer to create header/line-item transactions.
+    - Fixed a bug where Manabox imports would not have prices.
+    - Enhanced the Scryfall price provider to fetch and store prices for non-foil, foil, and etched finishes.
+- **Impact/Risks**: Major changes to data model and import logic. Existing data is not migrated.
+- **Verification Steps**: Build was successful. Manual testing of importers and price display is recommended.
+- **Linked Task/Issue**: M3
+
+
 ## 2025-09-27 16:00 — fix(build): Fix build errors in ReconcilerService
 - **Author**: AI (Gemini)
 - **Scope**: src/data/db.ts, src/features/scans/ReconcilerService.ts
