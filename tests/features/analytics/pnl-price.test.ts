@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getAcquisitionPnL } from '@/features/analytics/PnLService';
-import * as repos from '@/data/repos';
+import { acquisitionRepository, cardLotRepository, transactionRepository, sellAllocationRepository } from '@/data/repos';
 import { PriceQueryService } from '@/features/pricing/PriceQueryService';
 
-// Mock the repositories
+// Also need to mock sell allocation repository for P&L calculations
 vi.mock('@/data/repos', async () => {
   const actual = await vi.importActual('@/data/repos');
   return {
@@ -19,7 +19,7 @@ vi.mock('@/data/repos', async () => {
       getByLotId: vi.fn()
     },
     sellAllocationRepository: {
-      getByLotId: vi.fn()
+      getByLotId: vi.fn().mockResolvedValue([]) // Initially empty
     }
   };
 });
@@ -51,6 +51,16 @@ describe('PnL Service with Price Integration', () => {
     purchasedAt: new Date()
   };
 
+  // Mock sell allocation for the transaction
+  const mockSellAllocation = {
+    id: 'alloc123',
+    transactionId: 'tx123',
+    lotId: 'lot123',
+    quantity: 5,
+    unitCostCentAtSale: 1080, // Cost per unit in cents at time of sale
+    createdAt: new Date()
+  };
+
   const mockSellTransaction = {
     id: 'tx123',
     kind: 'SELL',
@@ -59,7 +69,8 @@ describe('PnL Service with Price Integration', () => {
     fees: 100,       // 1.00 EUR
     shipping: 200,   // 2.00 EUR
     happenedAt: new Date(),
-    lotId: 'lot123'
+    lotId: 'lot123',
+    cardId: 'card123'
   };
 
   beforeEach(() => {
@@ -68,10 +79,11 @@ describe('PnL Service with Price Integration', () => {
 
   it('should calculate P&L correctly when current market price is available', async () => {
     // Setup
-    const { acquisitionRepository, cardLotRepository, transactionRepository } = await import('@/data/repos');
     (acquisitionRepository.getById as vi.Mock).mockResolvedValue(mockAcquisition);
     (cardLotRepository.getByAcquisitionId as vi.Mock).mockResolvedValue([mockLot]);
     (transactionRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellTransaction]);
+    (transactionRepository.getById as vi.Mock).mockResolvedValue(mockSellTransaction);
+    (sellAllocationRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellAllocation]);
     
     // Mock the price service to return a current price
     (PriceQueryService.getLatestPriceForCard as vi.Mock).mockResolvedValue({
@@ -94,10 +106,11 @@ describe('PnL Service with Price Integration', () => {
 
   it('should handle P&L calculation gracefully when no current market price is available', async () => {
     // Setup
-    const { acquisitionRepository, cardLotRepository, transactionRepository } = await import('@/data/repos');
     (acquisitionRepository.getById as vi.Mock).mockResolvedValue(mockAcquisition);
     (cardLotRepository.getByAcquisitionId as vi.Mock).mockResolvedValue([mockLot]);
     (transactionRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellTransaction]);
+    (transactionRepository.getById as vi.Mock).mockResolvedValue(mockSellTransaction);
+    (sellAllocationRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellAllocation]);
     
     // Mock the price service to return null (no price available)
     (PriceQueryService.getLatestPriceForCard as vi.Mock).mockResolvedValue(null);

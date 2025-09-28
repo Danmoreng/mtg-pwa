@@ -1,30 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { allocateAcquisitionCosts } from '@/features/analytics/CostAllocationService';
 
-// Mock the database
-vi.mock('@/data/init', async () => {
-  return {
-    getDb: vi.fn(() => ({
-      acquisitions: {
-        get: vi.fn().mockResolvedValue(null), // Return null for non-existent acquisition
-        clear: vi.fn().mockResolvedValue(undefined)
-      },
-      card_lots: {
-        where: vi.fn(() => ({
-          equals: vi.fn(() => ({
-            toArray: vi.fn().mockResolvedValue([])
-          }))
-        })),
-        update: vi.fn().mockResolvedValue(1),
-        clear: vi.fn().mockResolvedValue(undefined)
-      },
-      price_points: {
-        clear: vi.fn().mockResolvedValue(undefined)
-      },
-      transaction: vi.fn()
-    }))
-  };
-});
+// Revert to using the real database for this test, like the setup does
+// We just need to mock the acquisitionRepository.getById to return null
 
 vi.mock('@/data/repos', async () => {
   const actual = await vi.importActual('@/data/repos');
