@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useImportStatusStore, type ImportStatus } from '../stores/importStatus';
 import { useAlertStore } from '../stores/alerts';
 

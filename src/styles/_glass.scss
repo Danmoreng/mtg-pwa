@@ -14,18 +14,20 @@
 
 .navbar.glass {
   @include glass-surface();
-  --bs-navbar-padding-y: .6rem;
+  --bs-navbar-padding-y: .3rem; /* Was .6rem */
   --bs-navbar-brand-font-weight: 600;
   --bs-navbar-color: var(--color-text);
   --bs-navbar-hover-color: var(--color-text);
-  overflow: hidden; /* contain glow */
-  border: 1px solid rgba(0,0,0,.1); /* light-mode border legibility */
+
+  /* Override mixin border for a bottom-only look */
+  border: none;
+  border-bottom: 1px solid rgba(0,0,0,.1); /* light-mode border legibility */
 }
 
 /* Dark theme border tweak for navbar */
 [data-bs-theme="dark"] .navbar.glass,
 [data-theme="dark"]    .navbar.glass {
-  border: 1px solid rgba(var(--glass-border-dark));
+  border-bottom: 1px solid rgba(var(--glass-border-dark));
 }
 
 /* A11y: solid fallback if user prefers no transparency */

@@ -13,24 +13,19 @@
 
       <div id="navbarNav" class="collapse navbar-collapse" :class="{ show: isOpen }">
         <ul class="navbar-nav me-auto" ref="navList" @mouseleave="snapToActive">
-          <!-- Moving glass bubble (under links) -->
-          <div class="nav-bubble" ref="bubble" aria-hidden="true"></div>
+          <div class="nav-underline" ref="underline" aria-hidden="true"></div>
 
           <li class="nav-item">
-            <router-link to="/" class="nav-link" :class="{ active: route.name === 'home' }"
-                         @mouseenter="hover" @focusin="hover">Dashboard</router-link>
+            <router-link to="/" class="nav-link" :class="{ active: route.name === 'home' }" @mouseenter="hover" @focusin="hover">Dashboard</router-link>
           </li>
           <li class="nav-item">
-            <router-link to="/decks" class="nav-link" :class="{ active: isDecksRoute }"
-                         @mouseenter="hover" @focusin="hover">Decks</router-link>
+            <router-link to="/decks" class="nav-link" :class="{ active: isDecksRoute }" @mouseenter="hover" @focusin="hover">Decks</router-link>
           </li>
           <li class="nav-item">
-            <router-link to="/cards" class="nav-link" :class="{ active: route.name === 'cards' }"
-                         @mouseenter="hover" @focusin="hover">Cards</router-link>
+            <router-link to="/cards" class="nav-link" :class="{ active: route.name === 'cards' }" @mouseenter="hover" @focusin="hover">Cards</router-link>
           </li>
           <li class="nav-item">
-            <router-link to="/import" class="nav-link" :class="{ active: route.path.startsWith('/import') }"
-                         @mouseenter="hover" @focusin="hover">Data Import</router-link>
+            <router-link to="/import" class="nav-link" :class="{ active: route.path.startsWith('/import') }" @mouseenter="hover" @focusin="hover">Data Import</router-link>
           </li>
         </ul>
 
@@ -55,31 +50,19 @@ const isOpen = ref(false);
 const toggle = () => { isOpen.value = !isOpen.value; };
 
 const navList = ref<HTMLElement | null>(null);
-const bubble = ref<HTMLElement | null>(null);
+const underline = ref<HTMLElement | null>(null);
 let ro: ResizeObserver | null = null;
 
-function moveBubbleTo(el: HTMLElement) {
-  const list = navList.value, bub = bubble.value; if (!list || !bub || !el) return;
+function moveUnderlineTo(el: HTMLElement) {
+  const list = navList.value, line = underline.value; if (!list || !line || !el) return;
   const listRect = list.getBoundingClientRect();
   const r = el.getBoundingClientRect();
 
-  // Size: pill slightly larger than the link
-  const padX = 12; // breathing room
-  const height = Math.max(32, Math.round(r.height * 0.72));
-  const width  = Math.max(r.width + padX * 2, 80);
+  const width = r.width;
+  const x = r.left - listRect.left + list.scrollLeft;
 
-  const x = (r.left - listRect.left) + list.scrollLeft - padX;
-  const y = (r.top  - listRect.top)  + list.scrollTop + (r.height - height) / 2;
-
-  bub.style.setProperty('--_x', `${x}px`);
-  bub.style.setProperty('--_y', `${y}px`);
-  bub.style.setProperty('--_w', `${width}px`);
-  bub.style.setProperty('--_h', `${height}px`);
-  bub.style.opacity = '1';
-
-  // Tint from the hovered/active link color (fallback to Bootstrap primary)
-  const accent = getComputedStyle(el).color || getComputedStyle(document.documentElement).getPropertyValue('--bs-primary') || '#0d6efd';
-  bub.style.setProperty('--nav-accent', accent.trim());
+  line.style.setProperty('--_x', `${x}px`);
+  line.style.setProperty('--_w', `${width}px`);
 }
 
 function getActiveLink(): HTMLElement | null {
@@ -88,12 +71,12 @@ function getActiveLink(): HTMLElement | null {
 
 function snapToActive() {
   const el = getActiveLink();
-  if (el) moveBubbleTo(el);
+  if (el) moveUnderlineTo(el);
 }
 
 function hover(e: Event) {
   const link = (e.currentTarget as HTMLElement);
-  if (link) moveBubbleTo(link);
+  if (link) moveUnderlineTo(link);
 }
 
 function setupResizeObserver() {
@@ -106,7 +89,7 @@ function setupResizeObserver() {
 onMounted(async () => {
   await nextTick();
   const el = getActiveLink() || (navList.value?.querySelector('.nav-link') as HTMLElement | null);
-  if (el) moveBubbleTo(el);
+  if (el) moveUnderlineTo(el);
   setupResizeObserver();
 });
 
