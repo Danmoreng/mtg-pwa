@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     BootstrapRekaDemo: typeof import('./src/components/BootstrapRekaDemo.vue')['default']
     CardComponent: typeof import('./src/components/CardComponent.vue')['default']
+    GlobalAlerts: typeof import('./src/components/GlobalAlerts.vue')['default']
     HeroGlass: typeof import('./src/components/HeroGlass.vue')['default']
     ImportStatusIndicator: typeof import('./src/components/ImportStatusIndicator.vue')['default']
     Navigation: typeof import('./src/components/Navigation.vue')['default']
