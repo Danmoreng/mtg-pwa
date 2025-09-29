@@ -89,160 +89,62 @@
 }
 
 /* ==========================================
-   Neon Glass Buttons (Bootstrap color-aware)
-   Usage:
-     <button class="btn btn-glass btn-glass-primary">...</button>
-     <button class="btn btn-glass-soft btn-glass-success">...</button>
-     <button class="btn btn-glass-strong btn-glass-warning">...</button>
+   Glass Buttons (Bootstrap color-aware)
    ========================================== */
 
-/* 1) Shared base (no compound extends) */
-%btn-glass-common {
-  @include glass-button-base;
+.btn-glass {
+  @include glass-button-base; // from _mixins.scss
 
-  /* Accent & ring; variants override --btn-glass-accent via .btn-glass-<name> */
   --btn-glass-accent: var(--bs-primary);
-  --btn-ring: 6px;
-
-  /* neon-demo style derivations from accent */
-  --btn-tint:   color-mix(in oklab, var(--btn-glass-accent) 20%, transparent);
-  --btn-shadow: color-mix(in oklab, var(--btn-glass-accent) 35%, transparent);
 
   color: var(--bs-body-color);
-  border-radius: var(--bs-btn-border-radius, .75rem);
-  border: 1px solid rgba(var(--glass-border-light));
-
-  /* Glass plate (two-stop gradient like demo) */
-  background: linear-gradient(
-    135deg,
-    rgb(var(--glass-bg)),
-    color-mix(in oklab, rgb(var(--glass-bg)) 70%, transparent)
-  );
-
-  /* Core glass effect */
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-con));
-
-  /* Base “thickness” + subtle neon rim always present */
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.55),
-    0 0 0 .8px color-mix(in oklab, var(--btn-glass-accent) 55%, transparent);
-
-  position: relative;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
-
-  /* Glossy highlight */
-  &::after {
-    content: "";
-    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 45%);
-    mix-blend-mode: screen; opacity: .35;
-  }
-
-  /* Gradient border layer (kept from your version, tuned slightly) */
-  &::before {
-    content: "";
-    position: absolute; inset: 0; padding: 1px; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(
-      120deg,
-      color-mix(in oklab, var(--btn-glass-accent) 85%, white 10%),
-      transparent 30%,
-      color-mix(in oklab, var(--btn-glass-accent) 60%, white 10%)
-    );
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
-  }
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.55),
-      0 16px 34px -16px var(--btn-shadow),
-      /* crisp edge */
-      0 0 0 1px color-mix(in oklab, var(--btn-glass-accent) 85%, white 10%);
-  }
-
-  &:active,
-  &.active,
-  .show > &.dropdown-toggle {
-    transform: translateY(0);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.55),
-      0 10px 24px -14px var(--btn-shadow),
-      0 0 0 .8px color-mix(in oklab, var(--btn-glass-accent) 60%, transparent);
-  }
+  text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
 
   &:focus-visible {
-    /* neon inner ring + soft outer halo from demo */
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.55),
-      0 0 0 2px color-mix(in oklab, var(--btn-glass-accent) 80%, white 10%),
-      0 0 0 var(--btn-ring) color-mix(in oklab, var(--btn-glass-accent) 32%, transparent),
-      var(--elev-2);
-    outline: none;
+    @include focus-ring;
   }
 
-  /* Fallback when backdrop-filter isn’t available */
+  /* Fallback for browsers that don't support backdrop-filter */
   @supports not ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
-    background: color-mix(in oklab, white 16%, transparent);
+    background: var(--surface-2);
   }
 }
 
-/* 2) Strength variants (just the background plate) */
-.btn-glass       { @extend %btn-glass-common; }
-
-.btn-glass-soft  {
-  @extend %btn-glass-common;
-  background: linear-gradient(
-                  135deg,
-                  rgb(var(--glass-bg-soft)),
-                  color-mix(in oklab, rgb(var(--glass-bg-soft)) 70%, transparent)
-  );
-}
-
-.btn-glass-strong{
-  @extend %btn-glass-common;
-  background: linear-gradient(
-                  135deg,
-                  rgb(var(--glass-bg-strong)),
-                  color-mix(in oklab, rgb(var(--glass-bg-strong)) 70%, transparent)
-  );
-}
-
-/* keep your aliases */
-.btn-glass-card  { @extend .btn-glass; }
-.btn-glass-pane  { @extend .btn-glass-soft; }
-.btn-glass-panel { @extend .btn-glass-strong; }
-
-/* subtle perimeter glow line kept */
-.btn-glass-panel::after {
-  content:"";
-  position:absolute; inset:-1.5px;
-  border-radius: calc(var(--bs-btn-border-radius, .75rem) + 1.5px);
-  pointer-events:none;
-  background: linear-gradient(120deg, transparent 20%, color-mix(in oklab, var(--btn-glass-accent) 30%, transparent), transparent 80%);
-  mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  padding: 1.5px; z-index: -1;
-}
-
-/* 4) Bootstrap color variants: set the accent via CSS var */
+/* Color variants: apply theme colors to the accent variable */
 @mixin make-btn-glass-variant($name, $color) {
   .btn-glass-#{$name} {
-    @extend .btn-glass;
     --btn-glass-accent: #{$color};
+
+    /* Default state: filled with semi-transparent color */
+    @include glass-surface(color-mix(in oklab, var(--btn-glass-accent) 25%, rgb(var(--glass-bg-soft))));
+    border: 1px solid color-mix(in oklab, var(--btn-glass-accent) 40%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+
+    /* Hover state: brighter, lifted */
+    &:hover {
+      background-color: color-mix(in oklab, var(--btn-glass-accent) 35%, rgb(var(--glass-bg-soft)));
+      border-color: color-mix(in oklab, var(--btn-glass-accent) 60%, transparent);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Active state: pressed down */
+    &:active {
+      @include glass-surface(color-mix(in oklab, var(--btn-glass-accent) 80%, rgb(var(--glass-bg-soft))));
+    }
   }
 }
+
 @each $name, $color in $theme-colors {
   @include make-btn-glass-variant($name, $color);
 }
 
 /* A11y prefs */
 @media (prefers-reduced-motion: reduce) {
-  .btn-glass, .btn-glass-soft, .btn-glass-strong { transition: none; }
+  .btn-glass { transition: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .btn-glass, .btn-glass-soft, .btn-glass-strong {
+  .btn-glass {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: var(--surface-2) !important;
