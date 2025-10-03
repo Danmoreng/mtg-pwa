@@ -25,6 +25,9 @@
             <router-link to="/cards" class="nav-link" :class="{ active: route.name === 'cards' }" @mouseenter="hover" @focusin="hover">Cards</router-link>
           </li>
           <li class="nav-item">
+            <router-link to="/booster-boxes" class="nav-link" :class="{ active: route.name === 'booster-boxes' }" @mouseenter="hover" @focusin="hover">Boxes</router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/import" class="nav-link" :class="{ active: route.path.startsWith('/import') }" @mouseenter="hover" @focusin="hover">Data Import</router-link>
           </li>
         </ul>

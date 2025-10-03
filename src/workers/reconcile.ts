@@ -1,82 +1,19 @@
 // Reconcile worker
 // This worker will run the reconciler to match scans to lots and sells to lots
 
-import { runReconciler } from '../features/scans/ReconcilerService';
-import { getDb } from '../data/init';
+import { runFullReconciler } from '../features/scans/ReconcilerService';
+import { dbPromise } from '../data/init';
 
-// Run the reconciler for all identities
 async function runReconcilerWorker(): Promise<void> {
   try {
-    // Get all unique card identities from scans and transactions
-    const db = getDb();
-    const scans = await db.scans.toArray();
-    const transactions = await db.transactions.toArray();
-    
-    // Create a set of unique identities
-    const identities = new Set<string>();
-    const identityMap = new Map<string, { cardId?: string; fingerprint: string; finish: string; lang: string }>();
-    
-    // Process scans
-    for (const scan of scans) {
-      if (scan.cardFingerprint) {
-        // Extract finish and language from cardFingerprint if possible, otherwise use defaults
-        const fingerprintParts = scan.cardFingerprint.split(':');
-        const finish = fingerprintParts.length > 3 ? fingerprintParts[3] : 'nonfoil';
-        const lang = fingerprintParts.length > 2 ? fingerprintParts[2] : 'EN';
-        
-        const identityKey = `${scan.cardFingerprint}:${finish}:${lang}`;
-        identities.add(identityKey);
-        identityMap.set(identityKey, {
-          cardId: scan.cardId,
-          fingerprint: scan.cardFingerprint,
-          finish: finish,
-          lang: lang
-        });
-      }
-    }
-    
-    // Process transactions
-    for (const tx of transactions) {
-      if (tx.cardId) {
-        // Get the card to get its info
-        const db = getDb();
-        const card = await db.cards.get(tx.cardId);
-        if (card) {
-          // Create a fingerprint from card properties since cardFingerprint doesn't exist on Card
-          // Format: game:set:number:finish:lang (simplified for this context)
-          const fingerprint = `mtg:${card.setCode}:${card.number}:${card.finish || 'nonfoil'}:${card.lang || 'EN'}`;
-          const finish = card.finish || 'nonfoil';
-          const lang = card.lang || 'EN';
-          
-          const identityKey = `${fingerprint}:${finish}:${lang}`;
-          identities.add(identityKey);
-          identityMap.set(identityKey, {
-            cardId: tx.cardId,
-            fingerprint: fingerprint,
-            finish: finish,
-            lang: lang
-          });
-        }
-      }
-    }
-    
-    // Run reconciler for each unique identity
-    for (const identityKey of identities) {
-      const identity = identityMap.get(identityKey);
-      if (identity) {
-        try {
-          await runReconciler(identity);
-        } catch (error) {
-          console.error(`Error running reconciler for identity ${identityKey}:`, error);
-        }
-      }
-    }
-    
-    // Send success message back to main thread
+    console.log('Reconciler worker: Starting...');
+    await dbPromise; // Ensure DB is initialized in the worker context
+    console.log('Reconciler worker: DB initialized, executing full reconciler...');
+    await runFullReconciler();
+    console.log('Reconciler worker: Full reconciler completed successfully');
     self.postMessage({ type: 'reconcilerCompleted', success: true });
   } catch (error) {
-    console.error('Error running reconciler:', error);
-    // Send error message back to main thread
+    console.error('Reconciler worker: Error running full reconciler:', error);
     self.postMessage({ type: 'reconcilerCompleted', success: false, error: error instanceof Error ? error.message : String(error) });
   }
 }
@@ -85,12 +22,13 @@ async function runReconcilerWorker(): Promise<void> {
 self.onmessage = function(e) {
   const { type } = e.data;
   
+  console.log('Reconciler worker: Received message type:', type);
   switch (type) {
     case 'runReconciler':
       runReconcilerWorker();
       break;
     default:
-      console.warn(`Unknown message type: ${type}`);
+      console.warn(`Reconciler worker: Unknown message type: ${type}`);
   }
 };
 

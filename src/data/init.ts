@@ -17,8 +17,10 @@ export const dbPromise = initialize();
 
 export const getDb = (): MtgTrackerDb => {
   if (!dbInstance) {
-    if (process.env.VITEST) {
-        throw new Error("Database not initialized. Call setDbForTesting in your test setup.");
+    // Vitest in a worker environment might not have process.env defined.
+    const isVitest = typeof process !== 'undefined' && process.env?.VITEST;
+    if (isVitest) {
+      throw new Error("Database not initialized. Call setDbForTesting in your test setup.");
     }
     throw new Error("Database not initialized");
   }

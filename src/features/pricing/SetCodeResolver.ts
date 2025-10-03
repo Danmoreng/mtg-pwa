@@ -29,6 +29,11 @@ function buildSetIndex(sets: ScryfallSet[]) {
 
 // Main resolver
 export async function resolveSetCode(cardmarketName: string): Promise<string | null> {
+  if (typeof cardmarketName !== 'string' || !cardmarketName) {
+    console.warn('resolveSetCode called with invalid cardmarketName:', cardmarketName);
+    return null;
+  }
+
   const raw = cardmarketName.trim();
   const n = norm(raw);
 

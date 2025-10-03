@@ -6,6 +6,7 @@ import type { Card, CardLot } from '../../data/db';
 import { getDb } from '../../data/init';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
+import { WorkerManager } from '../../workers/WorkerManager';
 
 
 // Use the new normalization gateway
@@ -55,11 +56,48 @@ export class ImportService {
 
                 // Parse amount as Money
                 const amount = Money.parse(transaction.amount, 'EUR');
+                const kind = amount.isPositive() ? ('SELL' as const) : ('BUY' as const);
+
+                const { cardId, cardData } = await this.resolveCard(transaction);
+
+                // If we have a card ID, fetch and save price data
+                if (cardId) {
+                    await this.ensureCardInDb(cardId, cardData, transaction);
+                }
+
+                let lotIdForTransaction: string | undefined = undefined;
+                if (kind === 'BUY') {
+                    lotIdForTransaction = await this.getOrCreateLotForPurchase(cardId, amount, transaction);
+                } else if (cardId) { // For 'SELL'
+                    const existingLots = await cardLotRepository.getByCardId(cardId);
+                    if (existingLots.length === 0) {
+                        // No lots exist for this card. Create a provisional one and link it.
+                        const lotId = `lot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                        const lot: CardLot = {
+                            id: lotId,
+                            cardId: cardId,
+                            quantity: 0, // Provisional lot starts with 0 quantity
+                            unitCost: 0,
+                            condition: '',
+                            language: transaction.language || 'en',
+                            foil: transaction.finish === 'foil' || transaction.finish === 'etched',
+                            finish: transaction.finish || 'nonfoil',
+                            source: 'provisional-sell', // A new source to identify these
+                            purchasedAt: new Date(transaction.date),
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        };
+                        await cardLotRepository.add(lot);
+                        lotIdForTransaction = lotId; // Link the transaction to the new provisional lot
+                    }
+                }
 
                 // Create transaction record
                 const transactionRecord = {
                     id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    kind: amount.isPositive() ? ('SELL' as const) : ('BUY' as const),
+                    kind: kind,
+                    cardId: cardId || undefined,
+                    lotId: lotIdForTransaction,
                     quantity: 1, // For transactions, quantity is typically 1
                     unitPrice: amount.getCents(),
                     fees: 0, // Fees would be in separate records
@@ -67,14 +105,19 @@ export class ImportService {
                     currency: 'EUR',
                     source: 'cardmarket',
                     externalRef,
-                    happenedAt: new Date(transaction.date),
-                    createdAt: now,
-                    updatedAt: now
-                };
+                          happenedAt: new Date(transaction.date),
+                          finish: transaction.finish || 'nonfoil',
+                          language: transaction.language || 'en',
+                          createdAt: now,
+                          updatedAt: now                };
 
                 // Save transaction
                 await transactionRepository.add(transactionRecord);
             }
+
+            // Trigger reconciliation
+            const reconcilerWorker = WorkerManager.createReconcilerWorker();
+            reconcilerWorker.postMessage({ type: 'runReconciler' });
 
             // Mark import as completed
             importStatusStore.completeImport(importId);
@@ -174,40 +217,54 @@ export class ImportService {
     });
 
     try {
-      const now = new Date();
+      const orderLines: ImportPipelines.CardmarketSellOrderLine[] = [];
 
       for (let i = 0; i < articles.length; i++) {
         const article = articles[i];
 
-        // Update progress
+        // Update progress for resolving cards
         importStatusStore.updateImport(importId, {
           status: 'processing',
           processedItems: i + 1,
-          progress: Math.round(((i + 1) / articles.length) * 100)
+          progress: Math.round(((i + 1) / articles.length) * 50) // 0-50% for resolving
         });
 
-        const { cardId, cardData } = await this.resolveCard(article);
+        if (article.direction !== 'sale') continue; // Only process sales
 
-        // Parse price as Money
+        const { cardId } = await this.resolveCard(article);
         const price = Money.parse(article.price, 'EUR');
 
-        // If we have a card ID, fetch and save price data
         if (cardId) {
-          await this.ensureCardInDb(cardId, cardData, article);
+          await this.ensureCardInDb(cardId, null, article);
         }
 
-        // Create card lot record if card was bought
-        let lotIdForTransaction: string | undefined = undefined;
-        if (article.direction === 'purchase') {
-          lotIdForTransaction = await this.getOrCreateLotForPurchase(cardId, price, article);
-        }
+        const headerExternalRef = `cardmarket:order:${article.shipmentId}`;
+        const header = await transactionRepository.getBySourceRef('cardmarket', headerExternalRef).then(res => res[0]);
 
-        // Create transaction record
-        await this.createTransactionForArticle(article, cardId, lotIdForTransaction, price, now);
+        orderLines.push({
+          id: uuidv4(),
+          cardId: cardId || undefined,
+          lotId: undefined, // Reconciler will set this
+          quantity: parseInt(article.amount) || 1,
+          unitPrice: price.getCents(),
+          fees: 0,
+          shipping: 0,
+          currency: 'EUR',
+          source: 'cardmarket',
+          externalRef: `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`,
+          happenedAt: new Date(article.dateOfPurchase),
+          relatedTransactionId: header?.id,
+          finish: article.finish || 'nonfoil',
+          language: article.language || 'en',
+        });
       }
+
+      // Now, import the processed order lines using the pipeline
+      await ImportPipelines.importCardmarketSells(orderLines);
 
       // Mark import as completed
       importStatusStore.completeImport(importId);
+
     } catch (error) {
       console.error('Error importing Cardmarket articles:', error);
       importStatusStore.completeImport(importId, (error as Error).message);
@@ -237,6 +294,10 @@ export class ImportService {
 
     // Priority 2: If no product ID or product ID lookup failed, try set code resolution
     if (!cardId) {
+      if (typeof article.name !== 'string' || !article.name) {
+        console.warn('Cannot resolve card without name (and no productId)', article);
+        return { cardId: null, cardData: null };
+      }
       const setCode = await resolveSetCode(article.expansion);
       const collectorNumber = this.extractCollectorNumber(article.name);
       let cleanCardName = article.name;
@@ -260,6 +321,9 @@ export class ImportService {
   }
 
   private static extractCollectorNumber(name: string): string {
+    if (typeof name !== 'string' || !name) {
+      return '';
+    }
     const patterns = [
       /-\s*(\d+[a-zA-Z★]*)\s*-/i,  // Standard with optional letters/special chars
       /-\s*([IVXLCDM]+)\s*-/i,     // Roman numerals
@@ -374,6 +438,11 @@ export class ImportService {
   }
 
   private static async getOrCreateLotForPurchase(cardId: string | null, price: Money, article: any): Promise<string | undefined> {
+    if (!cardId) {
+      console.warn("Attempted to create a lot for a purchase without a valid cardId. Skipping.", { article });
+      return undefined;
+    }
+
     const now = new Date();
     const lotExternalRef = `cardmarket:lot:${article.shipmentId}:${article.lineNumber}`;
     const existingLots = await cardLotRepository.getByExternalRef(lotExternalRef);
@@ -446,9 +515,17 @@ export class ImportService {
       externalRef: transactionExternalRef,
       relatedTransactionId: header?.id,
       happenedAt: new Date(article.dateOfPurchase),
+      finish: article.finish || 'nonfoil',
+      language: article.language || 'en',
       createdAt: now,
       updatedAt: now
     };
+    
+    // Log for debugging
+    if (!cardId) {
+      console.warn(`Creating transaction without cardId for externalRef: ${transactionExternalRef}`, article);
+    }
+    
     await transactionRepository.add(transactionRecord);
   }
 

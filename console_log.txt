@@ -1,0 +1,271 @@
+Starting processScans... ScanProcessingService.ts:78:13
+Found 2 unprocessed scans ScanProcessingService.ts:80:13
+Processing scan: scan-1759514672562-u2b68v50k, fingerprint: CMM:173:EN:nonfoil ScanProcessingService.ts:84:15
+Using existing cardId: bc1f42a2-fe11-45da-9552-069803b4068a ScanProcessingService.ts:90:17
+Card not found, need to process fingerprint: CMM:173:EN:nonfoil ScanProcessingService.ts:96:17
+Fingerprint parts: ["CMM","173","EN","nonfoil"] ScanProcessingService.ts:100:17
+Processing setCode/number-based fingerprint with setCode: CMM, number: 173 ScanProcessingService.ts:146:19
+Successfully resolved card by setCode and number: Mikaeus, the Unhallowed ScanProcessingService.ts:155:21
+Card not in DB, creating new card entry ScanProcessingService.ts:160:23
+Added new card with id: bc1f42a2-fe11-45da-9552-069803b4068a ScanProcessingService.ts:178:23
+Creating card lot for card: bc1f42a2-fe11-45da-9552-069803b4068a, scan: scan-1759514672562-u2b68v50k ScanProcessingService.ts:192:17
+Added new card lot with id: lot-1759514672803-kf6kt4o45 ScanProcessingService.ts:210:17
+Updated scan scan-1759514672562-u2b68v50k with cardId: bc1f42a2-fe11-45da-9552-069803b4068a and lotId: lot-1759514672803-kf6kt4o45 ScanProcessingService.ts:216:17
+Processing scan: scan-1759514672564-eqxjzhahp, fingerprint: CMM:173:EN:foil ScanProcessingService.ts:84:15
+Using existing cardId: bc1f42a2-fe11-45da-9552-069803b4068a ScanProcessingService.ts:90:17
+Creating card lot for card: bc1f42a2-fe11-45da-9552-069803b4068a, scan: scan-1759514672564-eqxjzhahp ScanProcessingService.ts:192:17
+Added new card lot with id: lot-1759514672806-lq9yrun72 ScanProcessingService.ts:210:17
+Updated scan scan-1759514672564-eqxjzhahp with cardId: bc1f42a2-fe11-45da-9552-069803b4068a and lotId: lot-1759514672806-lq9yrun72 ScanProcessingService.ts:216:17
+Completed processScans ScanProcessingService.ts:226:13
+Worker response type: parseTransactions CardmarketImportWizard.vue:509:19
+Worker response type: parseOrders CardmarketImportWizard.vue:509:19
+Worker response type: parseArticles CardmarketImportWizard.vue:509:19
+Worker response type: parseTransactions CardmarketImportWizard.vue:509:19
+Worker response type: parseOrders CardmarketImportWizard.vue:509:19
+Worker response type: parseArticles CardmarketImportWizard.vue:509:19
+Cannot resolve card without name (and no productId) 
+Proxy { <target>: {…}, <handler>: {…} }
+ImportService.ts:298:17
+Attempted to create a lot for a purchase without a valid cardId. Skipping. 
+Object { article: Proxy }
+ImportService.ts:442:15
+Cannot resolve card without name (and no productId) 
+Proxy { <target>: {…}, <handler>: {…} }
+ImportService.ts:298:17
+{"product_ids":["722537"],"resolved_via":"cardmarket_id","cardmarket_id":"722537","final_uri":"/cards/cardmarket/722537"} ImportService.ts:284:17
+[Debug] Total CardLots: 2, Total Cards: 1 BoosterBoxesView.vue:57:11
+[BoxValuationService] Calculating value for acquisitionId: acq-1759514672555-84srmm1yx BoxValuationService.ts:12:13
+[BoxValuationService] Fetched acquisition: 
+Object { id: "acq-1759514672555-84srmm1yx", kind: "box", source: "manabox", externalRef: "manabox-import-1759514672552", currency: "EUR", happenedAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit), totalPriceCent: 2000, totalFeesCent: 0, totalShippingCent: 0, totalCostCent: 2000, … }
+​
+createdAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​
+currency: "EUR"
+​
+externalRef: "manabox-import-1759514672552"
+​
+happenedAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​
+id: "acq-1759514672555-84srmm1yx"
+​
+kind: "box"
+​
+source: "manabox"
+​
+totalCostCent: 2000
+​
+totalFeesCent: 0
+​
+totalPriceCent: 2000
+​
+totalShippingCent: 0
+​
+updatedAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​
+<prototype>: Object { … }
+BoxValuationService.ts:15:13
+[BoxValuationService] Fetched cardLots: 
+Array [ {…}, {…} ]
+​
+0: Object { id: "lot-1759514672803-kf6kt4o45", cardId: "bc1f42a2-fe11-45da-9552-069803b4068a", acquisitionId: "acq-1759514672555-84srmm1yx", … }
+​​
+acquisitionId: "acq-1759514672555-84srmm1yx"
+​​
+cardId: "bc1f42a2-fe11-45da-9552-069803b4068a"
+​​
+condition: "near_mint"
+​​
+createdAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+finish: "nonfoil"
+​​
+foil: false
+​​
+id: "lot-1759514672803-kf6kt4o45"
+​​
+language: "en"
+​​
+purchasedAt: Date Fri Oct 03 2025 20:04:23 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+quantity: 1
+​​
+source: "manabox"
+​​
+unitCost: 0
+​​
+updatedAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+<prototype>: Object { … }
+​
+1: Object { id: "lot-1759514672806-lq9yrun72", cardId: "bc1f42a2-fe11-45da-9552-069803b4068a", acquisitionId: "acq-1759514672555-84srmm1yx", … }
+​​
+acquisitionId: "acq-1759514672555-84srmm1yx"
+​​
+cardId: "bc1f42a2-fe11-45da-9552-069803b4068a"
+​​
+condition: "near_mint"
+​​
+createdAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+finish: "foil"
+​​
+foil: true
+​​
+id: "lot-1759514672806-lq9yrun72"
+​​
+language: "en"
+​​
+purchasedAt: Date Fri Oct 03 2025 20:04:23 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+quantity: 1
+​​
+source: "manabox"
+​​
+unitCost: 0
+​​
+updatedAt: Date Fri Oct 03 2025 20:04:32 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+<prototype>: Object { … }
+​
+length: 2
+​
+<prototype>: Array []
+BoxValuationService.ts:23:13
+[BoxValuationService] Extracted lotIds: 
+Array [ "lot-1759514672803-kf6kt4o45", "lot-1759514672806-lq9yrun72" ]
+​
+0: "lot-1759514672803-kf6kt4o45"
+​
+1: "lot-1759514672806-lq9yrun72"
+​
+length: 2
+​
+<prototype>: Array []
+BoxValuationService.ts:56:13
+[BoxValuationService] All SELL transactions in DB: 
+Array(3) [ {…}, {…}, {…} ]
+​
+0: Object { id: "b83bdbce-fde2-4fb9-b825-75f6cad5b599", kind: "SELL", quantity: 0, … }
+​​
+cardId: null
+​​
+createdAt: Date Fri Oct 03 2025 20:04:44 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+currency: "EUR"
+​​
+externalRef: "cardmarket:order:1225032849"
+​​
+fees: 63
+​​
+happenedAt: Date Sat Aug 09 2025 18:56:42 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+id: "b83bdbce-fde2-4fb9-b825-75f6cad5b599"
+​​
+kind: "SELL"
+​​
+quantity: 0
+​​
+relatedTransactionId: null
+​​
+shipping: 125
+​​
+source: "cardmarket"
+​​
+unitPrice: 0
+​​
+updatedAt: Date Fri Oct 03 2025 20:04:44 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+<prototype>: Object { … }
+​
+1: Object { id: "tx-1759514684544-xpcra5zl2", kind: "SELL", quantity: 1, … }
+​​
+cardId: undefined
+​​
+createdAt: Date Fri Oct 03 2025 20:04:44 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+currency: "EUR"
+​​
+externalRef: "cardmarket:1225032849:2"
+​​
+fees: 0
+​​
+finish: "nonfoil"
+​​
+happenedAt: Date Mon Dec 08 2025 15:09:19 GMT+0100 (Mitteleuropäische Normalzeit)
+​​
+id: "tx-1759514684544-xpcra5zl2"
+​​
+kind: "SELL"
+​​
+language: "en"
+​​
+lotId: undefined
+​​
+quantity: 1
+​​
+shipping: 0
+​​
+source: "cardmarket"
+​​
+unitPrice: 1369
+​​
+updatedAt: Date Fri Oct 03 2025 20:04:44 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+<prototype>: Object { … }
+​
+2: Object { cardId: "bc1f42a2-fe11-45da-9552-069803b4068a", quantity: 1, unitPrice: 1244, … }
+​​
+cardId: "bc1f42a2-fe11-45da-9552-069803b4068a"
+​​
+createdAt: Date Fri Oct 03 2025 20:04:44 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+currency: "EUR"
+​​
+externalRef: "cardmarket:order:1225032849:line:1"
+​​
+fees: 0
+​​
+happenedAt: Date Sat Aug 09 2025 18:56:42 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+id: "tx-1759514684684-p6exdrzb0"
+​​
+kind: "SELL"
+​​
+lotId: undefined
+​​
+notes: undefined
+​​
+quantity: 1
+​​
+relatedTransactionId: "b83bdbce-fde2-4fb9-b825-75f6cad5b599"
+​​
+shipping: 0
+​​
+source: "cardmarket"
+​​
+unitPrice: 1244
+​​
+updatedAt: Date Fri Oct 03 2025 20:04:44 GMT+0200 (Mitteleuropäische Sommerzeit)
+​​
+<prototype>: Object { … }
+​
+length: 3
+​
+<prototype>: Array []
+BoxValuationService.ts:59:13
+[BoxValuationService] Fetched sellTransactions for the given lotIds: 
+Array []
+BoxValuationService.ts:65:13
+[BoxValuationService] Calculated soldValue: 0 BoxValuationService.ts:68:13
+[BoxValuationService] Final result: 
+Object { boxPrice: 2000, unsoldValue: 2492, soldValue: 0, totalCurrentValue: 2492 }
+​
+boxPrice: 2000
+​
+soldValue: 0
+​
+totalCurrentValue: 2492
+​
+unsoldValue: 2492
+​
+<prototype>: Object { … }
