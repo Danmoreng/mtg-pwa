@@ -1,0 +1,3 @@
+Date;Transaction;Category;Type;Counterpart;Reference;Amount;Starting balance (EUR);Closing balance (EUR)
+12.08.2025 15:09:19;821057788;Fees;Commissions;Cardmarket;1225032849;-0,63 €;114,66 €;114,03 €
+12.08.2025 15:09:19;821057786;Sales;Sales;cardmarket_user;1225032849;13,69 €;114,03 €;127,72 €

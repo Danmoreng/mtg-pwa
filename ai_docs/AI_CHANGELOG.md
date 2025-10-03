@@ -2,6 +2,19 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-10-03 12:30 — fix(importer): Improve import robustness and fix reconciliation
+- **Author**: AI (Gemini)
+- **Scope**: `src/features/pricing/SetCodeResolver.ts`, `src/data/init.ts`, `src/workers/reconcile.ts`
+- **Type**: fix
+- **Summary**: Fixed multiple critical bugs in the data import and reconciliation process to improve stability and ensure data integrity.
+- **Details**:
+  - Added a guard clause to `SetCodeResolver.ts` to prevent crashes when a `cardmarketName` is missing or undefined in imported data.
+  - Fixed a `ReferenceError: process is not defined` in `init.ts` that occurred when database functions were called from a web worker.
+  - Refactored the `reconcile.ts` worker to use the centralized `runFullReconciler` service, fixing a major bug where sell transactions were not being correctly matched with acquisition lots due to faulty identity generation.
+- **Impact/Risks**: These changes significantly improve the reliability of the import and valuation features. There are no known risks.
+- **Verification Steps**: Re-importing a Cardmarket CSV with missing data should no longer crash the app. Re-running a box valuation after importing both buys (e.g., Manabox) and sells (e.g., Cardmarket) should now correctly calculate the `soldValue`.
+- **Linked Task/Issue**: User-reported import errors and valuation issues.
+
 ## 2025-09-28 20:30 — fix(tests): Remove failing e2e test to unblock M3 implementation
 - **Author**: AI (Qwen)
 - **Scope**: tests/e2e/reconcile.e2e.test.ts

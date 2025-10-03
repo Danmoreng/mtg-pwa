@@ -96,8 +96,9 @@ export const transactionRepository = {
     return await getDb().transactions.get(id);
   },
 
-  async getAll(): Promise<Transaction[]> {
-    return await getDb().transactions.toArray();
+  async getAll(db: import('./db').default | null = null): Promise<Transaction[]> {
+    const dbInstance = db || getDb();
+    return await dbInstance.transactions.toArray();
   },
 
   async getByCardId(cardId: string): Promise<Transaction[]> {
@@ -152,8 +153,9 @@ export const scanRepository = {
     return await getDb().scans.get(id);
   },
 
-  async getAll(): Promise<Scan[]> {
-    return await getDb().scans.toArray();
+  async getAll(db: import('./db').default | null = null): Promise<Scan[]> {
+    const dbInstance = db || getDb();
+    return await dbInstance.scans.toArray();
   },
 
   async getByCardId(cardId: string): Promise<Scan[]> {

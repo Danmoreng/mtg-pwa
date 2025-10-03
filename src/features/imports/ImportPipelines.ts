@@ -6,6 +6,7 @@ import type { Transaction, Deck, DeckCard } from '../../data/db';
 import type { Scan } from '../../data/db';
 import { scanRepository } from '../../data/repos';
 import { ScanProcessingService } from '../scans/ScanProcessingService';
+import { WorkerManager } from '../../workers/WorkerManager';
 
 // 5.1 Manabox scans with box cost
 // Input: CSV rows + total cost (price/fees/shipping) + date.
@@ -95,6 +96,8 @@ export async function importManaboxScansWithBoxCost(
         externalRef: row.externalRef,
         scannedAt: row.scannedAt,
         quantity: row.quantity,
+        language: row.language, // Pass language
+        finish: row.foil ? 'foil' : 'nonfoil', // Pass finish, converting from boolean
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -119,6 +122,10 @@ export async function importManaboxScansWithBoxCost(
     }
     
     await ScanProcessingService.processScans(onProgress);
+
+    // Trigger reconciliation
+    const reconcilerWorker = WorkerManager.createReconcilerWorker();
+    reconcilerWorker.postMessage({ type: 'runReconciler' });
     
     return { acquisitionId, scanIds };
   } catch (error) {
@@ -190,6 +197,10 @@ export async function importCardmarketSells(orderLines: CardmarketSellOrderLine[
       }
     }
     
+    // Trigger reconciliation
+    const reconcilerWorker = WorkerManager.createReconcilerWorker();
+    reconcilerWorker.postMessage({ type: 'runReconciler' });
+
     return transactionIds;
   } catch (error) {
     console.error('Error importing Cardmarket SELLs:', error);

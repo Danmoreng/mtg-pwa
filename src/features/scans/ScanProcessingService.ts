@@ -83,23 +83,6 @@ export class ScanProcessingService {
       const scan = unprocessedScans[i];
       console.log(`Processing scan: ${scan.id}, fingerprint: ${scan.cardFingerprint}`);
       
-      if (scan.cardId) {
-        // Check if the card actually exists in the database
-        const existingCard = await cardRepository.getById(scan.cardId);
-        if (existingCard) {
-          console.log(`Scan ${scan.id} already has cardId: ${scan.cardId} with existing card, skipping`);
-          await this.updatePriceForCard(scan.cardId);
-          // Still update progress
-          if (onProgress) {
-            onProgress(i + 1, unprocessedScans.length);
-          }
-          continue;
-        } else {
-          // CardId exists but card doesn't exist in DB, so we need to process
-          console.log(`CardId ${scan.cardId} exists but card not found in DB, proceeding with processing`);
-        }
-      }
-
       let cardId: string | undefined = scan.cardId;
       let card: Card | undefined;
 

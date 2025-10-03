@@ -9,12 +9,18 @@ import DeckImportView from '../features/decks/views/DeckImportView.vue';
 import DecksView from '../features/decks/views/DecksView.vue';
 import DeckDetailView from '../features/decks/views/DeckDetailView.vue';
 import CardsView from '../features/cards/views/CardsView.vue';
+import BoosterBoxesView from '../features/dashboard/BoosterBoxesView.vue';
 
 const routes = [
   {
     path: '/',
     name: 'home',
     component: HomeView,
+  },
+  {
+    path: '/booster-boxes',
+    name: 'booster-boxes',
+    component: BoosterBoxesView,
   },
   {
     path: '/import',
