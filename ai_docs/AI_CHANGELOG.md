@@ -2,6 +2,21 @@
 
 A chronological log of AI‑proposed changes for the MTG Value Tracker. Times in Europe/Berlin.
 
+## 2025-10-04 18:00 — refactor(reconciler): Move to main thread and cleanup
+- **Author**: AI (Gemini)
+- **Scope**: `src/features/scans/ReconcilerService.ts`, `src/workers/WorkerManager.ts`, `src/features/imports/ImportPipelines.ts`, `src/features/imports/views/wizard/CardmarketImportWizard.vue`, `src/features/analytics/BoxValuationService.ts`, `src/workers/reconcile.ts`
+- **Type**: refactor
+- **Summary**: Moved the reconciliation logic from a web worker to the main thread to fix critical bugs and improve reliability. Cleaned up extensive debugging logs.
+- **Details**:
+  - The reconciliation logic, previously in `src/workers/reconcile.ts`, was moved to the main thread to resolve dependency and execution issues.
+  - The `reconcile.ts` worker file has been deleted.
+  - `WorkerManager.ts` was updated to execute the `runFullReconciler` service directly.
+  - Removed extensive `console.log` and `console.debug` statements from all related files to clean up the codebase.
+  - Deleted temporary and obsolete status files (`TODO.md`, `STATUS.md`, `console_log.txt`).
+- **Impact/Risks**: This change significantly improves the stability and reliability of the import and valuation features. The reconciliation process is now more robust. There are no known risks.
+- **Verification Steps**: The import and valuation process should now work correctly, with `soldValue` being accurately calculated.
+- **Linked Task/Issue**: User-reported issues with the reconciler not running.
+
 ## 2025-10-03 12:30 — fix(importer): Improve import robustness and fix reconciliation
 - **Author**: AI (Gemini)
 - **Scope**: `src/features/pricing/SetCodeResolver.ts`, `src/data/init.ts`, `src/workers/reconcile.ts`

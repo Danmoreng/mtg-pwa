@@ -6,7 +6,7 @@ import type { Card, CardLot } from '../../data/db';
 import { getDb } from '../../data/init';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
-import { WorkerManager } from '../../workers/WorkerManager';
+import { kickReconciler } from '../../workers/WorkerManager';
 
 
 // Use the new normalization gateway
@@ -116,8 +116,7 @@ export class ImportService {
             }
 
             // Trigger reconciliation
-            const reconcilerWorker = WorkerManager.createReconcilerWorker();
-            reconcilerWorker.postMessage({ type: 'runReconciler' });
+            await kickReconciler('after cardmarket transaction import');
 
             // Mark import as completed
             importStatusStore.completeImport(importId);
@@ -492,42 +491,7 @@ export class ImportService {
     }
   }
 
-  private static async createTransactionForArticle(article: any, cardId: string | null, lotId: string | undefined, price: Money, now: Date): Promise<void> {
-    const headerExternalRef = `cardmarket:order:${article.shipmentId}`;
-    const header = await transactionRepository.getBySourceRef('cardmarket', headerExternalRef).then(res => res[0]);
 
-    const transactionExternalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
-    const db = getDb();
-    const existingTransaction = await db.transactions.where('externalRef').equals(transactionExternalRef).first();
-    if (existingTransaction) return;
-
-    const transactionRecord = {
-      id: uuidv4(),
-      kind: article.direction === 'sale' ? ('SELL' as const) : ('BUY' as const),
-      cardId: cardId || undefined,
-      lotId: lotId,
-      quantity: parseInt(article.amount) || 1,
-      unitPrice: price.getCents(),
-      fees: 0,
-      shipping: 0,
-      currency: 'EUR',
-      source: 'cardmarket',
-      externalRef: transactionExternalRef,
-      relatedTransactionId: header?.id,
-      happenedAt: new Date(article.dateOfPurchase),
-      finish: article.finish || 'nonfoil',
-      language: article.language || 'en',
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    // Log for debugging
-    if (!cardId) {
-      console.warn(`Creating transaction without cardId for externalRef: ${transactionExternalRef}`, article);
-    }
-    
-    await transactionRepository.add(transactionRecord);
-  }
 
     
 

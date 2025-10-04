@@ -6,7 +6,7 @@ import type { Transaction, Deck, DeckCard } from '../../data/db';
 import type { Scan } from '../../data/db';
 import { scanRepository } from '../../data/repos';
 import { ScanProcessingService } from '../scans/ScanProcessingService';
-import { WorkerManager } from '../../workers/WorkerManager';
+import { kickReconciler } from '../../workers/WorkerManager';
 
 // 5.1 Manabox scans with box cost
 // Input: CSV rows + total cost (price/fees/shipping) + date.
@@ -48,7 +48,6 @@ export async function importManaboxScansWithBoxCost(
   externalRef: string,
   onProgress?: (processed: number, total: number) => void
 ): Promise<{ acquisitionId: string; scanIds: string[] }> {
-  try {
     // 1. getOrCreate Acquisition by [source+externalRef]; persist total costs & happenedAt.
     let acquisition = await acquisitionRepository.getByExternalRef(source, externalRef);
     if (!acquisition) {
@@ -124,14 +123,9 @@ export async function importManaboxScansWithBoxCost(
     await ScanProcessingService.processScans(onProgress);
 
     // Trigger reconciliation
-    const reconcilerWorker = WorkerManager.createReconcilerWorker();
-    reconcilerWorker.postMessage({ type: 'runReconciler' });
+    await kickReconciler('after manabox import');
     
     return { acquisitionId, scanIds };
-  } catch (error) {
-    console.error('Error importing Manabox scans with box cost:', error);
-    throw error;
-  }
 }
 
 // 5.2 Cardmarket SELLs
@@ -151,6 +145,8 @@ export interface CardmarketSellOrderLine {
   happenedAt: Date;
   notes?: string;
   relatedTransactionId?: string;
+  finish: string;
+  language: string;
 }
 
 /**
@@ -161,7 +157,6 @@ export interface CardmarketSellOrderLine {
  * 2. Reconciler later attaches lotId and optionally ScanSaleLinks.
  */
 export async function importCardmarketSells(orderLines: CardmarketSellOrderLine[]): Promise<string[]> {
-  try {
     const transactionIds: string[] = [];
     
     for (const line of orderLines) {
@@ -198,14 +193,9 @@ export async function importCardmarketSells(orderLines: CardmarketSellOrderLine[
     }
     
     // Trigger reconciliation
-    const reconcilerWorker = WorkerManager.createReconcilerWorker();
-    reconcilerWorker.postMessage({ type: 'runReconciler' });
+    await kickReconciler('after cardmarket import');
 
     return transactionIds;
-  } catch (error) {
-    console.error('Error importing Cardmarket SELLs:', error);
-    throw error;
-  }
 }
 
 // 5.3 Deck imports
@@ -229,7 +219,6 @@ export interface DeckImportRow {
  * Reconciler will attach lotId when a suitable lot exists as of addedAt.
  */
 export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImportRow[]): Promise<{ deckIds: string[]; deckCardIds: string[] }> {
-  try {
     const deckIds: string[] = [];
     const deckCardIds: string[] = [];
     
@@ -282,8 +271,4 @@ export async function importDecks(decks: Omit<Deck, 'id'>[], deckCards: DeckImpo
     }
     
     return { deckIds, deckCardIds };
-  } catch (error) {
-    console.error('Error importing decks:', error);
-    throw error;
-  }
 }

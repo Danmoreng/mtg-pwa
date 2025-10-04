@@ -2,7 +2,7 @@
 
 import { cardLotRepository, scanRepository, transactionRepository, sellAllocationRepository } from '../../data/repos';
 import { type CardLot } from '../../data/db';
-import { getDb } from '../../data/init';
+import { getDb, dbPromise } from '../../data/init';
 import { v4 as uuidv4 } from 'uuid';
 
 // 6.2 Helper APIs
@@ -13,23 +13,18 @@ import { v4 as uuidv4 } from 'uuid';
  * @returns Promise<number> - remaining quantity
  */
 export async function remainingQty(lotId: string): Promise<number> {
-  console.debug(`[remainingQty] Calculating for lotId: ${lotId}`);
   const lot = await cardLotRepository.getById(lotId);
   if (!lot) {
-    console.debug(`[remainingQty]   -> Lot not found.`);
     return 0;
   }
 
   const allocations = await sellAllocationRepository.getByLotId(lotId);
   if (!allocations || !Array.isArray(allocations)) {
-    console.debug(`[remainingQty]   -> No allocations found. Returning lot quantity: ${lot.quantity}`);
     return Math.max(0, lot.quantity);
   }
   const totalSold = allocations.reduce((sum, alloc) => sum + (alloc.quantity || 0), 0);
-  console.debug(`[remainingQty]   -> Lot quantity: ${lot.quantity}, Total sold from allocations: ${totalSold}`);
 
   const remaining = Math.max(0, lot.quantity - totalSold);
-  console.debug(`[remainingQty]   -> Returning remaining quantity: ${remaining}`);
   return remaining;
 }
 
@@ -43,36 +38,30 @@ export async function findLotsByIdentity(
   identity: { cardId?: string; fingerprint: string; finish: string; lang?: string },
   at?: Date
 ): Promise<CardLot[]> {
-  console.debug(`[findLotsByIdentity] Finding lots for identity:`, JSON.parse(JSON.stringify(identity)), `at:`, at);
   // Get all lots for this cardId
-  const lots = identity.cardId 
+  const lots = identity.cardId
     ? await cardLotRepository.getByCardId(identity.cardId)
     : [];
-  console.debug(`[findLotsByIdentity]   -> Found ${lots.length} lots for cardId ${identity.cardId} from repository.`);
-  
+
   // Filter by identity characteristics
   const filteredLots = lots.filter(lot => {
     // Filter by date if provided
     if (at && lot.purchasedAt > at) {
-      console.debug(`[findLotsByIdentity]   -> Filtering out lot ${lot.id} due to date (purchased ${lot.purchasedAt} > at ${at})`);
       return false;
     }
-    
+
     // Filter by finish
     if (lot.finish !== identity.finish) {
-      console.debug(`[findLotsByIdentity]   -> Filtering out lot ${lot.id} due to finish (lot: ${lot.finish}, identity: ${identity.finish})`);
       return false;
     }
 
     // Filter by language
     if (lot.language.toLowerCase() !== (identity.lang || 'en').toLowerCase()) {
-      console.debug(`[findLotsByIdentity]   -> Filtering out lot ${lot.id} due to language (lot: ${lot.language}, identity: ${identity.lang})`);
       return false;
     }
-    
+
     return true;
   });
-  console.debug(`[findLotsByIdentity]   -> Returning ${filteredLots.length} lots after filtering.`);
   return filteredLots;
 }
 
@@ -304,28 +293,24 @@ async function allocateSellAcrossLots(sell: import("../../data/db").Transaction,
 export async function reconcileSellsToLots(
   identity: { cardId?: string; fingerprint: string; finish: string; lang?: string }
 ): Promise<void> {
-  console.debug(`[reconcileSellsToLots] Processing identity:`, JSON.parse(JSON.stringify(identity)));
   // Get all SELL transactions for this identity
   const sells = identity.cardId
     ? await transactionRepository.getSellTransactionsByCardId(identity.cardId)
     : [];
-  console.debug(`[reconcileSellsToLots] Found ${sells.length} total sells for cardId ${identity.cardId}`);
 
   for (const sell of sells) {
-    console.debug(`[reconcileSellsToLots] Processing sell transaction:`, JSON.parse(JSON.stringify(sell)));
     // Filter sells to match the exact identity (finish, lang)
     // Check if finish matches, or if one of them is not defined, match with default 'nonfoil'
     const sellFinish = sell.finish || 'nonfoil';
     const identityFinish = identity.finish || 'nonfoil';
     const finishMatches = sellFinish.toLowerCase() === identityFinish.toLowerCase();
-    
+
     // Check if language matches, or if one of them is not defined, match with default 'en'
     const sellLanguage = sell.language || 'en';
     const identityLanguage = identity.lang || 'en';
     const languageMatches = sellLanguage.toLowerCase() === identityLanguage.toLowerCase();
-    
+
     if (!finishMatches || !languageMatches) {
-      console.debug(`[reconcileSellsToLots]   -> SKIPPING sell, does not match identity finish/lang. Sell: ${sellFinish}/${sellLanguage}, Identity: ${identityFinish}/${identityLanguage}`);
       continue;
     }
 
@@ -333,7 +318,6 @@ export async function reconcileSellsToLots(
     // The date filter is removed here to allow matching lots even if their purchase date is after the sale date.
     // The subsequent sort by time proximity will still prefer the closest match.
     const lots = await findLotsByIdentity(identity);
-    console.debug(`[reconcileSellsToLots]   -> Found ${lots.length} candidate lots from findLotsByIdentity.`);
 
     const availableLots = [];
 
@@ -343,11 +327,8 @@ export async function reconcileSellsToLots(
         availableLots.push({ lot, remaining });
       }
     }
-    console.debug(`[reconcileSellsToLots]   -> Found ${availableLots.length} available lots with remaining > 0.`);
 
     if (availableLots.length === 0) {
-      console.debug(`[reconcileSellsToLots]   -> No available lots found with remaining quantity. Attempting to link to any existing lot of the same card.`);
-      
       // If no available lots are found but we still want to link the transaction to a lot,
       // at least try to link it to an existing lot of the same card for reference
       if (lots.length > 0) {
@@ -357,11 +338,10 @@ export async function reconcileSellsToLots(
           const timeB = Math.abs(b.purchasedAt.getTime() - sell.happenedAt.getTime());
           return timeA - timeB;
         });
-        
+
         // Allocate to the first lot with quantity 0
         await allocateSellAcrossLots(sell, lots, identity);
       } else {
-        console.debug(`[reconcileSellsToLots]   -> No lots of this card exist at all. Creating provisional lot for sell transaction.`);
         // Create a provisional lot for the sell transaction if no lots exist
         const provisionalLot = await findOrCreateProvisionalLot(
           identity,
@@ -380,7 +360,6 @@ export async function reconcileSellsToLots(
       const timeB = Math.abs(b.lot.purchasedAt.getTime() - sell.happenedAt.getTime());
       return timeA - timeB;
     });
-    console.debug(`[reconcileSellsToLots]   -> Sorted available lots by time proximity:`, JSON.parse(JSON.stringify(availableLots.map(l => l.lot))));
 
     await allocateSellAcrossLots(sell, availableLots.map(l => l.lot), identity);
   }
@@ -428,8 +407,6 @@ export async function consolidateProvisionalLots(
 /**
  * Run the full reconciler for all identities
  */
-import { getDb, dbPromise } from '../../data/init';
-
 export async function runFullReconciler(): Promise<void> {
   const db = await dbPromise;
   // Get all unique card identities from scans and transactions
@@ -479,7 +456,8 @@ export async function runReconciler(
 ): Promise<void> {
   const lockKey = identity.fingerprint || identity.cardId;
   if (!lockKey || reconcilerLocks.has(lockKey)) {
-    if(lockKey) console.warn(`Reconciliation for ${lockKey} is already in progress.`);
+    // Optional: A less noisy warning, or telemetry
+    // if(lockKey) console.warn(`Reconciliation for ${lockKey} is already in progress.`);
     return;
   }
 

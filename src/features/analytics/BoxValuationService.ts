@@ -9,18 +9,13 @@ export class BoxValuationService {
   }
 
   public async calculateBoxValue(acquisitionId: string) {
-    console.log(`[BoxValuationService] Calculating value for acquisitionId: ${acquisitionId}`);
-
     const acquisition = await this.db.acquisitions.get(acquisitionId);
-    console.log('[BoxValuationService] Fetched acquisition:', acquisition);
 
     if (!acquisition || acquisition.kind !== 'box') {
-      console.error('[BoxValuationService] Acquisition not found or is not a box.');
       throw new Error('Acquisition not found or is not a box.');
     }
 
     const cardLots = await this.db.card_lots.where({ acquisitionId }).toArray();
-    console.log('[BoxValuationService] Fetched cardLots:', cardLots);
 
     const cardIds = [...new Set(cardLots.map(lot => lot.cardId))];
 
@@ -53,19 +48,13 @@ export class BoxValuationService {
     }
 
     const lotIds = cardLots.map(lot => lot.id);
-    console.log('[BoxValuationService] Extracted lotIds:', lotIds);
-
-    const allSellTransactions = await this.db.transactions.where({ kind: 'SELL' }).toArray();
-    console.log('[BoxValuationService] All SELL transactions in DB:', allSellTransactions);
 
     const sellTransactions = await this.db.transactions
         .where('lotId').anyOf(lotIds)
-        .and(tx => tx.kind === 'SELL')
+        .and(tx => tx.kind === 'SELL' && tx.cardId !== null) // Filter out order headers (where cardId is null)
         .toArray();
-    console.log('[BoxValuationService] Fetched sellTransactions for the given lotIds:', sellTransactions);
 
     const soldValue = sellTransactions.reduce((acc, tx) => acc + (tx.unitPrice * tx.quantity), 0);
-    console.log(`[BoxValuationService] Calculated soldValue: ${soldValue}`);
 
     const result = {
       boxPrice: acquisition.totalCostCent || 0,
@@ -73,8 +62,6 @@ export class BoxValuationService {
       soldValue,
       totalCurrentValue,
     };
-
-    console.log('[BoxValuationService] Final result:', result);
 
     return result;
   }
