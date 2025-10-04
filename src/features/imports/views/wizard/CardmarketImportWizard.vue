@@ -366,6 +366,8 @@ import CardmarketCsvWorker from '../../../../workers/cardmarketCsv?worker';
 // Import service for handling data imports
 import {ImportService} from '../../ImportService';
 
+import { kickReconciler } from '../../../../workers/WorkerManager';
+
 // Wizard steps
 const steps = [
   {key: 'upload', title: 'Upload'},
@@ -504,9 +506,7 @@ const autoDetectAndParse = async () => {
       // Wait for worker response
       const result = await new Promise<any>((resolve, reject) => {
         worker.onmessage = (e) => {
-          const {type, result, error} = e.data;
-          // Use the type variable to avoid TypeScript error
-          console.log('Worker response type:', type);
+          const {result, error} = e.data;
           if (error) {
             reject(new Error(error));
           } else {
@@ -599,6 +599,9 @@ const startImport = async () => {
           break;
       }
     }
+
+    // Trigger reconciliation after all imports are complete
+    await kickReconciler('wizard complete');
 
     // Show success message in UI
     importError.value = 'Import completed successfully! Check the status indicator in the top right for details.';

@@ -10,7 +10,8 @@ export class WorkerManager {
     
     if (isDev) {
       // In development, use the relative path
-      return new Worker(new URL(workerPath, import.meta.url), { type: 'module' });
+      const url = new URL(workerPath, import.meta.url);
+      return new Worker(url, { type: 'module' });
     } else {
       // In production, the worker will be bundled with a different path
       // This is a simplified approach - in a real app, you might need to handle this differently
@@ -42,14 +43,22 @@ export class WorkerManager {
   static createCardmarketCsvWorker(): Worker {
     return this.createWorker('./cardmarketCsv.ts');
   }
-  
-  // Create a reconciler worker
-  static createReconcilerWorker(): Worker {
-    return this.createWorker('./reconcile.ts');
-  }
-  
+
   // Create an allocation worker
   static createAllocationWorker(): Worker {
     return this.createWorker('./allocate.ts');
+  }
+}
+
+import { runFullReconciler } from '../features/scans/ReconcilerService';
+import { dbPromise } from '../data/init';
+
+// Export a function to kick the reconciler worker
+export async function kickReconciler(reason: string) {
+  try {
+    await dbPromise; // Ensure DB is ready
+    await runFullReconciler();
+  } catch (error) {
+    console.error(`[reconciler] (kick: ${reason}) reconciliation failed:`, error);
   }
 }
