@@ -398,7 +398,7 @@ export async function reconcileScansToLots(
     if (identity.cardId) {
       const card = await cardRepository.getById(identity.cardId);
       if (!card) {
-        logReconciler('warn', `Skipping reconcileScansToLots for identity with non-existent cardId: ${identity.cardId}`);
+        logReconciler('info', `Skipping reconcileScansToLots for identity with non-existent cardId: ${identity.cardId}`);
         return; // Skip this identity if the card doesn't exist
       }
     }
@@ -540,7 +540,7 @@ export async function reconcileSellsToLots(
     if (identity.cardId) {
       const card = await cardRepository.getById(identity.cardId);
       if (!card) {
-        logReconciler('warn', `Skipping reconcileSellsToLots for identity with non-existent cardId: ${identity.cardId}`);
+        logReconciler('info', `Skipping reconcileSellsToLots for identity with non-existent cardId: ${identity.cardId}`);
         return; // Skip this identity if the card doesn't exist
       }
     }
@@ -645,7 +645,7 @@ export async function consolidateProvisionalLots(
     if (identity.cardId) {
       const card = await cardRepository.getById(identity.cardId);
       if (!card) {
-        logReconciler('warn', `Skipping consolidateProvisionalLots for identity with non-existent cardId: ${identity.cardId}`);
+        logReconciler('info', `Skipping consolidateProvisionalLots for identity with non-existent cardId: ${identity.cardId}`);
         return; // Skip this identity if the card doesn't exist
       }
     }
