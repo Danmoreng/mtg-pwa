@@ -1,6 +1,6 @@
 # MTG Collection Value Tracker
 
-*Status: **2025‑09‑18***
+*Status: **2025‑10‑12***
 
 ## Principles
 
@@ -30,6 +30,7 @@
 * **P2 — Re‑enable and extend unit tests** ✓
 * **P2 — Pagination for card grids** ✓
 * **M2 — Pricing throughput, history & snapshots** ✓
+* **M3 — ManaBox scans & reconciliation** ✓
 
 ---
 
@@ -96,31 +97,36 @@
 
 ---
 
-### M3 — ManaBox scans & reconciliation
+### M3 — ManaBox scans & reconciliation ✓
 
 **Goal:** Round‑trip physical inventory → sales reconciliation.
 
 **Scope**
 
-* ManaBox worker + Scans view; wire to `ScanMatchingService` (sold vs owned).
+* Acquisition-based inventory management with cost allocation from acquisition to lots.
+* ManaBox worker + Scans view; wire to `ReconcilerService` (sold vs owned).
+* Sell allocation system for precise P&L tracking across multiple lots.
 * UI to manually link scans to lots/sales; audit trail via `scan_sale_links`.
-* Tests: greedy FIFO match, including partial quantities.
+* Tests: FIFO match, including partial quantities and multi-lot allocations.
 
 **Acceptance**
 
 * Import of sample CSV shows **matched/owned** correctly.
 * Manual linking updates lot/scan relations and audit trail.
+* Acquisition-based cost allocation works correctly.
+* Sell allocations properly distribute sales across multiple lots.
 
-**Dependencies:** M1 (lots truth), optional M2 (for valuations in the view).
+**Dependencies:** M1 (lots truth), M2 (for valuations in the view).
 
 ---
 
-### M4 — Manual add & correction
+### M4 — Fix Reconciler Issues & Manual add & correction
 
-**Goal:** Users can add lots by hand and correct/lock mappings safely.
+**Goal:** Fix critical reconciliation errors then enable users to add lots by hand and correct/lock mappings safely.
 
 **Scope**
 
+* Fix DataError and NotFoundError in ReconcilerService that prevent proper scan-to-lot and sell-to-lot matching
 * **Add Card** dialog (Cards/Holdings): create manual lots (with/without cost).
 * **Correct/Lock** on a lot/scan/transaction: set `override*` or `overrideCardId`; toggle `resolutionLocked`.
 * Linker: respect `resolutionLocked`/overrides and skip auto‑relink.
@@ -128,10 +134,11 @@
 
 **Acceptance**
 
+* Reconciler runs without DataError or NotFoundError.
 * Manual lot creation with optional `acquisitionPriceCent = null` shows "unknown cost".
 * Locked lots are preserved across re‑imports.
 
-**Dependencies:** M1.
+**Dependencies:** M1, M3.
 
 ---
 
@@ -249,7 +256,7 @@
 
 * [x] M1 complete and merged
 * [x] M2 complete and merged
-* [ ] M3 scan→sale reconciliation shipped
+* [x] M3 scan→sale reconciliation shipped
 * [ ] M4 manual add/correction GA
 * [ ] M5 purchase groups schema + wizard
 * [ ] M6 analytics filters + ROI

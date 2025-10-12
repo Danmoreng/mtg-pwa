@@ -1,6 +1,6 @@
 # Architecture (Authoritative)
 
-_Status updated: 2025-09-18_
+_Status updated: 2025-10-12_
 
 ## Overview
 Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-first design; all card data, pricing history, and user state live on-device. Background work handled via Web Workers.
@@ -21,7 +21,7 @@ Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-f
 │                Web Workers (Background)                     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │ CSV Parser  │  │ Price Sync  │  │ Snapshot    │         │
-│  │ MTGJSON     │  │ PriceGuide  │  │             │         │
+│  │ MTGJSON     │  │ PriceGuide  │  │ Reconciler  │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │                    Dexie Repositories                       │
@@ -35,13 +35,15 @@ All monetary values are stored as integer cents (EUR) to avoid float drift.
 
 ### Core Entities
 - **cards** — Scryfall-identified print (id, oracleId, setCode, number, lang, finish, imageUrl, timestamps)  
-- **card_lots** — Inventory lots with financial tracking (id, cardId, quantity, unitCost, acquisitionPriceCent, totalAcquisitionCostCent, salePriceCent, totalSaleRevenueCent, source, acquiredAt, disposedAt, externalRef, timestamps)  
+- **acquisitions** — Grouped purchases with total cost (id, kind, source, externalRef, currency, happenedAt, total cost fields, allocation metadata)  
+- **card_lots** — Inventory lots with financial tracking (id, cardId, acquisitionId, quantity, unitCost, acquisitionPriceCent, totalAcquisitionCostCent, salePriceCent, totalSaleRevenueCent, source, acquiredAt, disposedAt, externalRef, timestamps)  
 - **price_points** — Historical price snapshots per cardId/provider/asOf  
 - **transactions** — BUY/SELL with fees/shipping, `externalRef` idempotency key, timestamps  
 - **decks**, **deck_cards** — Imported Moxfield decks and their cards  
 - **settings** — Key/value app configuration  
 - **valuations** — Daily portfolio valuation snapshots  
-- **scan_sale_links** — Links between scans and sales for reconciliation  
+- **scan_sale_links** — Links between scans and sales for reconciliation
+- **sell_allocations** — Allocation of SELL transactions across multiple CardLots (id, transactionId, lotId, quantity, unitCostCentAtSale)  
 
 ### Inventory Layer (lots)
 - **card_lots**  
@@ -111,7 +113,7 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - Cards store centralizes price data with getters/selectors  
 
 ## Current Capabilities
-- Database v8 with lots as source of truth; holdings derived from lots  
+- Database v10 with acquisitions and lots as source of truth; holdings derived from lots  
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
 - Cardmarket Import Wizard with ID-first resolution  
@@ -124,3 +126,9 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - Real-time import progress tracking  
 - Interactive card image flipping for transform cards  
 - Idempotent imports with external references for deduplication  
+- Acquisition-based inventory management with cost allocation  
+- Sell allocation system for precise P&L tracking across multiple lots  
+- Reconciler service for matching scans to lots and sales to lots (currently experiencing DataError and NotFoundError issues that require fixing)
+
+## Current Issues
+- **Critical Reconciler Issue**: The reconciliation service is experiencing DataError and NotFoundError issues when attempting to link scans to lots and sales to lots. This prevents proper functionality of scan-to-lot and sell-to-lot matching.  
