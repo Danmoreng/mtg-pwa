@@ -25,7 +25,9 @@ type ProgressTick = {
 };
 
 function sendProgress(p: ProgressTick) {
-  try { progressPort?.postMessage(p); } catch {}
+  try { progressPort?.postMessage(p); } catch {
+    // Ignore progress channel errors; upload should continue.
+  }
 }
 
 // ----------------- stream helpers -----------------

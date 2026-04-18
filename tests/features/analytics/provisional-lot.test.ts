@@ -5,6 +5,9 @@ import type { CardLot } from '@/data/db';
 
 // Mock the repository
 vi.mock('@/data/repos', () => ({
+  cardRepository: {
+    getById: vi.fn(),
+  },
   cardLotRepository: {
     add: vi.fn(),
     getById: vi.fn(),
@@ -48,6 +51,8 @@ describe('findOrCreateProvisionalLot', () => {
     
     (cardLotRepository.add as vi.Mock).mockResolvedValue(expectedNewLotId);
     (cardLotRepository.getById as vi.Mock).mockResolvedValue(expectedNewLot);
+    const { cardRepository } = await import('@/data/repos');
+    (cardRepository.getById as vi.Mock).mockResolvedValue({ id: 'card123' });
 
     // Call the function
     const result = await findOrCreateProvisionalLot(
@@ -92,6 +97,8 @@ describe('findOrCreateProvisionalLot', () => {
     };
     
     (cardLotRepository.getByCardId as vi.Mock).mockResolvedValue([existingLot]);
+    const { cardRepository } = await import('@/data/repos');
+    (cardRepository.getById as vi.Mock).mockResolvedValue({ id: 'card123' });
 
     // Call the function
     const result = await findOrCreateProvisionalLot(

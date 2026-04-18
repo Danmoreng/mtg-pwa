@@ -10,8 +10,11 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.vue",
     "lint:fix": "eslint src --ext .ts,.vue --fix",
+    "typecheck": "vue-tsc -b",
     "prettier": "prettier --write src/",
     "test": "vitest",
+    "test:run": "vitest --run",
+    "verify": "npm run lint && npm run typecheck && npm run test:run && npm run build",
     "test:ui": "vitest --ui"
   },
   "dependencies": {
