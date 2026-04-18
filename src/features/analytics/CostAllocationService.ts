@@ -33,7 +33,7 @@ async function computeWeights(
       }
       break;
       
-    case 'by_market_price':
+    case 'by_market_price': {
       // Weight by PricePoint (e.g., avg7dCent) near happenedAt
       const provider = opts?.provider || 'scryfall';
       const date = opts?.date || new Date().toISOString().slice(0, 10);
@@ -57,6 +57,7 @@ async function computeWeights(
         }
       }
       break;
+    }
       
     case 'by_rarity':
       // Heuristic weights (mythic > rare > uncommon > common)
@@ -108,7 +109,7 @@ async function allocateAcquisitionCosts(
     const floorAllocations = idealAllocations.map(alloc => Math.floor(alloc));
     const totalFloor = floorAllocations.reduce((a, b) => a + b, 0);
 
-    let remainder = total - totalFloor;
+    const remainder = total - totalFloor;
 
     const remainders = idealAllocations.map((alloc, i) => alloc - floorAllocations[i]);
     const lotsWithRemainders = lots

@@ -23,4 +23,3 @@ onMounted(() => {
   text-align: center;
 }
 </style>
-</template>

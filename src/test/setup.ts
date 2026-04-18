@@ -3,10 +3,52 @@
 import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
 import { vi } from 'vitest'
-import { createPinia, setActivePinia } from 'pinia'
 
-// Set up Pinia for tests
-setActivePinia(createPinia())
+function createStorageMock(): Storage {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key: string) {
+      return store.has(key) ? store.get(key)! : null;
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    setItem(key: string, value: string) {
+      store.set(String(key), String(value));
+    },
+  };
+}
+
+function ensureStorage(name: 'localStorage' | 'sessionStorage'): void {
+  const current = (globalThis as any)[name];
+  if (current && typeof current.getItem === 'function' && typeof current.setItem === 'function') {
+    return;
+  }
+
+  const fromWindow = (globalThis as any).window?.[name];
+  if (fromWindow && typeof fromWindow.getItem === 'function' && typeof fromWindow.setItem === 'function') {
+    (globalThis as any)[name] = fromWindow;
+    return;
+  }
+
+  Object.defineProperty(globalThis, name, {
+    configurable: true,
+    writable: true,
+    value: createStorageMock(),
+  });
+}
+
+ensureStorage('localStorage');
+ensureStorage('sessionStorage');
 
 // keep Dexie quiet in tests
 Dexie.debug = false;
@@ -18,6 +60,9 @@ import MtgTrackerDb from '../data/db';
 let db: MtgTrackerDb;
 
 beforeAll(async () => {
+  const { createPinia, setActivePinia } = await import('pinia');
+  setActivePinia(createPinia());
+
   // Create a new database instance for tests
   db = new MtgTrackerDb();
   setDbForTesting(db);
