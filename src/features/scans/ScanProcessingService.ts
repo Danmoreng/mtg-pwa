@@ -82,6 +82,16 @@ export class ScanProcessingService {
     for (let i = 0; i < unprocessedScans.length; i++) {
       const scan = unprocessedScans[i];
       console.log(`Processing scan: ${scan.id}, fingerprint: ${scan.cardFingerprint}`);
+
+      // Idempotency guard: if a scan is already linked to a lot, skip it.
+      // Reprocessing linked scans would create duplicate lots on repeated imports.
+      if (scan.lotId) {
+        console.log(`Scan ${scan.id} already linked to lot ${scan.lotId}, skipping`);
+        if (onProgress) {
+          onProgress(i + 1, unprocessedScans.length);
+        }
+        continue;
+      }
       
       let cardId: string | undefined = scan.cardId;
       let card: Card | undefined;
