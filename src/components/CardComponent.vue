@@ -98,14 +98,12 @@
                         Scryfall
                       </a>
                       <a
-                        v-if="card.cardmarketId"
                         href="#"
                         @click.prevent="openCardmarketLink"
                         class="link-warning text-decoration-none"
                       >
                         Cardmarket
                       </a>
-                      <span v-else class="text-muted">Cardmarket ID missing</span>
                     </dd>
                   </dl>
                 </div>
@@ -346,13 +344,39 @@ const formatCardNameForCardmarket = (cardName: string) => {
     .replace(/^-|-$/g, '');
 };
 
+const getCardmarketProductUrl = (): string | null => {
+  if (!props.card.cardmarketId) return null;
+  return `https://www.cardmarket.com/en/Magic/Products/Singles?idProduct=${encodeURIComponent(String(props.card.cardmarketId))}&idGame=1&language=1&minCondition=3`;
+};
+
 const getLegacyCardmarketUrl = (): string => {
+  const productUrl = getCardmarketProductUrl();
+  if (productUrl) return productUrl;
   return `https://www.cardmarket.com/en/Magic/Products/Singles/${formatSetNameForCardmarket(props.card.set)}/${formatCardNameForCardmarket(props.card.name)}?language=1&minCondition=3`;
 };
 
 const resolveCardmarketUrl = async (): Promise<string> => {
   if (resolvedCardmarketUrl.value) return resolvedCardmarketUrl.value;
-  if (!props.card.cardmarketId) return getLegacyCardmarketUrl();
+  if (!props.card.cardmarketId) {
+    try {
+      if (props.card.id && !String(props.card.id).startsWith('cm:')) {
+        const scryfallCard = await ScryfallProvider.hydrateCard({
+          scryfall_id: props.card.id,
+          name: props.card.name,
+          setCode: props.card.setCode,
+          collectorNumber: props.card.number
+        });
+        const marketUrl = scryfallCard?.purchase_uris?.cardmarket;
+        if (typeof marketUrl === 'string' && marketUrl.length > 0) {
+          resolvedCardmarketUrl.value = marketUrl;
+          return marketUrl;
+        }
+      }
+    } catch (error) {
+      console.warn('Unable to resolve Cardmarket URL from Scryfall card data, falling back to slug URL.', error);
+    }
+    return getLegacyCardmarketUrl();
+  }
 
   if (!resolvingCardmarketUrl.value) {
     resolvingCardmarketUrl.value = true;

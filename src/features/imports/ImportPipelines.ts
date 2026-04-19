@@ -177,7 +177,9 @@ export async function importCardmarketSells(orderLines: CardmarketSellOrderLine[
           externalRef: line.externalRef,
           happenedAt: line.happenedAt,
           notes: line.notes,
-          relatedTransactionId: line.relatedTransactionId
+          relatedTransactionId: line.relatedTransactionId,
+          finish: line.finish,
+          language: line.language
         };
         
         const id = await transactionRepository.add({
@@ -189,6 +191,25 @@ export async function importCardmarketSells(orderLines: CardmarketSellOrderLine[
         } as Transaction);
         
         transactionIds.push(id);
+      } else {
+        // Heal existing rows on re-import (e.g., wrong card assignment from older logic).
+        const existing = existingTransactions[0];
+        const patch: Partial<Transaction> = {};
+
+        if (line.cardId && existing.cardId !== line.cardId) {
+          patch.cardId = line.cardId;
+        }
+        if (line.finish && existing.finish !== line.finish) {
+          patch.finish = line.finish;
+        }
+        if (line.language && existing.language !== line.language) {
+          patch.language = line.language;
+        }
+
+        if (Object.keys(patch).length > 0) {
+          patch.updatedAt = new Date();
+          await transactionRepository.update(existing.id, patch);
+        }
       }
     }
     
