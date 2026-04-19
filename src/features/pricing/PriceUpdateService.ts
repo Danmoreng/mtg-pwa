@@ -9,6 +9,11 @@ import { ValuationEngine } from '../../features/analytics/ValuationEngine';
 export class PriceUpdateService {
   // Batch size for price fetching
   private static readonly BATCH_SIZE = 75; // Scryfall recommends batches of 75 or less
+  private static readonly SYNTHETIC_CARDMARKET_ID_PREFIX = 'cm:';
+
+  private static isScryfallResolvableCardId(cardId: string): boolean {
+    return typeof cardId === 'string' && !cardId.startsWith(this.SYNTHETIC_CARDMARKET_ID_PREFIX);
+  }
 
   // Sync prices for all cards in the collection using batch fetching
   static async syncPrices(progressCallback?: (processed: number, total: number) => void): Promise<void> {
@@ -17,7 +22,9 @@ export class PriceUpdateService {
       const dateStr = now.toISOString().split('T')[0];
       
       // Get all cards with Scryfall IDs
-      const cards = await cardRepository.getAll();
+      const cards = (await cardRepository.getAll()).filter(card =>
+        this.isScryfallResolvableCardId(card.id)
+      );
       const totalCards = cards.length;
       
       // Keep track of processed cards for progress reporting
@@ -130,6 +137,10 @@ export class PriceUpdateService {
       const card = await cardRepository.getById(cardId);
       if (!card) {
         console.warn(`Card with ID ${cardId} not found`);
+        return;
+      }
+
+      if (!this.isScryfallResolvableCardId(card.id)) {
         return;
       }
       

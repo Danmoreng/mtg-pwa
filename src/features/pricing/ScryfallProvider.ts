@@ -5,6 +5,7 @@ export class ScryfallProvider {
   private static readonly BASE_URL = 'https://api.scryfall.com';
   private static lastRequestTime = 0;
   private static readonly RATE_LIMIT_DELAY = 100; // 100ms between requests
+  private static readonly cardmarketLookupCache = new Map<string, any | null>();
 
   // Enforce rate limiting by delaying requests if needed
   private static async enforceRateLimit(): Promise<void> {
@@ -167,6 +168,10 @@ export class ScryfallProvider {
   // Get card data by Cardmarket ID
   static async getByCardmarketId(cardmarketId: string): Promise<any> {
     try {
+      if (this.cardmarketLookupCache.has(cardmarketId)) {
+        return this.cardmarketLookupCache.get(cardmarketId);
+      }
+
       // Enforce rate limiting
       await this.enforceRateLimit();
       
@@ -174,20 +179,46 @@ export class ScryfallProvider {
       const response = await fetch(`${this.BASE_URL}/cards/cardmarket/${cardmarketId}`);
       
       if (!response.ok) {
-        console.error(`Scryfall API error for cardmarket_id ${cardmarketId}: ${response.status} ${response.statusText}`);
-        try {
-          const errorText = await response.text();
-          console.error(`Scryfall API error details: ${errorText}`);
-        } catch (e) {
-          console.error('Could not read error response body');
+        if (response.status !== 404) {
+          console.error(`Scryfall API error for cardmarket_id ${cardmarketId}: ${response.status} ${response.statusText}`);
+          try {
+            const errorText = await response.text();
+            console.error(`Scryfall API error details: ${errorText}`);
+          } catch (e) {
+            console.error('Could not read error response body');
+          }
         }
+        this.cardmarketLookupCache.set(cardmarketId, null);
         return null;
       }
 
       // Return the card data
-      return await response.json();
+      const data = await response.json();
+      this.cardmarketLookupCache.set(cardmarketId, data);
+      return data;
     } catch (error) {
       console.error('Error fetching card by Cardmarket ID from Scryfall:', error);
+      return null;
+    }
+  }
+
+  // Get card data by set code and collector number
+  static async getBySetAndCollector(setCode: string, collectorNumber: string): Promise<any | null> {
+    try {
+      const normalizedSet = String(setCode || '').trim();
+      const normalizedCollector = String(collectorNumber || '').trim();
+      if (!normalizedSet || !normalizedCollector) {
+        return null;
+      }
+
+      await this.enforceRateLimit();
+      const response = await fetch(`${this.BASE_URL}/cards/${encodeURIComponent(normalizedSet)}/${encodeURIComponent(normalizedCollector)}`);
+      if (!response.ok) {
+        return null;
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching card by set and collector number from Scryfall:', error);
       return null;
     }
   }
@@ -430,5 +461,69 @@ export class ScryfallProvider {
       console.error('Error hydrating card with Scryfall data:', error);
       return null;
     }
+  }
+
+  static async searchBySetAndName(setCode: string, name: string): Promise<any | null> {
+    const normalizedSet = typeof setCode === 'string' ? setCode.trim().toLowerCase() : '';
+    const normalizedName = this.normalizeNameForMatch(name);
+    if (!normalizedSet || !normalizedName) {
+      return null;
+    }
+
+    try {
+      const queries = [
+        `set:${normalizedSet} name:"${name}"`,
+        `set:${normalizedSet} ${name}`
+      ];
+
+      for (const query of queries) {
+        await this.enforceRateLimit();
+        const response = await fetch(
+          `${this.BASE_URL}/cards/search?q=${encodeURIComponent(query)}&unique=prints&include_extras=true`
+        );
+        if (!response.ok) {
+          continue;
+        }
+
+        const data = await response.json();
+        const cards = Array.isArray(data?.data) ? data.data : [];
+        if (cards.length === 0) {
+          continue;
+        }
+
+        const matched = cards.find((card: any) => this.cardNameMatches(card?.name, normalizedName));
+        return matched || cards[0];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error searching card by set and name from Scryfall:', error);
+      return null;
+    }
+  }
+
+  private static normalizeNameForMatch(name: string): string {
+    return String(name || '')
+      .replace(/^Art\s*Series:\s*/i, '')
+      .replace(/\s*\(V\.\d+\)\s*$/i, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private static cardNameMatches(cardName: string, normalizedNeedle: string): boolean {
+    const normalizedCardName = this.normalizeNameForMatch(cardName || '');
+    if (!normalizedCardName || !normalizedNeedle) {
+      return false;
+    }
+    if (normalizedCardName.includes(normalizedNeedle)) {
+      return true;
+    }
+
+    const needleTokens = normalizedNeedle.split(' ').filter(token => token.length > 2);
+    if (needleTokens.length === 0) {
+      return false;
+    }
+    return needleTokens.every(token => normalizedCardName.includes(token));
   }
 }

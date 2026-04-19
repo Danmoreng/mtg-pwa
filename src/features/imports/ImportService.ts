@@ -237,12 +237,12 @@ export class ImportService {
           progress: Math.round(((i + 1) / articles.length) * 50) // 0-50% for resolving
         });
 
-        const { cardId } = await this.resolveCard(article);
+        const { cardId, cardData } = await this.resolveCard(article);
         const price = Money.parse(article.price, 'EUR');
         const quantity = parseInt(article.amount, 10) || 1;
 
         if (cardId) {
-          await this.ensureCardInDb(cardId, null, article);
+          await this.ensureCardInDb(cardId, cardData, article);
         }
 
         const lineExternalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
@@ -318,8 +318,14 @@ export class ImportService {
     let cardData = null;
     let cardId = null;
     const productIds = this.getProductIds(article.productId);
+    const productIdNumbers = productIds
+      .map(id => Number.parseInt(id, 10))
+      .filter((id): id is number => Number.isFinite(id));
     const cardName = this.getCardNameCandidate(article);
+    const isArtSeries = this.isArtSeriesName(cardName);
     const expansion = this.normalizeText(article.expansion);
+    const hasProductId = productIds.length > 0;
+    let resolvedViaCardmarketId = false;
 
     // Priority 1: Try to resolve by Cardmarket product ID first
     if (productIds.length > 0) {
@@ -334,32 +340,133 @@ export class ImportService {
         }
       }
       cardId = cardData?.id || null;
+      resolvedViaCardmarketId = !!cardId;
     }
 
     // Priority 2: If no product ID or product ID lookup failed, try set code resolution
     if (!cardId) {
       if (!cardName) {
+        if (hasProductId) {
+          const syntheticId = this.toSyntheticCardmarketCardId(productIds[0]);
+          return {
+            cardId: syntheticId,
+            cardData: {
+              id: syntheticId,
+              cardmarket_id: Number.parseInt(productIds[0], 10),
+              synthetic_source: 'cardmarket_product'
+            }
+          };
+        }
         return { cardId: null, cardData: null };
       }
       const setCode = await resolveSetCode(expansion);
-      const collectorNumber = this.extractCollectorNumber(cardName);
-      let cleanCardName = cardName;
-      let versionInfo: string | undefined;
-      const versionMatch = cardName.match(/^(.+?)\s*\((V\.\d+)\)$/i);
+      const collectorCandidates = await this.getCollectorNumberCandidates(article, cardName, isArtSeries);
+      const collectorNumber = collectorCandidates[0] || '';
+      const lookupNames = this.getLookupNameCandidates(cardName);
+      let versionInfo: string | undefined = undefined;
+      const versionMatch = cardName.match(/\((V\.\d+)\)\s*$/i);
       if (versionMatch) {
-        cleanCardName = versionMatch[1].trim();
-        versionInfo = versionMatch[2];
+        versionInfo = versionMatch[1];
       }
 
-      console.log(JSON.stringify({ product_ids: productIds, resolved_via: 'set+cn', set_code: setCode, collector_number: collectorNumber, final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : '' }));
+      console.log(JSON.stringify({
+        product_ids: productIds,
+        resolved_via: 'set+cn',
+        set_code: setCode,
+        collector_number: collectorNumber,
+        collector_candidates: collectorCandidates,
+        final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : ''
+      }));
 
-      cardData = await ScryfallProvider.hydrateCard({ name: cleanCardName, setCode: setCode || expansion, collectorNumber: collectorNumber, version: versionInfo });
+      const setHints = this.getSetLookupCandidates(setCode, expansion, hasProductId, cardName);
+      const artSeriesSetCode = setCode ? `a${setCode}`.toLowerCase() : '';
+      // Deterministic first pass using set + collector number variants (e.g., A38 / 38).
+      if (!cardData?.id && setHints.length > 0 && collectorCandidates.length > 0) {
+        for (const setHint of setHints) {
+          for (const collectorCandidate of collectorCandidates) {
+            cardData = await ScryfallProvider.getBySetAndCollector(setHint, collectorCandidate);
+            if (cardData?.id) {
+              break;
+            }
+          }
+          if (cardData?.id) {
+            break;
+          }
+        }
+      }
+
+      for (const setHint of setHints) {
+        if (cardData?.id) break;
+        for (const lookupName of lookupNames) {
+          cardData = await ScryfallProvider.hydrateCard({
+            name: lookupName,
+            setCode: setHint,
+            collectorNumber: collectorNumber,
+            version: versionInfo
+          });
+          if (cardData?.id) {
+            break;
+          }
+        }
+        if (cardData?.id) {
+          break;
+        }
+      }
+
+      // `cards/named` often misses Art Series / split-name entries.
+      // Use search endpoint as a secondary lookup.
+      if (!cardData?.id && setHints.length > 0 && (hasProductId || isArtSeries)) {
+        for (const setHint of setHints) {
+          for (const lookupName of lookupNames) {
+            cardData = await ScryfallProvider.searchBySetAndName(setHint, lookupName);
+            if (cardData?.id) {
+              break;
+            }
+          }
+          if (cardData?.id) {
+            break;
+          }
+        }
+      }
+
       cardId = cardData?.id || null;
+
+      // For product-id imports, only accept fallback resolution when Cardmarket ID matches.
+      // Exception: Art Series cards in `a<setCode>` can legitimately have no Cardmarket mapping in Scryfall.
+      if (hasProductId && cardId && !resolvedViaCardmarketId) {
+        const resolvedCardmarketId = typeof cardData?.cardmarket_id === 'number' ? cardData.cardmarket_id : null;
+        const productIdMatches = resolvedCardmarketId !== null && productIdNumbers.includes(resolvedCardmarketId);
+        const isAcceptedArtSeriesFallback = Boolean(
+          isArtSeries &&
+          artSeriesSetCode &&
+          typeof cardData?.set === 'string' &&
+          cardData.set.toLowerCase() === artSeriesSetCode
+        );
+
+        if (!productIdMatches && !isAcceptedArtSeriesFallback) {
+          cardData = null;
+          cardId = null;
+        }
+      }
 
       if (!cardId) {
         console.log(JSON.stringify({ product_ids: productIds, resolved_via: 'none', set_code: null, collector_number: '', final_uri: '', name: cardName, expansion }));
       }
     }
+
+    // If product-id resolution and safe fallback both failed, use synthetic ID.
+    if (hasProductId && !cardId) {
+      const syntheticId = this.toSyntheticCardmarketCardId(productIds[0]);
+      return {
+        cardId: syntheticId,
+        cardData: {
+          id: syntheticId,
+          cardmarket_id: Number.parseInt(productIds[0], 10),
+          synthetic_source: 'cardmarket_product'
+        }
+      };
+    }
+
     return { cardId, cardData };
   }
 
@@ -386,15 +493,219 @@ export class ImportService {
     return '';
   }
 
+  private static getLookupNameCandidates(cardName: string): string[] {
+    const base = this.normalizeText(cardName);
+    const withoutVersion = base.replace(/\s*\(V\.\d+\)\s*$/i, '').trim();
+    const withoutArtSeriesPrefix = withoutVersion.replace(/^Art\s*Series:\s*/i, '').trim();
+    const candidates = [base, withoutVersion, withoutArtSeriesPrefix]
+      .map(name => this.normalizeText(name))
+      .filter(Boolean);
+    return Array.from(new Set(candidates));
+  }
+
+  private static isArtSeriesName(cardName: string): boolean {
+    return /^Art\s*Series:/i.test(this.normalizeText(cardName));
+  }
+
+  private static getSetLookupCandidates(
+    resolvedSetCode: string | null,
+    expansion: string,
+    hasProductId: boolean,
+    cardName: string
+  ): string[] {
+    const candidates: string[] = [];
+    const isArtSeries = /^Art\s*Series:/i.test(this.normalizeText(cardName));
+
+    if (resolvedSetCode) {
+      if (isArtSeries) {
+        candidates.push(`a${resolvedSetCode}`.toLowerCase());
+      }
+      candidates.push(resolvedSetCode);
+    }
+
+    if (!hasProductId && expansion) {
+      candidates.push(expansion);
+    }
+
+    return Array.from(new Set(candidates.map(value => this.normalizeText(value)).filter(Boolean)));
+  }
+
+  private static async getCollectorNumberCandidates(article: any, cardName: string, isArtSeries: boolean): Promise<string[]> {
+    const rawCandidates: string[] = [];
+
+    const fromName = this.extractCollectorNumber(cardName);
+    if (fromName) rawCandidates.push(fromName);
+
+    const directCandidates = [article?.collectorNumber, article?.number];
+    for (const candidate of directCandidates) {
+      const normalized = this.normalizeCollectorNumber(candidate);
+      if (normalized) rawCandidates.push(normalized);
+    }
+
+    const textCandidates = [article?.description, article?.comments];
+    for (const textCandidate of textCandidates) {
+      const extracted = this.extractCollectorNumberFromText(this.normalizeText(textCandidate));
+      if (extracted) rawCandidates.push(extracted);
+    }
+
+    const shipmentId = this.normalizeText(article?.shipmentId);
+    const productId = this.getProductIds(article?.productId)[0];
+    if (shipmentId && productId) {
+      try {
+        const db = getDb();
+        const orderLines = await db.cm_order_lines
+          .where('[orderId+productId]')
+          .equals([shipmentId, productId])
+          .toArray();
+
+        for (const orderLine of orderLines) {
+          if (orderLine?.collectorNumber) {
+            rawCandidates.push(orderLine.collectorNumber);
+          }
+
+          if (orderLine?.descriptionRaw) {
+            rawCandidates.push(...this.extractCollectorNumbersFromText(orderLine.descriptionRaw));
+          }
+        }
+
+        const order = await db.cm_orders.get(shipmentId);
+        if (
+          order &&
+          this.orderContainsProductId(order.productIdsRaw, productId) &&
+          order.descriptionRaw
+        ) {
+          const targetedMatch = this.extractCollectorNumberForCardName(order.descriptionRaw, cardName);
+          if (targetedMatch) {
+            rawCandidates.push(targetedMatch);
+          } else if ((order.articleCount ?? 0) <= 1) {
+            rawCandidates.push(...this.extractCollectorNumbersFromText(order.descriptionRaw));
+          }
+        }
+      } catch (error) {
+        console.warn('Unable to fetch collector number hints from cm_order_lines.', error);
+      }
+    }
+
+    return this.expandCollectorNumberCandidates(rawCandidates, isArtSeries);
+  }
+
+  private static normalizeCollectorNumber(value: unknown): string {
+    const normalized = this
+      .normalizeText(value)
+      .replace(/^#/, '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+    return /^[A-Z]?\d+[A-Z★]*$/.test(normalized) ? normalized : '';
+  }
+
+  private static extractCollectorNumberFromText(text: string): string {
+    return this.extractCollectorNumbersFromText(text)[0] || '';
+  }
+
+  private static extractCollectorNumbersFromText(text: string): string[] {
+    if (!text) return [];
+
+    const out: string[] = [];
+    const seen = new Set<string>();
+    const patterns = [
+      /-\s*([A-Za-z]?\d+[A-Za-z★]*)\s*-/g,
+      /\b([A-Za-z]?\d+[A-Za-z★]*)\b/g,
+    ];
+
+    for (const pattern of patterns) {
+      for (const match of text.matchAll(pattern)) {
+        const normalized = this.normalizeCollectorNumber(match?.[1]);
+        if (!normalized || seen.has(normalized)) continue;
+        seen.add(normalized);
+        out.push(normalized);
+      }
+    }
+
+    return out;
+  }
+
+  private static escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private static extractCollectorNumberForCardName(description: string, cardName: string): string {
+    const normalizedDescription = this.normalizeText(description);
+    if (!normalizedDescription) return '';
+
+    const lookupNames = this
+      .getLookupNameCandidates(cardName)
+      .sort((a, b) => b.length - a.length);
+
+    for (const lookupName of lookupNames) {
+      if (!lookupName) continue;
+
+      const escapedName = this.escapeRegex(lookupName);
+      const aroundNameRegex = new RegExp(
+        `${escapedName}[\\s\\S]{0,180}?-\\s*([A-Za-z]?\\d+[A-Za-z★]*)\\s*-`,
+        'i'
+      );
+      const match = normalizedDescription.match(aroundNameRegex);
+      if (match?.[1]) {
+        const normalized = this.normalizeCollectorNumber(match[1]);
+        if (normalized) return normalized;
+      }
+    }
+
+    return '';
+  }
+
+  private static orderContainsProductId(productIdsRaw: unknown, productId: string): boolean {
+    const normalizedProductId = this.normalizeText(productId);
+    if (!normalizedProductId) return false;
+
+    const raw = this.normalizeText(productIdsRaw);
+    if (!raw) return false;
+
+    const tokens = raw
+      .split(/[|,;\s]+/)
+      .map(value => value.trim())
+      .filter(Boolean);
+
+    return tokens.includes(normalizedProductId);
+  }
+
+  private static expandCollectorNumberCandidates(rawCandidates: string[], isArtSeries: boolean): string[] {
+    const expanded: string[] = [];
+
+    for (const raw of rawCandidates) {
+      const normalized = this.normalizeCollectorNumber(raw);
+      if (!normalized) continue;
+      expanded.push(normalized);
+
+      if (isArtSeries) {
+        if (/^A\d+[A-Z★]*$/.test(normalized)) {
+          expanded.push(normalized.slice(1));
+        } else if (/^\d+[A-Z★]*$/.test(normalized)) {
+          expanded.push(`A${normalized}`);
+        }
+      }
+    }
+
+    return Array.from(new Set(expanded.filter(Boolean)));
+  }
+
+  private static toSyntheticCardmarketCardId(productId: string): string {
+    return `cm:${productId}`;
+  }
+
+  private static isSyntheticCardmarketCardId(cardId: string): boolean {
+    return typeof cardId === 'string' && cardId.startsWith('cm:');
+  }
+
   private static extractCollectorNumber(name: string): string {
     if (typeof name !== 'string' || !name) {
       return '';
     }
     const patterns = [
-      /-\s*(\d+[a-zA-Z★]*)\s*-/i,  // Standard with optional letters/special chars
+      /-\s*([a-zA-Z]?\d+[a-zA-Z★]*)\s*-/i,  // Standard with optional prefix/suffix chars
       /-\s*([IVXLCDM]+)\s*-/i,     // Roman numerals
-      /\s+(\d+[a-zA-Z★]*)\s*$/i,   // At end of name with space
-      /\((\d+[a-zA-Z★]*)\)/i       // In parentheses
+      /\s+([a-zA-Z]?\d+[a-zA-Z★]*)\s*$/i,   // At end of name with space
+      /\(([a-zA-Z]?\d+[a-zA-Z★]*)\)/i       // In parentheses
     ];
     for (const pattern of patterns) {
       const match = name.match(pattern);
@@ -409,6 +720,34 @@ export class ImportService {
     const existingCard = await cardRepository.getById(cardId);
     const cardName = this.getCardNameCandidate(article);
     const expansion = this.normalizeText(article.expansion);
+    const productId = this.getProductIds(article.productId)[0];
+    const parsedProductId = Number.parseInt(productId, 10);
+    const fallbackCardmarketId = Number.isFinite(parsedProductId) ? parsedProductId : undefined;
+    const isSyntheticCardmarketCard = this.isSyntheticCardmarketCardId(cardId);
+
+    if (isSyntheticCardmarketCard) {
+      if (!existingCard) {
+        const syntheticCard: Card = {
+          id: cardId,
+          oracleId: '',
+          name: cardName || `Cardmarket Product ${productId}`,
+          set: expansion || '',
+          setCode: (await resolveSetCode(expansion)) || '',
+          number: this.extractCollectorNumber(cardName) || '',
+          lang: this.normalizeText(article.language) || 'en',
+          finish: this.normalizeText(article.finish) || 'nonfoil',
+          layout: 'normal',
+          imageUrl: '',
+          imageUrlBack: '',
+          cardmarketId: fallbackCardmarketId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        await cardRepository.add(syntheticCard);
+      }
+      return;
+    }
+
     if (!existingCard) {
       const scryfallData = cardData || await ScryfallProvider.hydrateCard({ scryfall_id: cardId, name: cardName, setCode: expansion, collectorNumber: '' });
       const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
@@ -424,13 +763,28 @@ export class ImportService {
         layout: imageUrls?.layout || 'normal',
         imageUrl: imageUrls?.front || '',
         imageUrlBack: imageUrls?.back || '',
-        cardmarketId: typeof scryfallData?.cardmarket_id === 'number' ? scryfallData.cardmarket_id : undefined,
+        cardmarketId:
+          typeof scryfallData?.cardmarket_id === 'number'
+            ? scryfallData.cardmarket_id
+            : typeof cardData?.cardmarket_id === 'number'
+              ? cardData.cardmarket_id
+              : fallbackCardmarketId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       await cardRepository.add(newCard);
       await this.updatePriceForCard(cardId);
     } else {
+      const cardmarketIdFromData =
+        typeof cardData?.cardmarket_id === 'number'
+          ? cardData.cardmarket_id
+          : fallbackCardmarketId;
+      if (!existingCard.cardmarketId && typeof cardmarketIdFromData === 'number') {
+        await cardRepository.update(cardId, {
+          cardmarketId: cardmarketIdFromData,
+          updatedAt: new Date(),
+        });
+      }
       await this.updatePriceForCard(cardId);
     }
   }
