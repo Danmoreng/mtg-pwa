@@ -8,11 +8,14 @@ import { AutomaticPriceUpdateService } from './features/pricing/AutomaticPriceUp
 import { registerSW } from 'virtual:pwa-register'
 import { dbPromise } from './data/init'
 
-registerSW({
-    immediate: true,
-    onRegistered(r) { console.log('SW registered', r) },
-    onRegisterError(e) { console.error('SW registration error', e) },
-})
+// Avoid SW registration issues in Vite dev server and keep local dev deterministic.
+if (import.meta.env.PROD) {
+  registerSW({
+      immediate: true,
+      onRegistered(r) { console.log('SW registered', r) },
+      onRegisterError(e) { console.error('SW registration error', e) },
+  })
+}
 
 const app = createApp(App)
 

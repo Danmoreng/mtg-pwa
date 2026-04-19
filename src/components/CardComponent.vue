@@ -97,11 +97,10 @@
                       >
                         Scryfall
                       </a>
-                      <a 
+                      <a
                         v-if="card.cardmarketId"
-                        :href="`https://www.cardmarket.com/en/Magic/Products/Singles/${formatSetNameForCardmarket(card.set)}/${formatCardNameForCardmarket(card.name)}?language=1&minCondition=4`" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                        href="#"
+                        @click.prevent="openCardmarketLink"
                         class="link-warning text-decoration-none"
                       >
                         Cardmarket
@@ -234,6 +233,7 @@ import {Money} from '../core/Money';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 import PriceHistoryChart from './PriceHistoryChart.vue';
 import { useCardsStore } from '../stores';
+import { ScryfallProvider } from '../features/pricing/ScryfallProvider';
 
 const cardsStore = useCardsStore();
 
@@ -260,6 +260,8 @@ const pricePoints = ref<any[]>([]);
 const isFlipped = ref(false);
 
 const showLots = ref(false);
+const resolvedCardmarketUrl = ref<string | null>(null);
+const resolvingCardmarketUrl = ref(false);
 
 const transactionsSorted = computed(() => {
   if (!transactions.value) return [];
@@ -315,6 +317,10 @@ const loadCardDetails = async () => {
     // ---- lots & transactions (as before) ----
     lots.value = await cardLotRepository.getByCardId(props.card.id);
     transactions.value = await transactionRepository.getByCardId(props.card.id);
+
+    if (props.card.cardmarketId) {
+      await resolveCardmarketUrl();
+    }
   } catch (error) {
     console.error('Error loading card details:', error);
   }
@@ -322,21 +328,53 @@ const loadCardDetails = async () => {
 
 // Helper methods for external links
 const formatSetNameForCardmarket = (setName: string) => {
-  // Remove special characters and replace spaces with hyphens
-  return setName
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
+  return String(setName || '')
+    .replace(/[:/()]/g, ' ')
+    .replace(/[^A-Za-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 };
 
 const formatCardNameForCardmarket = (cardName: string) => {
-  // Remove special characters and replace spaces with hyphens
-  return cardName
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
+  return String(cardName || '')
+    .replace(/\((V\.\d+)\)/gi, '$1')
+    .replace(/[:/]/g, ' ')
+    .replace(/[^A-Za-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
+const getLegacyCardmarketUrl = (): string => {
+  return `https://www.cardmarket.com/en/Magic/Products/Singles/${formatSetNameForCardmarket(props.card.set)}/${formatCardNameForCardmarket(props.card.name)}?language=1&minCondition=3`;
+};
+
+const resolveCardmarketUrl = async (): Promise<string> => {
+  if (resolvedCardmarketUrl.value) return resolvedCardmarketUrl.value;
+  if (!props.card.cardmarketId) return getLegacyCardmarketUrl();
+
+  if (!resolvingCardmarketUrl.value) {
+    resolvingCardmarketUrl.value = true;
+    try {
+      const scryfallCard = await ScryfallProvider.getByCardmarketId(String(props.card.cardmarketId));
+      const marketUrl = scryfallCard?.purchase_uris?.cardmarket;
+      if (typeof marketUrl === 'string' && marketUrl.length > 0) {
+        resolvedCardmarketUrl.value = marketUrl;
+      }
+    } catch (error) {
+      console.warn('Unable to resolve Cardmarket URL from Scryfall, falling back to slug URL.', error);
+    } finally {
+      resolvingCardmarketUrl.value = false;
+    }
+  }
+
+  return resolvedCardmarketUrl.value || getLegacyCardmarketUrl();
+};
+
+const openCardmarketLink = async () => {
+  const url = await resolveCardmarketUrl();
+  window.open(url, '_blank', 'noopener,noreferrer');
 };
 </script>
 

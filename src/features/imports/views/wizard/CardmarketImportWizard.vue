@@ -365,6 +365,7 @@ import {ref, computed} from 'vue';
 import CardmarketCsvWorker from '../../../../workers/cardmarketCsv?worker';
 // Import service for handling data imports
 import {ImportService} from '../../ImportService';
+import { CardmarketV2ImportService } from '../../CardmarketV2ImportService';
 
 import { kickReconciler } from '../../../../workers/WorkerManager';
 
@@ -519,8 +520,16 @@ const autoDetectAndParse = async () => {
         };
       });
 
-      // Store parsed data by file type
-      parsedData.value[fileType] = result;
+      // Store parsed data by file type.
+      // We keep source file information so multiple months of the same type can be imported together.
+      const taggedRows = (result as any[]).map((row) => ({
+        ...row,
+        __sourceFileName: fileName
+      }));
+      if (!parsedData.value[fileType]) {
+        parsedData.value[fileType] = [];
+      }
+      parsedData.value[fileType].push(...taggedRows);
 
       // Clean up worker
       worker.terminate();
@@ -577,6 +586,13 @@ const startImport = async () => {
   importError.value = null;
 
   try {
+    // New canonical Cardmarket v2 schema import (shadow write during transition).
+    const v2Summary = await CardmarketV2ImportService.importFromWizardPayload({
+      parsedData: parsedData.value,
+      fileContents: fileContents.value,
+      fileTypes: fileTypes.value
+    });
+
     // Import data for each file type
     for (const [fileType, rows] of Object.entries(parsedData.value)) {
       if (!rows || rows.length === 0) continue;
@@ -604,7 +620,7 @@ const startImport = async () => {
     await kickReconciler('wizard complete');
 
     // Show success message in UI
-    importError.value = 'Import completed successfully! Check the status indicator in the top right for details.';
+    importError.value = `Import completed successfully! v2 files: ${v2Summary.importedFiles}, skipped duplicates: ${v2Summary.skippedFiles}. Check the status indicator in the top right for details.`;
     
     // Reset form after successful import
     setTimeout(() => {

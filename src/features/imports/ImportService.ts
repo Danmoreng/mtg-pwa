@@ -58,7 +58,16 @@ export class ImportService {
                 const amount = Money.parse(transaction.amount, 'EUR');
                 const kind = amount.isPositive() ? ('SELL' as const) : ('BUY' as const);
 
-                const { cardId, cardData } = await this.resolveCard(transaction);
+                const hasCardIdentityHints = this.getProductIds(transaction.productId).length > 0
+                  || this.getCardNameCandidate(transaction).length > 0;
+
+                let cardId: string | null = null;
+                let cardData: any | null = null;
+                if (hasCardIdentityHints) {
+                  const resolved = await this.resolveCard(transaction);
+                  cardId = resolved.cardId;
+                  cardData = resolved.cardData;
+                }
 
                 // If we have a card ID, fetch and save price data
                 if (cardId) {
@@ -66,7 +75,7 @@ export class ImportService {
                 }
 
                 let lotIdForTransaction: string | undefined = undefined;
-                if (kind === 'BUY') {
+                if (kind === 'BUY' && cardId) {
                     lotIdForTransaction = await this.getOrCreateLotForPurchase(cardId, amount, transaction);
                 } else if (cardId) { // For 'SELL'
                     const existingLots = await cardLotRepository.getByCardId(cardId);
@@ -228,34 +237,68 @@ export class ImportService {
           progress: Math.round(((i + 1) / articles.length) * 50) // 0-50% for resolving
         });
 
-        if (article.direction !== 'sale') continue; // Only process sales
-
         const { cardId } = await this.resolveCard(article);
         const price = Money.parse(article.price, 'EUR');
+        const quantity = parseInt(article.amount, 10) || 1;
 
         if (cardId) {
           await this.ensureCardInDb(cardId, null, article);
         }
 
+        const lineExternalRef = `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`;
         const headerExternalRef = `cardmarket:order:${article.shipmentId}`;
-        const header = await transactionRepository.getBySourceRef('cardmarket', headerExternalRef).then(res => res[0]);
+        const header = await transactionRepository
+          .getBySourceRef('cardmarket', headerExternalRef)
+          .then(res => res[0]);
 
-        orderLines.push({
-          id: uuidv4(),
-          cardId: cardId || undefined,
-          lotId: undefined, // Reconciler will set this
-          quantity: parseInt(article.amount) || 1,
-          unitPrice: price.getCents(),
-          fees: 0,
-          shipping: 0,
-          currency: 'EUR',
-          source: 'cardmarket',
-          externalRef: `cardmarket:order:${article.shipmentId}:line:${article.lineNumber}`,
-          happenedAt: new Date(article.dateOfPurchase),
-          relatedTransactionId: header?.id,
-          finish: article.finish || 'nonfoil',
-          language: article.language || 'en',
-        });
+        if (article.direction === 'sale') {
+          orderLines.push({
+            id: uuidv4(),
+            cardId: cardId || undefined,
+            lotId: undefined, // Reconciler will set this
+            quantity,
+            unitPrice: price.getCents(),
+            fees: 0,
+            shipping: 0,
+            currency: 'EUR',
+            source: 'cardmarket',
+            externalRef: lineExternalRef,
+            happenedAt: new Date(article.dateOfPurchase),
+            relatedTransactionId: header?.id,
+            finish: article.finish || 'nonfoil',
+            language: article.language || 'en',
+          });
+          continue;
+        }
+
+        if (article.direction === 'purchase') {
+          const existing = await transactionRepository.getBySourceRef('cardmarket', lineExternalRef);
+          if (existing.length > 0) continue;
+
+          const lotIdForPurchase = cardId
+            ? await this.getOrCreateLotForPurchase(cardId, price, article)
+            : undefined;
+
+          await transactionRepository.add({
+            id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            kind: 'BUY',
+            cardId: cardId || undefined,
+            lotId: lotIdForPurchase,
+            quantity,
+            unitPrice: price.getCents(),
+            fees: 0,
+            shipping: 0,
+            currency: 'EUR',
+            source: 'cardmarket',
+            externalRef: lineExternalRef,
+            happenedAt: new Date(article.dateOfPurchase),
+            relatedTransactionId: header?.id,
+            finish: article.finish || 'nonfoil',
+            language: article.language || 'en',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
       }
 
       // Now, import the processed order lines using the pipeline
@@ -274,10 +317,12 @@ export class ImportService {
   private static async resolveCard(article: any): Promise<{ cardId: string | null, cardData: any | null }> {
     let cardData = null;
     let cardId = null;
+    const productIds = this.getProductIds(article.productId);
+    const cardName = this.getCardNameCandidate(article);
+    const expansion = this.normalizeText(article.expansion);
 
     // Priority 1: Try to resolve by Cardmarket product ID first
-    if (article.productId) {
-      const productIds = article.productId.split(' | ').map((id: string) => id.trim());
+    if (productIds.length > 0) {
       if (productIds.length === 1) {
         cardData = await ScryfallProvider.getByCardmarketId(productIds[0]);
         console.log(JSON.stringify({ product_ids: productIds, resolved_via: 'cardmarket_id', cardmarket_id: productIds[0], final_uri: `/cards/cardmarket/${productIds[0]}` }));
@@ -293,30 +338,52 @@ export class ImportService {
 
     // Priority 2: If no product ID or product ID lookup failed, try set code resolution
     if (!cardId) {
-      if (typeof article.name !== 'string' || !article.name) {
-        console.warn('Cannot resolve card without name (and no productId)', article);
+      if (!cardName) {
         return { cardId: null, cardData: null };
       }
-      const setCode = await resolveSetCode(article.expansion);
-      const collectorNumber = this.extractCollectorNumber(article.name);
-      let cleanCardName = article.name;
-      let versionInfo = null;
-      const versionMatch = article.name.match(/^(.+?)\s*\((V\.\d+)\)$/i);
+      const setCode = await resolveSetCode(expansion);
+      const collectorNumber = this.extractCollectorNumber(cardName);
+      let cleanCardName = cardName;
+      let versionInfo: string | undefined;
+      const versionMatch = cardName.match(/^(.+?)\s*\((V\.\d+)\)$/i);
       if (versionMatch) {
         cleanCardName = versionMatch[1].trim();
         versionInfo = versionMatch[2];
       }
 
-      console.log(JSON.stringify({ product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [], resolved_via: 'set+cn', set_code: setCode, collector_number: collectorNumber, final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : '' }));
+      console.log(JSON.stringify({ product_ids: productIds, resolved_via: 'set+cn', set_code: setCode, collector_number: collectorNumber, final_uri: setCode ? `/cards/${setCode}/${collectorNumber}` : '' }));
 
-      cardData = await ScryfallProvider.hydrateCard({ name: cleanCardName, setCode: setCode || article.expansion, collectorNumber: collectorNumber, version: versionInfo });
+      cardData = await ScryfallProvider.hydrateCard({ name: cleanCardName, setCode: setCode || expansion, collectorNumber: collectorNumber, version: versionInfo });
       cardId = cardData?.id || null;
 
       if (!cardId) {
-        console.log(JSON.stringify({ product_ids: article.productId ? article.productId.split(' | ').map((id: string) => id.trim()) : [], resolved_via: 'none', set_code: null, collector_number: '', final_uri: '', name: article.name, expansion: article.expansion }));
+        console.log(JSON.stringify({ product_ids: productIds, resolved_via: 'none', set_code: null, collector_number: '', final_uri: '', name: cardName, expansion }));
       }
     }
     return { cardId, cardData };
+  }
+
+  private static normalizeText(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : String(value ?? '').trim();
+  }
+
+  private static getProductIds(value: unknown): string[] {
+    const raw = this.normalizeText(value);
+    if (!raw) return [];
+    return raw.split('|').map(id => id.trim()).filter(Boolean);
+  }
+
+  private static getCardNameCandidate(article: any): string {
+    const candidates = [
+      article?.name,
+      article?.localizedProductName,
+      article?.articleName
+    ];
+    for (const candidate of candidates) {
+      const normalized = this.normalizeText(candidate);
+      if (normalized) return normalized;
+    }
+    return '';
   }
 
   private static extractCollectorNumber(name: string): string {
@@ -340,16 +407,18 @@ export class ImportService {
 
   private static async ensureCardInDb(cardId: string, cardData: any, article: any): Promise<void> {
     const existingCard = await cardRepository.getById(cardId);
+    const cardName = this.getCardNameCandidate(article);
+    const expansion = this.normalizeText(article.expansion);
     if (!existingCard) {
-      const scryfallData = cardData || await ScryfallProvider.hydrateCard({ scryfall_id: cardId, name: article.name, setCode: article.expansion, collectorNumber: '' });
+      const scryfallData = cardData || await ScryfallProvider.hydrateCard({ scryfall_id: cardId, name: cardName, setCode: expansion, collectorNumber: '' });
       const imageUrls = await ScryfallProvider.getImageUrlById(cardId);
       const newCard: Card = {
         id: cardId,
         oracleId: scryfallData?.oracle_id || cardData?.oracle_id || '',
-        name: article.name,
-        set: scryfallData?.set_name || cardData?.set_name || article.expansion,
-        setCode: scryfallData?.set || cardData?.set || (await resolveSetCode(article.expansion) || ''),
-        number: scryfallData?.collector_number || cardData?.collector_number || this.extractCollectorNumber(article.name) || '',
+        name: cardName || scryfallData?.name || cardData?.name || '',
+        set: scryfallData?.set_name || cardData?.set_name || expansion,
+        setCode: scryfallData?.set || cardData?.set || (await resolveSetCode(expansion) || ''),
+        number: scryfallData?.collector_number || cardData?.collector_number || this.extractCollectorNumber(cardName) || '',
         lang: scryfallData?.lang || cardData?.lang || 'en',
         finish: 'nonfoil',
         layout: imageUrls?.layout || 'normal',
@@ -471,10 +540,10 @@ export class ImportService {
         cardId: cardId || '',
         quantity: parseInt(article.amount) || 1,
         unitCost: price.getCents(),
-        condition: '',
-        language: '',
-        foil: false,
-        finish: 'nonfoil',
+        condition: this.normalizeText(article.condition) || 'NM',
+        language: this.normalizeText(article.language) || 'en',
+        foil: this.normalizeText(article.finish).toLowerCase() === 'foil' || this.normalizeText(article.finish).toLowerCase() === 'etched',
+        finish: this.normalizeText(article.finish) || 'nonfoil',
         source: 'cardmarket',
         currency: 'EUR',
         externalRef: lotExternalRef,
