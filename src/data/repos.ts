@@ -11,7 +11,13 @@ import type {
   Valuation, 
   Setting,
   ScanSaleLink,
-  SellAllocation
+  SellAllocation,
+  CardmarketImportFile,
+  CardmarketOrder,
+  CardmarketOrderLine,
+  CardmarketLedgerTransaction,
+  CardmarketOrderLedgerLink,
+  CardmarketOrderParty
 } from './db';
 
 // Card repository
@@ -344,6 +350,97 @@ export const acquisitionRepository = {
     return getDb().acquisitions.where('[source+externalRef]').equals([source, externalRef]).first();
   },
   async update(id: string, patch: Partial<Acquisition>) { return getDb().acquisitions.update(id, patch); },
+};
+
+export const cardmarketImportFileRepository = {
+  async add(file: CardmarketImportFile): Promise<string> {
+    return getDb().cm_import_files.add(file);
+  },
+
+  async put(file: CardmarketImportFile): Promise<string> {
+    return getDb().cm_import_files.put(file);
+  },
+
+  async getBySourceAndHash(source: CardmarketImportFile['source'], fileHash: string): Promise<CardmarketImportFile | undefined> {
+    return getDb().cm_import_files.where('[source+fileHash]').equals([source, fileHash]).first();
+  },
+
+  async getAll(): Promise<CardmarketImportFile[]> {
+    return getDb().cm_import_files.toArray();
+  }
+};
+
+export const cardmarketOrderRepository = {
+  async put(order: CardmarketOrder): Promise<string> {
+    return getDb().cm_orders.put(order);
+  },
+
+  async getById(id: string): Promise<CardmarketOrder | undefined> {
+    return getDb().cm_orders.get(id);
+  },
+
+  async getAll(): Promise<CardmarketOrder[]> {
+    return getDb().cm_orders.toArray();
+  }
+};
+
+export const cardmarketOrderPartyRepository = {
+  async put(party: CardmarketOrderParty): Promise<string> {
+    return getDb().cm_order_parties.put(party);
+  },
+
+  async getByOrderId(orderId: string): Promise<CardmarketOrderParty | undefined> {
+    return getDb().cm_order_parties.get(orderId);
+  }
+};
+
+export const cardmarketOrderLineRepository = {
+  async put(row: CardmarketOrderLine): Promise<string> {
+    return getDb().cm_order_lines.put(row);
+  },
+
+  async bulkPut(rows: CardmarketOrderLine[]): Promise<void> {
+    if (rows.length === 0) return;
+    await getDb().cm_order_lines.bulkPut(rows);
+  },
+
+  async getByOrderId(orderId: string): Promise<CardmarketOrderLine[]> {
+    return getDb().cm_order_lines.where('orderId').equals(orderId).toArray();
+  }
+};
+
+export const cardmarketLedgerTransactionRepository = {
+  async put(tx: CardmarketLedgerTransaction): Promise<string> {
+    return getDb().cm_ledger_transactions.put(tx);
+  },
+
+  async bulkPut(rows: CardmarketLedgerTransaction[]): Promise<void> {
+    if (rows.length === 0) return;
+    await getDb().cm_ledger_transactions.bulkPut(rows);
+  },
+
+  async getById(id: string): Promise<CardmarketLedgerTransaction | undefined> {
+    return getDb().cm_ledger_transactions.get(id);
+  },
+
+  async getByReference(reference: string): Promise<CardmarketLedgerTransaction[]> {
+    return getDb().cm_ledger_transactions.where('reference').equals(reference).toArray();
+  }
+};
+
+export const cardmarketOrderLedgerLinkRepository = {
+  async put(link: CardmarketOrderLedgerLink): Promise<string> {
+    return getDb().cm_order_ledger_links.put(link);
+  },
+
+  async bulkPut(links: CardmarketOrderLedgerLink[]): Promise<void> {
+    if (links.length === 0) return;
+    await getDb().cm_order_ledger_links.bulkPut(links);
+  },
+
+  async getByOrderId(orderId: string): Promise<CardmarketOrderLedgerLink[]> {
+    return getDb().cm_order_ledger_links.where('orderId').equals(orderId).toArray();
+  }
 };
 
 // Setting repository

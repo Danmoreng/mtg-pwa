@@ -196,6 +196,111 @@ export interface SellAllocation {
     createdAt: Date;
 }
 
+export type CardmarketImportFileKind =
+    | 'transaction_summary'
+    | 'sold_orders'
+    | 'purchased_orders'
+    | 'sold_articles'
+    | 'purchased_articles';
+
+export interface CardmarketImportFile {
+    id: string;
+    source: 'cardmarket';
+    kind: CardmarketImportFileKind;
+    fileName: string;
+    fileHash: string;
+    periodStart?: string; // YYYY-MM-DD from file name when present
+    periodEnd?: string; // YYYY-MM-DD from file name when present
+    rowCount: number;
+    importedAt: Date;
+    createdAt: Date;
+}
+
+export interface CardmarketOrder {
+    id: string; // Cardmarket OrderID / Shipment nr.
+    direction: 'sale' | 'purchase';
+    orderDate: Date;
+    username?: string;
+    currency: string;
+    articleCount: number;
+    merchandiseCents: number;
+    shippingCents: number;
+    totalCents: number;
+    commissionCents?: number;
+    trusteeFeeCents?: number;
+    descriptionRaw?: string;
+    productIdsRaw?: string;
+    localizedNamesRaw?: string;
+    sourceFileId: string;
+    sourceLineNumber: number;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface CardmarketOrderParty {
+    orderId: string;
+    name?: string;
+    street?: string;
+    city?: string;
+    country?: string;
+    isProfessional?: boolean;
+    vatNumber?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface CardmarketOrderLine {
+    id: string; // `${orderId}:${lineNo}`
+    orderId: string;
+    lineNo: number;
+    direction: 'sale' | 'purchase';
+    purchasedAt: Date;
+    productId: string;
+    articleName: string;
+    localizedProductName?: string;
+    expansion?: string;
+    category?: string;
+    quantity: number;
+    unitPriceCents: number;
+    lineTotalCents: number;
+    currency: string;
+    comments?: string;
+    collectorNumber?: string;
+    rarity?: string;
+    condition?: string;
+    language?: string;
+    isFoil?: boolean;
+    descriptionRaw?: string;
+    sourceFileId: string;
+    sourceLineNumber: number;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface CardmarketLedgerTransaction {
+    id: string; // Cardmarket "Transaction" id when available
+    happenedAt: Date;
+    category: string;
+    type: string;
+    counterpart: string;
+    reference: string;
+    amountCents: number;
+    currency: string;
+    startingBalanceCents?: number;
+    closingBalanceCents?: number;
+    sourceFileId: string;
+    sourceLineNumber: number;
+    createdAt: Date;
+}
+
+export interface CardmarketOrderLedgerLink {
+    id: string; // `${orderId}:${ledgerTransactionId}`
+    orderId: string;
+    ledgerTransactionId: string;
+    relation: 'sale' | 'fee' | 'purchase' | 'trustee_fee' | 'other';
+    createdAt: Date;
+}
+
 export default class MtgTrackerDb extends Dexie {
     cards!: EntityTable<Card, 'id'>;
     card_lots!: EntityTable<CardLot, 'id'>;
@@ -210,208 +315,18 @@ export default class MtgTrackerDb extends Dexie {
     settings!: EntityTable<Setting, 'k'>;
     scan_sale_links!: EntityTable<ScanSaleLink, 'id'>;
     sell_allocations!: EntityTable<SellAllocation, 'id'>;
+    cm_import_files!: EntityTable<CardmarketImportFile, 'id'>;
+    cm_orders!: EntityTable<CardmarketOrder, 'id'>;
+    cm_order_parties!: EntityTable<CardmarketOrderParty, 'orderId'>;
+    cm_order_lines!: EntityTable<CardmarketOrderLine, 'id'>;
+    cm_ledger_transactions!: EntityTable<CardmarketLedgerTransaction, 'id'>;
+    cm_order_ledger_links!: EntityTable<CardmarketOrderLedgerLink, 'id'>;
 
     constructor() {
         super('MtgTrackerDb');
 
-        // Version 1 - Initial schema
+        // Fresh start: single clean schema (no migrations)
         this.version(1).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish',
-            transactions: 'id, kind, cardId, source, externalRef, happenedAt',
-            scans: 'id, cardFingerprint, cardId, source, scannedAt',
-            decks: 'id, platform, name, importedAt',
-            deck_cards: 'id, [deckId+cardId], deckId, cardId',
-            price_points: 'id, cardId, provider, asOf',
-            valuations: 'id, asOf',
-            settings: 'k'
-        });
-
-        // Version 2 - Enhanced schema with better indexing and new tables
-        this.version(2).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
-            transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
-            scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, [deckId+cardId], deckId, cardId, createdAt',
-            price_points: 'id, cardId, provider, asOf, createdAt',
-            valuations: 'id, asOf, createdAt',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
-        }).upgrade(async (tx) => {
-            // Add createdAt and updatedAt to existing records
-            const now = new Date();
-
-            // Update cards
-            await tx.table('cards').toCollection().modify(card => {
-                card.createdAt = card.createdAt || now;
-                card.updatedAt = card.updatedAt || now;
-            });
-
-
-            // Update transactions
-            await tx.table('transactions').toCollection().modify(transaction => {
-                transaction.createdAt = transaction.createdAt || now;
-                transaction.updatedAt = transaction.updatedAt || now;
-            });
-
-            // Update scans
-            await tx.table('scans').toCollection().modify(scan => {
-                scan.createdAt = scan.createdAt || now;
-                scan.updatedAt = scan.updatedAt || now;
-            });
-
-            // Update decks
-            await tx.table('decks').toCollection().modify(deck => {
-                deck.createdAt = deck.createdAt || now;
-                deck.updatedAt = deck.updatedAt || now;
-            });
-
-            // Update deck_cards
-            await tx.table('deck_cards').toCollection().modify(deckCard => {
-                deckCard.createdAt = deckCard.createdAt || now;
-            });
-
-            // Update price_points
-            await tx.table('price_points').toCollection().modify(pricePoint => {
-                pricePoint.createdAt = pricePoint.createdAt || now;
-            });
-
-            // Update valuations
-            await tx.table('valuations').toCollection().modify(valuation => {
-                valuation.createdAt = valuation.createdAt || now;
-            });
-
-            // Update settings
-            await tx.table('settings').toCollection().modify(setting => {
-                setting.createdAt = setting.createdAt || now;
-                setting.updatedAt = setting.updatedAt || now;
-            });
-        });
-
-        // Version 3 - Enhanced schema for historical pricing
-        this.version(3).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
-            transactions: 'id, kind, cardId, source, externalRef, happenedAt, createdAt, updatedAt',
-            scans: 'id, cardFingerprint, cardId, source, scannedAt, createdAt, updatedAt',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, [deckId+cardId], deckId, cardId, createdAt',
-            price_points: 'id, cardId, provider, currency, asOf, createdAt, [cardId+asOf], [provider+asOf]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, matchedAt, createdAt'
-        });
-
-        // Version 4 - Enhanced schema for lot-based tracking
-        this.version(4).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
-            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, [cardId+purchasedAt], [acquisitionId+cardId]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
-            scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
-            price_points: 'id, cardId, provider, currency, asOf, source, createdAt, [cardId+asOf], [provider+asOf]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
-        }).upgrade(async (_tx) => {
-            // Add missing fields to existing deck_cards records
-        });
-
-        // Version 5 - Add externalRef to card_lots for deduplication
-        this.version(5).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, createdAt, updatedAt',
-            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
-            scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
-            price_points: 'id, cardId, provider, currency, asOf, source, createdAt, [cardId+asOf], [provider+asOf]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
-        });
-
-        // Version 6 - Add layout to cards and improve card_lots indexing
-        this.version(6).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, createdAt, updatedAt',
-            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
-            scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
-            price_points: 'id, cardId, provider, currency, asOf, source, createdAt, [cardId+asOf], [provider+asOf]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
-        }).upgrade(async tx => {
-            await tx.table('cards').toCollection().modify(card => {
-                card.layout = card.layout || 'normal';
-            });
-        });
-
-        // Version 7 - Remove holdings table
-        this.version(7).stores({
-            holdings: null
-        });
-
-        // Version 8 - Enhanced price points schema for M2
-        this.version(8).stores({
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
-            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, [cardId+purchasedAt], [acquisitionId+cardId], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, [lotId+kind]',
-            scans: 'id, cardFingerprint, cardId, lotId, source, scannedAt, boosterPackId, createdAt, updatedAt, [lotId+scannedAt]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
-            price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, [cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt'
-        }).upgrade(async tx => {
-            const t = tx.table('price_points');
-            const rows = await t.toArray();
-            for (const r of rows) {
-                // price → priceCent (convert decimals to cents when needed)
-                if (r.priceCent == null && r.price != null) {
-                    const isDecimal = typeof r.price === 'number' && r.price < 1000;
-                    r.priceCent = isDecimal ? Math.round(r.price * 100) : r.price;
-                    delete r.price;
-                }
-
-                // derive finish/date/provider/id from old shapes
-                let finish: 'nonfoil' | 'foil' | 'etched' = r.finish ?? 'nonfoil';
-                let date = r.date ?? (r.asOf ? new Date(r.asOf).toISOString().slice(0, 10) : undefined);
-                const parts = String(r.id ?? '').split(':'); // legacy ids
-                const maybeFinish = parts[2];
-                const maybeDate = parts[3] ?? parts[2];
-                if (maybeFinish === 'foil' || maybeFinish === 'etched') finish = maybeFinish;
-                if (/^\d{4}-\d{2}-\d{2}$/.test(maybeDate)) date = maybeDate;
-
-                // Convert source to provider
-                let provider: 'scryfall' | 'mtgjson.cardmarket' | 'cardmarket.priceguide' = 'scryfall';
-                if (r.source) {
-                    if (r.source === 'mtgjson') {
-                        provider = 'mtgjson.cardmarket';
-                    } else if (r.source === 'cardmarket') {
-                        provider = 'cardmarket.priceguide';
-                    } else {
-                        provider = 'scryfall';
-                    }
-                }
-
-                r.finish = finish;
-                r.provider = provider;
-                r.date = date ?? new Date().toISOString().slice(0, 10);
-                r.currency = r.currency ?? 'EUR';
-                r.createdAt = r.createdAt ?? new Date();
-                r.asOf = r.asOf ?? new Date();
-                r.id = `${r.cardId}:${provider}:${finish}:${r.date}`;
-
-                await t.put(r);
-            }
-        });
-
-        // Version 9 – acquisitions + strengthened indexes + scans.acquisitionId
-        this.version(9).stores({
             acquisitions: 'id, kind, source, externalRef, currency, happenedAt, createdAt, updatedAt, [source+externalRef]',
             cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
             card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
@@ -420,38 +335,21 @@ export default class MtgTrackerDb extends Dexie {
                 '[lotId+kind], [cardId+kind], [source+externalRef]',
             scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
                 '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
-            deck_cards: '[deckId+cardId], lotId, addedAt, removedAt, createdAt, [lotId+addedAt]',
-            // ensure provider index matches repository API (see §7.3)
-            price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
-                '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score'
-        }).upgrade(async (_tx) => {
-            // Backfill scans.acquisitionId = null; leave existing data intact
-            // Ensure disposedAt stays consistent (optional pass to set disposedAt where remaining==0)
-        });
-
-        // Version 10 - Add sell_allocations store for M3 implementation
-        this.version(10).stores({
-            acquisitions: 'id, kind, source, externalRef, currency, happenedAt, createdAt, updatedAt, [source+externalRef]',
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
-            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
-                '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
-                '[lotId+kind], [cardId+kind], [source+externalRef]',
-            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
-                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
-            deck_cards: '[deckId+cardId], lotId, addedAt, removedAt, createdAt, [lotId+addedAt]',
+            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
+            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
             price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
                 '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
             valuations: 'id, asOf, createdAt, [asOf+createdAt]',
             settings: 'k, createdAt, updatedAt',
             scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score',
             sell_allocations: 'id, transactionId, lotId, quantity, unitCostCentAtSale, createdAt, ' +
-                '[transactionId+lotId], [lotId], [transactionId]'
-        }).upgrade(async (_tx) => {
-            // No-op upgrade as this is an additive change
+                '[transactionId+lotId], [lotId], [transactionId]',
+            cm_import_files: 'id, source, kind, fileName, fileHash, periodStart, periodEnd, rowCount, importedAt, createdAt, &[source+fileHash]',
+            cm_orders: 'id, direction, orderDate, username, articleCount, currency, sourceFileId, sourceLineNumber, createdAt, updatedAt, [direction+orderDate]',
+            cm_order_parties: 'orderId, country, isProfessional, vatNumber, updatedAt',
+            cm_order_lines: 'id, orderId, lineNo, direction, purchasedAt, productId, articleName, localizedProductName, quantity, sourceFileId, sourceLineNumber, updatedAt, &[orderId+lineNo], [orderId+productId], [productId+direction]',
+            cm_ledger_transactions: 'id, happenedAt, category, type, counterpart, reference, amountCents, sourceFileId, sourceLineNumber, createdAt, [reference+happenedAt], [category+type], &[sourceFileId+sourceLineNumber]',
+            cm_order_ledger_links: 'id, orderId, ledgerTransactionId, relation, createdAt, &[orderId+ledgerTransactionId], [ledgerTransactionId+orderId], [orderId+relation]'
         });
     }
 }

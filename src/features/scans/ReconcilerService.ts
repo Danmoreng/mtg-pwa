@@ -169,11 +169,13 @@ export async function findOrCreateProvisionalLot(
     const now = new Date();
     const purchaseDate = when instanceof Date ? when : new Date(when);
     
-    const newLot: Omit<CardLot, 'id'> = {
+    const provisionalLotId = `lot-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const newLot: CardLot = {
+      id: provisionalLotId,
       cardId: identity.cardId,
       quantity: 0, // Starts with 0 quantity
       unitCost: 0, // Default unit cost for provisional lots
-      condition: 'Near Mint', // Default condition - ensure it's a valid condition value
+      condition: 'NM',
       language: (identity.lang || 'en'), // Ensure language is properly set
       foil: identity.finish === 'foil' || identity.finish === 'etched', // Set foil based on finish
       finish: identity.finish,
@@ -182,25 +184,13 @@ export async function findOrCreateProvisionalLot(
       acquisitionId: acquisitionId || undefined, // Change null to undefined to match interface
       createdAt: now,
       updatedAt: now,
-      // Explicitly set optional fields to proper values to avoid potential schema issues
-      disposedAt: undefined,
-      disposedQuantity: undefined,
-      saleTransactionId: undefined,
-      currency: undefined,
-      externalRef: undefined,
-      acquisitionPriceCent: undefined,
-      acquisitionFeesCent: undefined,
-      acquisitionShippingCent: undefined,
-      totalAcquisitionCostCent: undefined,
-      salePriceCent: undefined,
-      saleFeesCent: undefined,
-      saleShippingCent: undefined,
-      totalSaleRevenueCent: undefined,
-      netProfitPerUnitCent: undefined,
-      totalNetProfitCent: undefined,
     };
     
     // Validate the constructed lot before saving
+    if (!newLot.id || typeof newLot.id !== 'string') {
+      throw new Error(`Invalid id in new lot: ${newLot.id}`);
+    }
+
     if (!newLot.cardId || typeof newLot.cardId !== 'string') {
       throw new Error(`Invalid cardId in new lot: ${newLot.cardId}`);
     }
@@ -255,7 +245,7 @@ export async function findOrCreateProvisionalLot(
     // Try to add the new lot to the repository with better error handling
     let savedLotId: string;
     try {
-      savedLotId = await cardLotRepository.add(newLot as CardLot);
+      savedLotId = await cardLotRepository.add(newLot);
     } catch (dbError) {
       logReconciler('error', `Database error when adding new lot:`, {
         error: dbError,
@@ -327,7 +317,7 @@ export async function mergeLots(targetLotId: string, fromLotId:string): Promise<
 
   try {
     const db = getDb();
-    return db.transaction('rw', db.card_lots, db.scans, db.transactions, async () => {
+    await db.transaction('rw', db.card_lots, db.scans, db.transactions, async () => {
       const fromLot = await cardLotRepository.getById(fromLotId);
       const targetLot = await cardLotRepository.getById(targetLotId);
 

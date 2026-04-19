@@ -18,6 +18,7 @@ function parseCurrency(value: any): number {
 
 // Type definitions for Cardmarket data
 interface CardmarketTransaction {
+  transactionId: string;
   reference: string;
   date: string;
   category: string;
@@ -25,7 +26,8 @@ interface CardmarketTransaction {
   counterpart: string;
   amount: number;
   currency: string;
-  balanceAfter: number;
+  startingBalance: number;
+  closingBalance: number;
   lineNumber: number;
 }
 
@@ -35,12 +37,19 @@ interface CardmarketOrder {
   merchandiseValue: number;  // Warenwert
   shipmentCosts: number;       // Versandkosten
   commission: number;         // Provision/Gebühren
+  trusteeServiceFee: number;
   totalValue: number;         // Gesamtwert
-  // ... other existing fields
   dateOfPurchase: string;
   username: string;
+  name: string;
+  street: string;
   country: string;
   city: string;
+  isProfessional: string;
+  vatNumber: string;
+  description: string;
+  productId: string;
+  localizedProductName: string;
   articleCount: string;
   currency: string;
   lineNumber: number;
@@ -51,6 +60,7 @@ interface CardmarketArticle {
   dateOfPurchase: string;
   productId: string;
   name: string;
+  localizedProductName: string;
   expansion: string;
   category: string;
   amount: string;
@@ -104,16 +114,18 @@ function parseTransactionsCSV(csvText: string): CardmarketTransaction[] {
     };
     
     // Extract values using flexible matching
+    transaction.transactionId = getValue('Transaction', 'Transaktion', 'Transaction ID');
     transaction.reference = getValue('Reference', 'Referenz', 'Transaktions-ID');
     transaction.date = getValue('Date', 'Datum', 'Date Paid', 'Date paid', 'Datum Paid');
     transaction.category = getValue('Category', 'Kategorie');
     transaction.type = getValue('Type', 'Typ');
     transaction.counterpart = getValue('Counterpart', 'Gegenpartei');
     transaction.amount = parseCurrency(getValue('Amount', 'Betrag'));
-    transaction.balanceAfter = parseCurrency(getValue('Closing balance (EUR)', 'Balance After', 'Saldo danach (EUR)'));
+    transaction.startingBalance = parseCurrency(getValue('Starting balance (EUR)', 'Balance before', 'Saldo vorher (EUR)'));
+    transaction.closingBalance = parseCurrency(getValue('Closing balance (EUR)', 'Balance After', 'Saldo danach (EUR)'));
     
     // Only add transactions with a reference
-    if (transaction.reference) {
+    if (transaction.reference && transaction.date) {
       transaction.lineNumber = i; // Add line number for idempotency
       transaction.currency = 'EUR'; // Assume EUR for now
       transactions.push(transaction);
@@ -166,12 +178,20 @@ function parseOrdersCSV(csvText: string, direction: 'sale' | 'purchase'): Cardma
     order.orderId = getValue('Order ID', 'OrderID', 'Bestellnummer');
     order.dateOfPurchase = getValue('Date of Purchase', 'Date', 'Date of payment', 'Kaufdatum', 'Zahlungsdatum');
     order.username = getValue('Username', 'Benutzername');
+    order.name = getValue('Name');
+    order.street = getValue('Street');
     order.country = getValue('Country', 'Land');
     order.city = getValue('City', 'Stadt');
+    order.isProfessional = getValue('Is Professional');
+    order.vatNumber = getValue('VAT Number');
+    order.description = getValue('Description');
+    order.productId = getValue('Product ID', 'Produkt ID');
+    order.localizedProductName = getValue('Localized Product Name', 'Produktname');
     order.articleCount = getValue('Article Count', 'Items', 'Anzahl Artikel');
     order.merchandiseValue = parseCurrency(getValue('Merchandise Value', 'Warenwert'));
     order.shipmentCosts = parseCurrency(getValue('Shipment Costs', 'Versandkosten'));
     order.commission = parseCurrency(getValue('Commission', 'Trustee service fee', 'Provision'));
+    order.trusteeServiceFee = parseCurrency(getValue('Trustee service fee'));
     order.totalValue = parseCurrency(getValue('Total Value', 'Gesamtwert'));
     
     // Only add orders with an ID
@@ -229,7 +249,8 @@ function parseArticlesCSV(csvText: string, direction: 'sale' | 'purchase'): Card
     article.shipmentId = getValue('Shipment nr.', 'Shipment nr', 'Shipment ID', 'Order ID', 'Bestellnummer');
     article.dateOfPurchase = getValue('Date of purchase', 'Date');
     article.productId = getValue('Product ID', 'Produkt ID');
-    article.name = getValue('Article', 'Artikel', 'Localized Product Name', 'Produktname');
+    article.name = getValue('Article', 'Artikel', 'Produktname', 'Localized Product Name');
+    article.localizedProductName = getValue('Localized Product Name', 'Produktname', 'Article', 'Artikel');
     article.expansion = getValue('Expansion', 'Erweiterung');
     article.category = getValue('Category', 'Kategorie');
     article.amount = getValue('Amount', 'Anzahl');
