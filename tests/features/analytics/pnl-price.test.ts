@@ -1,129 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type MtgTrackerDb from '@/data/db';
 import { getAcquisitionPnL } from '@/features/analytics/PnLService';
-import { acquisitionRepository, cardLotRepository, transactionRepository, sellAllocationRepository } from '@/data/repos';
-import { PriceQueryService } from '@/features/pricing/PriceQueryService';
+import { createTestDb, deleteTestDb } from '../../helpers/createTestDb';
 
-// Also need to mock sell allocation repository for P&L calculations
-vi.mock('@/data/repos', async () => {
-  const actual = await vi.importActual('@/data/repos');
-  return {
-    ...actual,
-    acquisitionRepository: {
-      getById: vi.fn()
-    },
-    cardLotRepository: {
-      getByAcquisitionId: vi.fn()
-    },
-    transactionRepository: {
-      getById: vi.fn(),
-      getByLotId: vi.fn()
-    },
-    sellAllocationRepository: {
-      getByLotId: vi.fn().mockResolvedValue([]) // Initially empty
-    }
-  };
-});
+describe('PnL Service with canonical price integration', () => {
+  let db: MtgTrackerDb;
+  const now = new Date('2026-08-10T12:00:00.000Z');
 
-vi.mock('@/features/pricing/PriceQueryService', () => ({
-  PriceQueryService: {
-    getLatestPriceForCard: vi.fn()
-  }
-}));
-
-describe('PnL Service with Price Integration', () => {
-  const mockAcquisition = {
-    id: 'acq123',
-    totalPriceCent: 10000, // 100.00 EUR
-    totalFeesCent: 500,    // 5.00 EUR
-    totalShippingCent: 300, // 3.00 EUR
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  const mockLot = {
-    id: 'lot123',
-    cardId: 'card123',
-    cardFingerprint: 'mtg:dom:1:nonfoil:en',
-    quantity: 10,
-    totalAcquisitionCostCent: 10800, // Total cost for the lot
-    unitCost: 1080, // Cost per unit in cents
-    finish: 'nonfoil',
-    purchasedAt: new Date()
-  };
-
-  // Mock sell allocation for the transaction
-  const mockSellAllocation = {
-    id: 'alloc123',
-    transactionId: 'tx123',
-    lotId: 'lot123',
-    quantity: 5,
-    unitCostCentAtSale: 1080, // Cost per unit in cents at time of sale
-    createdAt: new Date()
-  };
-
-  const mockSellTransaction = {
-    id: 'tx123',
-    kind: 'SELL',
-    quantity: 5,
-    unitPrice: 1500, // 15.00 EUR per unit
-    fees: 100,       // 1.00 EUR
-    shipping: 200,   // 2.00 EUR
-    happenedAt: new Date(),
-    lotId: 'lot123',
-    cardId: 'card123'
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
+  beforeEach(async () => {
+    db = await createTestDb('pnl-price');
+    await db.cards.add({ id: 'card123', name: 'Test Card', set: 'Test', setCode: 'tst', number: '1', lang: 'en', finish: 'nonfoil', createdAt: now, updatedAt: now });
+    await db.acquisitions.add({ id: 'acq123', kind: 'single', source: 'cardmarket', currency: 'EUR', happenedAt: now, occurredAt: now, totalCostCent: 10800, allocationMethod: 'manual', projectionVersion: 1, createdAt: now, updatedAt: now });
+    await db.inventory_lots.add({ id: 'lot123', acquisitionId: 'acq123', cardId: 'card123', initialQuantity: 10, allocatedCostCent: 10800, costBasisStatus: 'known', origin: 'cardmarket', ownershipStatus: 'import_confirmed', condition: 'near_mint', language: 'en', finish: 'nonfoil', acquiredAt: now, sourceRef: 'purchase:1', createdAt: now, updatedAt: now });
+    await db.sales.add({ id: 'sale123', occurredAt: now, currency: 'EUR', grossMerchandiseCent: 7500, platformFeesCent: 100, shippingIncomeCent: 200, shippingExpenseCent: 0, netProceedsCent: 7600, sourceRef: 'sale:1', projectionVersion: 1, createdAt: now, updatedAt: now });
+    await db.sale_lines.add({ id: 'line123', saleId: 'sale123', cardId: 'card123', quantity: 5, finish: 'nonfoil', language: 'en', grossLineCent: 7500, allocatedFeesCent: 100, allocatedShippingIncomeCent: 200, allocatedShippingExpenseCent: 0, netLineProceedsCent: 7600, sourceRef: 'sale:1:line', createdAt: now, updatedAt: now });
+    await db.lot_allocations.add({ id: 'allocation123', saleLineId: 'line123', lotId: 'lot123', quantity: 5, costBasisCentSnapshot: 5400, costBasisStatus: 'known', netProceedsCentSnapshot: 7600, method: 'auto', createdAt: now });
   });
 
-  it('should calculate P&L correctly when current market price is available', async () => {
-    // Setup
-    (acquisitionRepository.getById as vi.Mock).mockResolvedValue(mockAcquisition);
-    (cardLotRepository.getByAcquisitionId as vi.Mock).mockResolvedValue([mockLot]);
-    (transactionRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellTransaction]);
-    (transactionRepository.getById as vi.Mock).mockResolvedValue(mockSellTransaction);
-    (sellAllocationRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellAllocation]);
-    
-    // Mock the price service to return a current price
-    (PriceQueryService.getLatestPriceForCard as vi.Mock).mockResolvedValue({
-      price: { getCents: () => 2000 }, // 20.00 EUR per card
-      asOf: new Date(),
-      provider: 'scryfall'
-    });
+  afterEach(async () => deleteTestDb(db));
 
-    // Call the function
-    const result = await getAcquisitionPnL('acq123');
-
-    // Verify the results
-    expect(result.totalCostCent).toBe(10800); // 10000 + 500 + 300
-    expect(result.realizedPnLCent).toBeGreaterThan(0); // Should be positive if selling above cost
-    expect(result.unrealizedPnLCent).toBeGreaterThan(0); // Should be positive if market price > cost
-    
-    // Verify that the PriceQueryService was called
-    expect(PriceQueryService.getLatestPriceForCard).toHaveBeenCalledWith('card123');
+  it('calculates realized and unrealized P&L when a current price exists', async () => {
+    await db.price_points.add({ id: 'card123:scryfall:nonfoil:2026-08-10', cardId: 'card123', provider: 'scryfall', finish: 'nonfoil', date: '2026-08-10', currency: 'EUR', priceCent: 2000, asOf: now, createdAt: now });
+    const result = await getAcquisitionPnL('acq123', now, db);
+    expect(result.totalCostCent).toBe(10800);
+    expect(result.totalRevenueCent).toBe(7600);
+    expect(result.realizedPnLCent).toBe(2200);
+    expect(result.unrealizedPnLCent).toBe(4600);
+    expect(result.unrealizedPnLStatus).toBe('known');
   });
 
-  it('should handle P&L calculation gracefully when no current market price is available', async () => {
-    // Setup
-    (acquisitionRepository.getById as vi.Mock).mockResolvedValue(mockAcquisition);
-    (cardLotRepository.getByAcquisitionId as vi.Mock).mockResolvedValue([mockLot]);
-    (transactionRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellTransaction]);
-    (transactionRepository.getById as vi.Mock).mockResolvedValue(mockSellTransaction);
-    (sellAllocationRepository.getByLotId as vi.Mock).mockResolvedValue([mockSellAllocation]);
-    
-    // Mock the price service to return null (no price available)
-    (PriceQueryService.getLatestPriceForCard as vi.Mock).mockResolvedValue(null);
-
-    // Call the function
-    const result = await getAcquisitionPnL('acq123');
-
-    // Verify the results
-    expect(result.totalCostCent).toBe(10800); // 10000 + 500 + 300
-    expect(result.realizedPnLCent).toBeGreaterThan(0); // Realized P&L should still be calculated
-    expect(result.unrealizedPnLCent).toBe(0); // Unrealized P&L should be 0 when no price available
-    
-    // Verify that the PriceQueryService was called
-    expect(PriceQueryService.getLatestPriceForCard).toHaveBeenCalledWith('card123');
+  it('propagates unknown unrealized P&L when no current price exists', async () => {
+    const result = await getAcquisitionPnL('acq123', now, db);
+    expect(result.realizedPnLCent).toBe(2200);
+    expect(result.unrealizedPnLStatus).toBe('unknown');
   });
 });

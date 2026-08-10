@@ -478,6 +478,7 @@ export interface DeckImportRun {
     costBasisPolicy: 'unknown' | 'enter_total' | 'enter_per_card';
     totalDeficitCostCent?: number;
     unitCostCentByDeckCardId?: Record<string, number>;
+    defaultDeficitUnitCostCent?: number;
     defaultFinish: 'nonfoil' | 'foil' | 'etched';
     defaultLanguage: string;
     defaultCondition: string;

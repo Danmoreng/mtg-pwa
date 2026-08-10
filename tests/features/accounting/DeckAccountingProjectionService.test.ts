@@ -252,4 +252,26 @@ describe('DeckAccountingProjectionService', () => {
     });
     expect(manualAllocation?.releasedAt).toBeUndefined();
   });
+
+  it('applies a confirmed default unit cost to every created deficit', async () => {
+    await db.cards.bulkAdd([card('card-1'), card('card-2')]);
+    await db.decks.add(deck());
+    await db.deck_cards.bulkAdd([
+      deckCard('deck-card-1', 'card-1', 2),
+      deckCard('deck-card-2', 'card-2', 1),
+    ]);
+
+    await service.projectDeck('deck-1', {
+      missingInventoryPolicy: 'create_deficit',
+      costBasisPolicy: 'enter_per_card',
+      defaultDeficitUnitCostCent: 125,
+    });
+
+    const lots = await db.inventory_lots.orderBy('id').toArray();
+    expect(lots.map(row => row.allocatedCostCent)).toEqual([250, 125]);
+    expect(await db.deck_import_runs.get('deck-import-run:deck-1')).toMatchObject({
+      defaultDeficitUnitCostCent: 125,
+      confirmedBy: 'user',
+    });
+  });
 });

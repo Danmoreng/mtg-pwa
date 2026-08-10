@@ -11,6 +11,7 @@ import DeckDetailView from '../features/decks/views/DeckDetailView.vue';
 import CardsView from '../features/cards/views/CardsView.vue';
 import BoosterBoxesView from '../features/dashboard/BoosterBoxesView.vue';
 import BackupRestoreView from '../features/backup/views/BackupRestoreView.vue';
+import InventoryManagementView from '../features/accounting/views/InventoryManagementView.vue';
 
 const routes = [
   {
@@ -74,6 +75,11 @@ const routes = [
     path: '/cards',
     name: 'cards',
     component: CardsView,
+  },
+  {
+    path: '/inventory',
+    name: 'inventory',
+    component: InventoryManagementView,
   },
   {
     path: '/backup',

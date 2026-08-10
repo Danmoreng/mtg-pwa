@@ -8,6 +8,7 @@ import { AccountingRepository } from './AccountingRepository';
 import { calculateLotAccounting } from './AccountingKernel';
 import { assertAccountingSnapshot } from './AccountingValidation';
 import type { CostBasisStatus } from './AccountingTypes';
+import { allocateIntegerCents } from './CentAllocator';
 
 export interface CreateManualInventoryCommand {
   acquisitionId: string;
@@ -36,6 +37,19 @@ export interface ApplyInventoryAdjustmentCommand {
   note?: string;
   confirmedAt: Date;
   reversesAdjustmentId?: string;
+}
+
+export interface CorrectInventoryQuantityCommand {
+  id: string;
+  sourceRef: string;
+  lotId: string;
+  targetRemainingQuantity: number;
+  addedCostBasisCent?: number;
+  addedCostBasisStatus?: CostBasisStatus;
+  kind: InventoryAdjustment['kind'];
+  effectiveAt: Date;
+  note?: string;
+  confirmedAt: Date;
 }
 
 function assertSafeInteger(value: number, fieldName: string): void {
@@ -298,6 +312,57 @@ export class AccountingCommandService {
       costBasisStatus: original.costBasisStatus,
       kind: 'correction',
       reversesAdjustmentId: original.id,
+    });
+  }
+
+  async correctRemainingQuantity(
+    command: CorrectInventoryQuantityCommand
+  ): Promise<InventoryAdjustment> {
+    assertSafeInteger(command.targetRemainingQuantity, 'targetRemainingQuantity');
+    if (command.targetRemainingQuantity < 0) {
+      throw new Error('targetRemainingQuantity must not be negative.');
+    }
+    const snapshot = await this.repository.getLotSnapshot(command.lotId);
+    if (!snapshot) {
+      throw new Error('Inventory lot ' + command.lotId + ' does not exist.');
+    }
+    const quantityDelta = command.targetRemainingQuantity - snapshot.remainingQuantity;
+    if (quantityDelta === 0) {
+      throw new Error('The requested correction does not change remaining quantity.');
+    }
+
+    let costBasisStatus: CostBasisStatus;
+    let costBasisDeltaCent: number | undefined;
+    if (quantityDelta > 0) {
+      costBasisStatus = command.addedCostBasisStatus ?? 'unknown';
+      costBasisDeltaCent = command.addedCostBasisCent;
+    } else if (snapshot.openCostBasis.status === 'unknown') {
+      costBasisStatus = 'unknown';
+    } else {
+      costBasisStatus = snapshot.openCostBasis.status;
+      const removedQuantity = -quantityDelta;
+      costBasisDeltaCent = -(
+        allocateIntegerCents(snapshot.openCostBasis.cents, [
+          {
+            id: 'remaining',
+            weight: snapshot.remainingQuantity - removedQuantity,
+          },
+          { id: 'removed', weight: removedQuantity },
+        ]).find(row => row.id === 'removed')?.cents ?? 0
+      );
+    }
+
+    return this.applyAdjustment({
+      id: command.id,
+      sourceRef: command.sourceRef,
+      lotId: command.lotId,
+      quantityDelta,
+      costBasisDeltaCent,
+      costBasisStatus,
+      kind: command.kind,
+      effectiveAt: command.effectiveAt,
+      note: command.note,
+      confirmedAt: command.confirmedAt,
     });
   }
 

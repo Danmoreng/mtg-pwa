@@ -71,9 +71,11 @@ import { useRoute, useRouter } from 'vue-router';
 import CardComponent from '../../../components/CardComponent.vue';
 import PaginationComponent from '../../../components/PaginationComponent.vue';
 import { useCardsStore } from '../../../stores/cards';
+import { useHoldingsStore } from '../../../stores/holdings';
 
 // Use the cards store
 const cardsStore = useCardsStore();
+const holdingsStore = useHoldingsStore();
 
 // Use router and route
 const route = useRoute();
@@ -124,7 +126,9 @@ watch([currentPage, itemsPerPage], () => {
 
 // Filter cards based on search query
 const filteredCards = computed(() => {
-  const allCards = cardsStore.getAllCards;
+  const allCards = cardsStore.getAllCards.filter(
+    card => holdingsStore.getTotalQuantityByCardId(card.id) > 0
+  );
   if (!searchQuery.value) {
     return allCards;
   }
@@ -159,8 +163,8 @@ const sortedCards = computed(() => {
         }
         break;
       case 'owned':
-        // We can implement owned quantity sorting if needed
-        comparison = 0;
+        comparison = holdingsStore.getTotalQuantityByCardId(a.id) -
+          holdingsStore.getTotalQuantityByCardId(b.id);
         break;
       default:
         comparison = a.name.localeCompare(b.name);
@@ -187,7 +191,7 @@ const updateCurrentPage = (page: number) => {
 };
 
 // Load cards and prices when component mounts
-onMounted(() => {
+onMounted(async () => {
   // Initialize from URL parameters
   if (route.query.search) {
     searchQuery.value = route.query.search as string;
@@ -202,7 +206,7 @@ onMounted(() => {
   }
   
   // Load cards immediately
-  cardsStore.loadCards();
+  await Promise.all([cardsStore.loadCards(), holdingsStore.loadHoldings()]);
   
   // Load prices in the background without blocking UI
   setTimeout(() => {

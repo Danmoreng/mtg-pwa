@@ -7,9 +7,10 @@ the deliberate fresh start `MtgTrackerDbAccounting`, Dexie schema version 1.
 There is no migration from prototype databases and the app never deletes those
 older databases automatically.
 
-The accounting rebuild is complete through Phase 3. Phase 4 (switching the
-existing stores, analytics, and UI to the canonical selectors) is intentionally
-not started until the user reviews the behavior and data model.
+The accounting rebuild is complete through Phase 4. All user-facing inventory,
+deck coverage, dashboard, P/L, valuation, and box consumers now use the shared
+canonical selectors. Legacy tables remain only as import compatibility/staging
+until the dedicated cleanup phase.
 
 ## Completed Phase 0 — safety and verification
 
@@ -62,6 +63,24 @@ not started until the user reviews the behavior and data model.
 - Unmatched, oversold, invalid-quantity, deck-deficit, and duplicate cases remain
   visible in `reconciliation_issues`; projection never invents provisional stock.
 
+## Completed Phase 4 — canonical consumers and guided actions
+
+- `AccountingQueryService` is the shared read model for lots, holdings,
+  portfolio totals, card activity, acquisition/box P/L, and deck coverage.
+- Unknown and estimated prices/costs remain visible in totals; partial known
+  amounts are labelled instead of silently coercing missing values to zero.
+- Dashboard, cards/holdings, card history, finance/P&L, valuation snapshots,
+  booster boxes, deck lists, and deck details use canonical lots and allocations.
+- `/inventory` provides manual printing lookup, inventory creation, auditable
+  quantity correction/removal, reversal, and open/resolved issue handling.
+- Possible deck/import duplicates can be confirmed as the same physical copy,
+  retained as additional inventory, ignored, or reopened. Decisions survive
+  reprojection.
+- Deck import exposes requirements-only, allocate-existing, and confirmed
+  create-deficit policies, with unknown, total, or per-card cost entry.
+- Archiving a deck preserves its history while releasing active inventory
+  reservations.
+
 ## Existing capabilities retained
 
 - Cardmarket multi-file CSV import and normalized `cm_*` staging tables
@@ -71,21 +90,14 @@ not started until the user reviews the behavior and data model.
 - Deck text import and Moxfield URL import
 - Booster-box views, local-first PWA, offline caching, and complete backup/restore
 
-## Deliberately pending Phase 4
+## Pending Phase 5 cleanup and acceptance
 
-The following consumers still read legacy `card_lots`, `transactions`,
-`sell_allocations`, or mutable disposal/profit fields and are not yet
-authoritative against the new accounting model:
-
-- holdings/cards store and dashboard totals
-- portfolio and P/L analytics
-- booster-box analytics
-- deck coverage/details
-- guided manual-correction UI and reconciliation issue UI
-
-Phase 4 should first present the proposed screens/selectors for review, then cut
-these consumers over together. Only after that cutover should legacy accounting
-fields, provisional-lot paths, and duplicate reconciler code be removed.
+- Manually exercise the Phase 4 screens with representative personal imports.
+- Remove legacy mutable accounting fields/tables and the provisional-lot
+  reconciler after confirming no import compatibility path still needs them.
+- Add large-collection benchmarks and explicit selector/projection budgets.
+- Complete browser acceptance for import files, offline behavior, and
+  backup/restore with populated canonical data.
 
 ## Verification commands
 

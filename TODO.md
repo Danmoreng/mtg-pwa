@@ -13,23 +13,25 @@ _Updated: 2026-08-10_
 - [x] Phase 3: idempotent Cardmarket, ManaBox, and deck projections with visible
   reconciliation issues and import-order convergence
 
-## Phase 4 — requires user review before implementation
+## Phase 4 — canonical consumers and UI
 
-- [ ] Review the proposed holdings/dashboard/accounting presentation
-- [ ] Review the guided manual add/remove/correct/reverse workflow
-- [ ] Review deck coverage and deficit/duplicate-resolution UX
-- [ ] Cut holdings and cards store over to canonical selectors
-- [ ] Cut dashboard, P/L, valuations, and booster analytics over together
-- [ ] Cut deck details/coverage over to `deck_inventory_allocations`
-- [ ] Add correction and reconciliation issue screens
+- [x] Implement the reviewed holdings/dashboard/accounting presentation
+- [x] Add the guided manual add/remove/correct/reverse workflow
+- [x] Add deck coverage and deficit/duplicate-resolution UX
+- [x] Cut holdings and cards store over to canonical selectors
+- [x] Cut dashboard, P/L, valuations, and booster analytics over together
+- [x] Cut deck details/coverage over to `deck_inventory_allocations`
+- [x] Add correction and reconciliation issue screens
 
 ## Cleanup after Phase 4
 
 - [ ] Remove legacy mutable disposal/profit fields and compatibility tables
 - [ ] Retire provisional-lot creation and duplicate legacy reconciliation paths
 - [ ] Add large-dataset projection benchmarks and performance budgets
-- [ ] Run browser-level acceptance tests for import, backup/restore, offline use,
-  and all Phase 4 workflows
+- [ ] Complete manual acceptance with representative Cardmarket, ManaBox, and
+  deck imports (automated empty-state/browser smoke coverage is complete)
+- [ ] Run browser-level acceptance tests for populated import, backup/restore,
+  and offline workflows
 - [ ] Prepare the release and deployment only after canonical UI acceptance
 
 See `ai_docs/ACCOUNTING_TARGET_MODEL.md` for the data contract and

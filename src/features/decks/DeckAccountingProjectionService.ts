@@ -17,6 +17,7 @@ export interface DeckAccountingProjectionOptions {
   costBasisPolicy?: DeckImportRun['costBasisPolicy'];
   totalDeficitCostCent?: number;
   unitCostCentByDeckCardId?: Record<string, number>;
+  defaultDeficitUnitCostCent?: number;
   defaultFinish?: DeckImportRun['defaultFinish'];
   defaultLanguage?: string;
   defaultCondition?: string;
@@ -36,6 +37,7 @@ interface NormalizedDeckProjectionOptions {
   costBasisPolicy: DeckImportRun['costBasisPolicy'];
   totalDeficitCostCent?: number;
   unitCostCentByDeckCardId: Record<string, number>;
+  defaultDeficitUnitCostCent?: number;
   defaultFinish: DeckImportRun['defaultFinish'];
   defaultLanguage: string;
   defaultCondition: string;
@@ -55,6 +57,7 @@ function normalizeOptions(
     costBasisPolicy: options.costBasisPolicy ?? 'unknown',
     totalDeficitCostCent: options.totalDeficitCostCent,
     unitCostCentByDeckCardId: options.unitCostCentByDeckCardId ?? {},
+    defaultDeficitUnitCostCent: options.defaultDeficitUnitCostCent,
     defaultFinish: options.defaultFinish ?? 'nonfoil',
     defaultLanguage: String(options.defaultLanguage ?? '').trim().toLowerCase() || 'en',
     defaultCondition: String(options.defaultCondition ?? '').trim() || 'unknown',
@@ -79,6 +82,13 @@ function normalizeOptions(
       throw new Error(`Invalid unit cost for deck card ${deckCardId}.`);
     }
   }
+  if (
+    normalized.defaultDeficitUnitCostCent !== undefined &&
+    (!Number.isSafeInteger(normalized.defaultDeficitUnitCostCent) ||
+      normalized.defaultDeficitUnitCostCent < 0)
+  ) {
+    throw new Error('defaultDeficitUnitCostCent must be a non-negative integer.');
+  }
   return normalized;
 }
 
@@ -98,7 +108,8 @@ export class DeckAccountingProjectionService {
     });
     const summaries: DeckAccountingProjectionSummary[] = [];
     for (const run of runs) {
-      if (!(await this.db.decks.get(run.targetDeckId))) continue;
+      const deck = await this.db.decks.get(run.targetDeckId);
+      if (!deck || deck.status === 'archived') continue;
       summaries.push(
         await this.projectDeck(run.targetDeckId, {
           existingInventoryPolicy: run.existingInventoryPolicy,
@@ -106,6 +117,7 @@ export class DeckAccountingProjectionService {
           costBasisPolicy: run.costBasisPolicy,
           totalDeficitCostCent: run.totalDeficitCostCent,
           unitCostCentByDeckCardId: run.unitCostCentByDeckCardId,
+          defaultDeficitUnitCostCent: run.defaultDeficitUnitCostCent,
           defaultFinish: run.defaultFinish,
           defaultLanguage: run.defaultLanguage,
           defaultCondition: run.defaultCondition,
@@ -219,6 +231,7 @@ export class DeckAccountingProjectionService {
       costBasisPolicy: options.costBasisPolicy,
       totalDeficitCostCent: options.totalDeficitCostCent,
       unitCostCentByDeckCardId: options.unitCostCentByDeckCardId,
+      defaultDeficitUnitCostCent: options.defaultDeficitUnitCostCent,
       defaultFinish: options.defaultFinish,
       defaultLanguage: options.defaultLanguage,
       defaultCondition: options.defaultCondition,
@@ -422,7 +435,9 @@ export class DeckAccountingProjectionService {
 
     const costs = new Map<string, number | undefined>();
     for (const deficit of deficits) {
-      const unitCostCent = options.unitCostCentByDeckCardId[deficit.deckCard.id];
+      const unitCostCent =
+        options.unitCostCentByDeckCardId[deficit.deckCard.id] ??
+        options.defaultDeficitUnitCostCent;
       if (!Number.isSafeInteger(unitCostCent) || unitCostCent < 0) {
         throw new Error(
           `enter_per_card requires a non-negative unit cost for ${deficit.deckCard.id}.`

@@ -15,10 +15,10 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 
 ## Current Health (verified on 2026-08-10)
 - `npm run build`: passes.
-- `npm run lint`: passes (`59` warnings, no errors).
+- `npm run lint`: passes (`45` warnings, no errors).
 - `npm run typecheck`: passes.
-- `npm run test:run`: passes (`28` files, `118` tests).
-- `npm run test:accounting`: passes (`7` files, `29` tests).
+- `npm run test:run`: passes (`31` files, `127` tests).
+- `npm run test:accounting`: passes (`9` files, `37` tests).
 - Test discovery intentionally targets `tests/**/*.test.ts`; legacy `src/test/**` is excluded in `vitest.config.ts`.
 
 ## Architectural Map
@@ -28,7 +28,7 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
   - mounts router + Pinia
   - schedules automatic pricing update
 - Routing: `src/app/router.ts`
-  - Dashboard, Cards, Decks, Booster Boxes, Import wizards, and Backup/Restore.
+  - Dashboard, Cards, Inventory/Reconciliation, Decks, Booster Boxes, Import wizards, and Backup/Restore.
 - Persistence:
   - fresh baseline schema: `src/data/db.ts` (`MtgTrackerDbAccounting`, schema version 1)
   - no legacy migrations or automatic database deletion
@@ -45,7 +45,7 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 - Cardmarket, ManaBox, and deck import rows project through stable source refs;
   unlocked sale/deck allocations are reproducible and locked decisions survive.
 - Legacy `card_lots`, `transactions`, and `sell_allocations` remain only for
-  Phase 4 compatibility and are not canonical accounting truth.
+  ingestion/reconciliation compatibility and are not canonical accounting truth.
 - Pricing key shape: `${cardId}:${provider}:${finish}:${date}`.
 - Provider precedence in query logic: `cardmarket.priceguide` > `mtgjson.cardmarket` > `scryfall`.
 
@@ -78,10 +78,9 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 ## Known Risk Areas
 - Legacy reconciler is complex and remains the most fragile compatibility path
   (heavy logging, provisional lot creation, allocation rewrites).
-- UI consumers still using `disposedQuantity`/`disposedAt`, legacy lots, or old
-  analytics are not authoritative until the separately reviewed Phase 4 cutover.
+- Legacy ingestion/reconciliation code still uses mutable `card_lots` and
+  `transactions`; keep it isolated from canonical UI/query consumers until cleanup.
 - Import and scan flows duplicate some logic across old/new services; prefer `src/features/**` over deprecated shims in `src/services/**`.
-- `BoosterBoxesView` constructs `new MtgTrackerDb()` directly instead of using shared `getDb()` singleton.
 - `Money.parse(number)` assumes decimal units and multiplies by 100; pass careful input types to avoid double scaling.
 
 ## Where To Start For Changes
