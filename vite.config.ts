@@ -43,4 +43,13 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: './docs',
   },
+  server: {
+    proxy: {
+      '/moxfield-api': {
+        target: 'https://api2.moxfield.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/moxfield-api/, ''),
+      },
+    },
+  },
 }))

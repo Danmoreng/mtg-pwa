@@ -4,45 +4,59 @@
     
     <div class="import-section">
       <h2>Moxfield Deck Import</h2>
-      <p>Copy and paste your decklist from Moxfield to track which cards you own and which you're missing.</p>
+      <p>Paste a public Moxfield deck URL to import directly. Text import is still available as a fallback.</p>
       
       <div class="mb-3">
-        <label for="deck-name" class="form-label">Deck Name</label>
+        <label for="deck-name" class="form-label">Deck Name (optional for URL import)</label>
         <input 
           id="deck-name" 
           v-model="deckName" 
           type="text" 
-          placeholder="Enter a name for your deck"
+          placeholder="Override deck name (optional)"
           class="form-control"
         />
       </div>
+
+      <div class="mb-3">
+        <label for="moxfield-url" class="form-label">Moxfield URL</label>
+        <input
+          id="moxfield-url"
+          v-model="moxfieldUrl"
+          type="url"
+          placeholder="https://moxfield.com/decks/..."
+          class="form-control"
+        />
+      </div>
+
+      <button @click="importFromUrl" :disabled="isImporting" class="btn btn-glass-primary mb-4">
+        {{ isImporting ? 'Importing...' : 'Import From Moxfield URL' }}
+      </button>
       
       <div class="mb-3">
-        <label for="decklist" class="form-label">Decklist</label>
+        <label for="decklist" class="form-label">Decklist Text (fallback)</label>
         <textarea 
           id="decklist" 
           v-model="decklist" 
-          placeholder="Paste your decklist here (e.g., 4 Lightning Bolt&#10;2 Counterspell)"
+          placeholder="Paste exported list lines like: 1 Card Name (SET) 123"
           rows="10"
           class="form-control"
         ></textarea>
       </div>
       
-      <button @click="importDeck" :disabled="isImporting" class="btn btn-glass-primary mb-4">
-        {{ isImporting ? 'Importing...' : 'Import Deck' }}
+      <button @click="importFromText" :disabled="isImporting" class="btn btn-glass-primary mb-4">
+        {{ isImporting ? 'Importing...' : 'Import From Text' }}
       </button>
       
-      <div v-if="importError" class="status-message error">
-        {{ importError }}
+      <div v-if="statusMessage" class="status-message" :class="statusType || 'error'">
+        {{ statusMessage }}
       </div>
       
       <div class="instructions">
-        <h3>How to copy from Moxfield:</h3>
+        <h3>How to import:</h3>
         <ol>
           <li>Open your deck on Moxfield.com</li>
-          <li>Click the "Export" button</li>
-          <li>Select "Text" format</li>
-          <li>Copy the text and paste it here</li>
+          <li>Copy the URL from your browser and paste it above</li>
+          <li>If URL import fails, export as text and paste into the fallback box</li>
         </ol>
       </div>
     </div>
@@ -55,42 +69,63 @@ import { DeckImportService } from '../DeckImportService';
 
 // Reactive state
 const deckName = ref('');
+const moxfieldUrl = ref('');
 const decklist = ref('');
 const isImporting = ref(false);
-const importError = ref<string | null>(null);
+const statusMessage = ref<string | null>(null);
+const statusType = ref<'success' | 'error' | null>(null);
 
-// Import deck
-const importDeck = async () => {
-  // Validate inputs
-  if (!deckName.value.trim()) {
-    importError.value = 'Please enter a deck name';
+const setStatus = (message: string, type: 'success' | 'error') => {
+  statusMessage.value = message;
+  statusType.value = type;
+};
+
+const importFromUrl = async () => {
+  if (!moxfieldUrl.value.trim()) {
+    setStatus('Please paste a Moxfield URL', 'error');
     return;
   }
-  
-  if (!decklist.value.trim()) {
-    importError.value = 'Please paste your decklist';
-    return;
-  }
-  
+
   isImporting.value = true;
-  importError.value = null;
-  
+  statusMessage.value = null;
+  statusType.value = null;
+
   try {
-    // Import the deck using the service
-    await DeckImportService.importDeckFromText(deckName.value.trim(), decklist.value.trim());
-    
-    // Show success message
-    importError.value = 'Deck import started successfully! Check the status indicator in the top right for progress.';
-    
-    // Reset form after successful import
-    setTimeout(() => {
-      deckName.value = '';
-      decklist.value = '';
-      isImporting.value = false;
-      importError.value = null;
-    }, 3000);
+    await DeckImportService.importDeckFromMoxfieldUrl(
+      moxfieldUrl.value.trim(),
+      deckName.value.trim() || undefined
+    );
+    setStatus('Deck import started successfully! Check the status indicator for progress.', 'success');
+    moxfieldUrl.value = '';
   } catch (error) {
-    importError.value = 'Failed to import deck: ' + (error as Error).message;
+    setStatus('Failed to import deck from URL: ' + (error as Error).message, 'error');
+  } finally {
+    isImporting.value = false;
+  }
+};
+
+const importFromText = async () => {
+  if (!deckName.value.trim()) {
+    setStatus('Please enter a deck name for text import', 'error');
+    return;
+  }
+
+  if (!decklist.value.trim()) {
+    setStatus('Please paste your decklist text', 'error');
+    return;
+  }
+
+  isImporting.value = true;
+  statusMessage.value = null;
+  statusType.value = null;
+
+  try {
+    await DeckImportService.importDeckFromText(deckName.value.trim(), decklist.value.trim());
+    setStatus('Deck import started successfully! Check the status indicator for progress.', 'success');
+    decklist.value = '';
+  } catch (error) {
+    setStatus('Failed to import deck from text: ' + (error as Error).message, 'error');
+  } finally {
     isImporting.value = false;
   }
 };
