@@ -71,12 +71,16 @@ The following columns are required for proper parsing:
    - PO (Poor) → PO
 
 ### Idempotency
-Each transaction is uniquely identified by:
+Raw files/rows retain their source hashes and Cardmarket identifiers. Canonical
+accounting rows use deterministic references such as:
 ```
-externalRef = "cardmarket:" + OrderId + ":" + lineNumber
+cardmarket:purchase:<orderId>:line:<lineId>
+cardmarket:sale:<orderId>:line:<lineId>
 ```
 
-This prevents duplicate imports when the same CSV is imported multiple times.
+Purchases are projected before sales. Merchandise, fees, and shipping are
+allocated exactly in integer cents. Re-import replaces the same canonical rows;
+locked manual allocations are preserved.
 
 ### Card Resolution
 Cardmarket imports now use a Product-ID-first resolution approach:
@@ -89,6 +93,8 @@ Cardmarket imports now use a Product-ID-first resolution approach:
 - **Invalid Prices**: Rows with unparseable prices are skipped
 - **Malformed Rows**: Incomplete rows are skipped with line number
 - **Currency Issues**: Only EUR is supported; other currencies are skipped
+- **Unmatched/Oversold**: Canonical inventory is not invented. Stable open
+  `reconciliation_issues` retain the unresolved source and quantities.
 
 ### Sample CSV
 ```csv
@@ -124,19 +130,15 @@ Normalization includes:
 - Standardizing language codes
 - Standardizing finish types
 
-### Scan Matching Algorithm
-The matching algorithm links scanned cards to sales using a greedy FIFO approach:
+### Canonical projection
 
-1. For each scan, expand into quantity singletons with key:
-   ```
-   K = (cardId||fingerprint, foil, language)
-   ```
-2. Get all SELL transactions with same K and `happenedAt >= scannedAt`, sorted by date
-3. Assign units to earliest sale lots with remaining quantity
-4. Store link as `soldTransactionId` on scan
-
-### Partial Matches
-When scanned quantity exceeds sold quantity, the remainder is marked as "Still Owned".
+1. Scans retain their raw fingerprint and source reference.
+2. Resolved positive-quantity scans project to deterministic `inventory_lots`.
+3. A known box/acquisition total is allocated by scanned quantity without losing
+   cents. A missing total produces unknown cost basis, never zero cost.
+4. Unresolved or invalid scans create stable reconciliation issues.
+5. Cardmarket sales and stored deck runs are then reprojected so import order
+   converges to the same accounting result.
 
 ### Sample CSV
 ```csv
@@ -152,14 +154,20 @@ Name,Set,Collector,Language,Foil,Condition,Qty,ScanDate
 2. Application fetches deck JSON from public API
 3. Parses mainboard and commander sections
 4. Resolves cards to `cardId` using EntityLinker
-5. Creates/updates `decks` and `deck_cards` records
+5. Creates `decks` and `deck_cards` requirements without direct lot IDs
+6. Stores one explicit `deck_import_run` policy and projects physical reservations
 
-### Ownership Calculation
-For each card in the deck:
-1. Check if card exists in holdings
-2. Compare required quantity vs owned quantity
-3. Calculate ownership percentage
-4. Highlight fully/partially owned cards
+### Inventory policy
+
+- Default: allocate existing free inventory and leave any shortage visible.
+- `requirements_only`: do not reserve physical inventory.
+- Explicit `create_deficit`: after user confirmation, create only missing copies
+  as `deck_gap` lots. Their cost basis may be entered or remain unknown.
+- A later Cardmarket/ManaBox lot that may duplicate a deck-created copy opens a
+  `possible_duplicate_inventory` issue for user resolution.
+
+The current deck screen still calculates coverage through legacy fields; its
+Phase 4 cutover to canonical allocations is intentionally pending review.
 
 ### Rate Limiting
 Moxfield API requests are rate-limited to respect service limits.
@@ -185,9 +193,9 @@ https://www.moxfield.com/decks/example-deck-id
 6. Store in appropriate database tables
 
 ### Duplicate Detection
-- **Cardmarket**: Uses `externalRef` based on OrderId and line number
-- **ManaBox**: Uses combination of fingerprint and scan date
-- **Moxfield**: Uses deck ID to prevent duplicate imports
+- **Cardmarket**: stable file hashes, order/line IDs, and canonical `sourceRef`
+- **ManaBox**: acquisition plus external scan reference and deterministic lot ID
+- **Decks**: stable run per imported deck; reservations have deterministic IDs
 
 ### Error Reporting
 All import errors are logged with:

@@ -11,6 +11,7 @@ import {
   cardmarketOrderPartyRepository,
   cardmarketOrderRepository,
 } from '../../data/repos';
+import { AccountingProjectionCoordinator } from '../accounting/AccountingProjectionCoordinator';
 
 type WizardFileType =
   | 'transactions'
@@ -388,6 +389,7 @@ export class CardmarketV2ImportService {
     }
 
     summary.upsertedOrderLedgerLinks = await this.linkOrdersToLedger();
+    await new AccountingProjectionCoordinator(getDb()).projectAfterCardmarketImport();
     return summary;
   }
 

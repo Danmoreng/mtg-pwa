@@ -17,7 +17,8 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 - `npm run build`: passes.
 - `npm run lint`: passes (`59` warnings, no errors).
 - `npm run typecheck`: passes.
-- `npm run test:run`: passes (`21` files, `89` tests).
+- `npm run test:run`: passes (`28` files, `118` tests).
+- `npm run test:accounting`: passes (`7` files, `29` tests).
 - Test discovery intentionally targets `tests/**/*.test.ts`; legacy `src/test/**` is excluded in `vitest.config.ts`.
 
 ## Architectural Map
@@ -29,7 +30,7 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 - Routing: `src/app/router.ts`
   - Dashboard, Cards, Decks, Booster Boxes, Import wizards, and Backup/Restore.
 - Persistence:
-  - fresh baseline schema: `src/data/db.ts` (`MtgTrackerDbV2`, schema version 1)
+  - fresh baseline schema: `src/data/db.ts` (`MtgTrackerDbAccounting`, schema version 1)
   - no legacy migrations or automatic database deletion
   - singleton init: `src/data/init.ts`
   - repositories: `src/data/repos.ts`
@@ -37,8 +38,14 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 - Feature modules: `src/features`
 
 ## Data Model Invariants
-- Target invariant: remaining inventory is derived from `card_lots` minus `sell_allocations`; Phase 1 must make every consumer use this rule consistently.
-- Key tables: `cards`, `acquisitions`, `card_lots`, `transactions`, `scans`, `price_points`, `valuations`, `sell_allocations`, `scan_sale_links`.
+- Canonical inventory truth is `inventory_lots` plus immutable
+  `inventory_adjustments`; sold and deck-reserved quantities are derived from
+  `lot_allocations` and active `deck_inventory_allocations`.
+- Cost basis and P/L use `known | estimated | unknown`; unknown is never zero.
+- Cardmarket, ManaBox, and deck import rows project through stable source refs;
+  unlocked sale/deck allocations are reproducible and locked decisions survive.
+- Legacy `card_lots`, `transactions`, and `sell_allocations` remain only for
+  Phase 4 compatibility and are not canonical accounting truth.
 - Pricing key shape: `${cardId}:${provider}:${finish}:${date}`.
 - Provider precedence in query logic: `cardmarket.priceguide` > `mtgjson.cardmarket` > `scryfall`.
 
@@ -47,11 +54,13 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
   - UI parses CSV in worker `src/workers/cardmarketCsv.ts`
   - applies import logic via `src/features/imports/ImportService.ts`
   - pipelines in `src/features/imports/ImportPipelines.ts`
-  - triggers reconciler (`kickReconciler`).
+  - projects raw orders into canonical acquisitions/sales/allocations and then
+    recomputes stored deck runs.
 - ManaBox import:
   - wizard -> `ImportService.importManaboxScansWithBoxCost`
   - scan hydration/materialization in `src/features/scans/ScanProcessingService.ts`
-  - reconciliation in `src/features/scans/ReconcilerService.ts`.
+  - canonical scan projection, sale retry, and deck reprojection through
+    `AccountingProjectionCoordinator`.
 - Price updates:
   - scheduler: `src/features/pricing/AutomaticPriceUpdateService.ts`
   - fetch/write: `src/features/pricing/PriceUpdateService.ts`
@@ -67,8 +76,10 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 - `npm run build` mutates tracked `docs/` artifacts; avoid running unless needed during code-only edits.
 
 ## Known Risk Areas
-- Reconciler is complex and currently the most fragile part (heavy logging, provisional lot creation, allocation rewrites).
-- Existing `disposedQuantity`/`disposedAt` consumers do not yet agree with `sell_allocations`; do not treat portfolio/P&L figures as authoritative before Phase 1.
+- Legacy reconciler is complex and remains the most fragile compatibility path
+  (heavy logging, provisional lot creation, allocation rewrites).
+- UI consumers still using `disposedQuantity`/`disposedAt`, legacy lots, or old
+  analytics are not authoritative until the separately reviewed Phase 4 cutover.
 - Import and scan flows duplicate some logic across old/new services; prefer `src/features/**` over deprecated shims in `src/services/**`.
 - `BoosterBoxesView` constructs `new MtgTrackerDb()` directly instead of using shared `getDb()` singleton.
 - `Money.parse(number)` assumes decimal units and multiplies by 100; pass careful input types to avoid double scaling.
@@ -76,6 +87,8 @@ Build runs `vue-tsc -b` and writes production assets + service worker into `docs
 ## Where To Start For Changes
 - Imports: `src/features/imports/**`, `src/workers/cardmarketCsv.ts`
 - Reconciliation: `src/features/scans/ReconcilerService.ts`
+- Canonical accounting: `src/features/accounting/**`
+- Canonical deck projection: `src/features/decks/DeckAccountingProjectionService.ts`
 - Pricing/history: `src/features/pricing/**`, `src/stores/cards.ts`
 - Analytics/P&L: `src/features/analytics/**`
 - Schema baseline: `src/data/db.ts`

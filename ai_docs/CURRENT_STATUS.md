@@ -2,28 +2,65 @@
 
 ## Release-hardening baseline
 
-Development currently continues on `stabilize/release-hardening`. The project is
-being recovered as an advanced alpha: existing UI and import integrations are
-kept, while persistence and the financial accounting kernel are hardened before
-new product features are added.
+Development continues on `stabilize/release-hardening`. The active IndexedDB is
+the deliberate fresh start `MtgTrackerDbAccounting`, Dexie schema version 1.
+There is no migration from prototype databases and the app never deletes those
+older databases automatically.
 
-The active IndexedDB database is the deliberate fresh start `MtgTrackerDbV2`,
-Dexie schema version 1. There is no legacy v10 migration because no legacy user
-database needs to be retained. The app does not delete or overwrite older
-prototype databases.
+The accounting rebuild is complete through Phase 3. Phase 4 (switching the
+existing stores, analytics, and UI to the canonical selectors) is intentionally
+not started until the user reviews the behavior and data model.
 
-## Phase 0 — completed baseline work
+## Completed Phase 0 — safety and verification
 
-- All 18 current schema tables are declared in one baseline schema.
-- `examples_temp/` is ignored because local Cardmarket exports can contain
-  personal or financial data.
-- Automatic database deletion on `VersionError`/`UpgradeError` was removed.
-- Backup/restore is exposed through the main navigation.
-- Backups contain every table, format and schema metadata, and all records.
-- Restore validates the complete snapshot before writing, revives Date fields,
-  and replaces all tables inside one Dexie transaction.
-- Database and backup round-trip tests cover the complete schema and transaction
-  rollback.
+- One fresh v1 schema declares legacy compatibility, raw import, and canonical
+  accounting tables.
+- `examples_temp/` is ignored because exports can contain personal/financial data.
+- Backup/restore is visible in the main navigation, includes every schema table,
+  validates before writing, revives dates, and restores atomically.
+- CI runs lint, typecheck, and the complete test suite on Node 22.
+- `npm run check`, `npm run test:accounting`, and isolated uniquely named Dexie
+  test databases provide repeatable local verification.
+
+## Completed Phase 1 — accounting kernel
+
+- One pure kernel derives effective, sold, remaining, deck-reserved, and freely
+  available quantities per canonical lot.
+- Open cost basis, realized P/L, and unrealized P/L propagate
+  `known | estimated | unknown`; unknown is never treated as zero.
+- Executable invariants reject negative inventory, overselling, invalid
+  allocations, and over-reservation.
+- Deterministic largest-remainder allocation preserves every integer cent,
+  including signed totals.
+
+## Completed Phase 2 — canonical persistence and manual commands
+
+- Canonical tables: `inventory_lots`, `inventory_lot_sources`,
+  `inventory_adjustments`, `sales`, `sale_lines`, `lot_allocations`,
+  `deck_inventory_allocations`, `deck_import_runs`, and
+  `reconciliation_issues`.
+- `AccountingRepository` exposes the shared lot snapshot and FIFO availability.
+- `AccountingCommandService` atomically creates manual inventory and applies or
+  reverses immutable adjustments. Stable source references are idempotent and
+  conflicting reuse is rejected.
+
+## Completed Phase 3 — deterministic projections
+
+- Cardmarket purchases project to acquisitions/lots; sales project to sales,
+  lines, and FIFO lot allocations with exact fee/shipping distribution.
+- ManaBox acquisitions allocate known box cost by scan quantity; missing costs
+  remain unknown.
+- Deck imports store requirements without direct lot links. Existing inventory
+  is reserved first; the default leaves missing copies visible. Explicit
+  `create_deficit` creates only the confirmed shortage as user-owned
+  `deck_gap` inventory with known or unknown cost basis.
+- Later Cardmarket/ManaBox evidence for deck-created inventory raises a visible
+  `possible_duplicate_inventory` issue.
+- Import projections converge across import order: sales take priority over
+  unlocked deck reservations, then decks are recomputed. Locked manual choices
+  survive reprojection.
+- Unmatched, oversold, invalid-quantity, deck-deficit, and duplicate cases remain
+  visible in `reconciliation_issues`; projection never invents provisional stock.
 
 ## Existing capabilities retained
 
@@ -31,36 +68,31 @@ prototype databases.
 - ManaBox scan/acquisition import
 - Scryfall card hydration and price updates
 - MTGJSON and Cardmarket PriceGuide imports
-- Card, lot, transaction, price history, valuation, and portfolio screens
 - Deck text import and Moxfield URL import
-- Booster-box views
-- Local-first PWA and offline caching
+- Booster-box views, local-first PWA, offline caching, and complete backup/restore
 
-## Known correctness gaps
+## Deliberately pending Phase 4
 
-The following items remain intentionally open for the next phases:
+The following consumers still read legacy `card_lots`, `transactions`,
+`sell_allocations`, or mutable disposal/profit fields and are not yet
+authoritative against the new accounting model:
 
-- Remaining inventory is not yet derived consistently from
-  `card_lots.quantity - sell_allocations.quantity`.
-- Some screens still use `disposedQuantity`/`disposedAt` and can disagree with
-  reconciliation and P&L.
-- Provisional-lot creation and lot merging need allocation-safe rules.
-- Acquisition/box costs are not consistently allocated to lots.
-- Shipping and fee semantics differ across analytics services.
-- The Cardmarket `cm_*` shadow-write path has not yet become the single canonical
-  projection path.
-- ManaBox UI imports do not yet use deterministic external references.
+- holdings/cards store and dashboard totals
+- portfolio and P/L analytics
+- booster-box analytics
+- deck coverage/details
+- guided manual-correction UI and reconciliation issue UI
 
-Until these items are resolved, displayed holdings and P&L figures should not be
-treated as authoritative accounting results.
+Phase 4 should first present the proposed screens/selectors for review, then cut
+these consumers over together. Only after that cutover should legacy accounting
+fields, provisional-lot paths, and duplicate reconciler code be removed.
 
-## Next implementation order
+## Verification commands
 
-1. Phase 1: define and implement one accounting kernel for remaining quantity,
-   acquisition cost, net sale proceeds, and realized/unrealized P&L.
-2. Phase 2: make Cardmarket raw/staging data project idempotently into the
-   canonical model and remove duplicate import paths.
-3. Phase 3: add end-to-end golden-path, migration/baseline, re-import,
-   multi-lot sale, backup, and performance coverage.
-4. Only then continue manual correction UI, deck coverage, box analytics, and
-   deployment automation.
+```text
+npm run test:accounting
+npm run check
+npm run verify
+```
+
+`npm run verify` also rebuilds tracked production artifacts in `docs/`.

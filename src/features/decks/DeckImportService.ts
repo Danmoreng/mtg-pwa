@@ -5,6 +5,10 @@ import { type Card } from '../../data/db';
 import { getDb } from '../../data/init';
 import { useImportStatusStore } from '../../stores/importStatus';
 import { v4 as uuidv4 } from 'uuid';
+import {
+    DeckAccountingProjectionService,
+    type DeckAccountingProjectionOptions,
+} from './DeckAccountingProjectionService';
 
 type DeckPlatform = 'moxfield' | 'csv';
 type DeckRole = 'main' | 'side' | 'maybeboard';
@@ -240,7 +244,11 @@ export function normalizeMoxfieldDeckData(
 }
 
 export class DeckImportService {
-    static async importDeckFromText(deckName: string, deckText: string): Promise<void> {
+    static async importDeckFromText(
+        deckName: string,
+        deckText: string,
+        accountingOptions: DeckAccountingProjectionOptions = {}
+    ): Promise<void> {
         const normalizedDeckName = String(deckName || '').trim();
         if (!normalizedDeckName) {
             throw new Error('Please enter a deck name.');
@@ -259,15 +267,19 @@ export class DeckImportService {
             name: normalizedDeckName,
             platform: 'csv',
             entries,
-        });
+        }, accountingOptions);
     }
 
-    static async importDeckFromMoxfieldUrl(moxfieldUrl: string, deckNameOverride?: string): Promise<void> {
+    static async importDeckFromMoxfieldUrl(
+        moxfieldUrl: string,
+        deckNameOverride?: string,
+        accountingOptions: DeckAccountingProjectionOptions = {}
+    ): Promise<void> {
         const deckId = extractMoxfieldDeckId(moxfieldUrl);
         const normalizedUrl = `https://moxfield.com/decks/${deckId}`;
         const rawDeck = await this.fetchMoxfieldDeck(deckId);
         const payload = normalizeMoxfieldDeckData(rawDeck, normalizedUrl, deckNameOverride);
-        await this.importDeck(payload);
+        await this.importDeck(payload, accountingOptions);
     }
 
     private static getMoxfieldEndpoints(deckId: string): string[] {
@@ -331,7 +343,10 @@ export class DeckImportService {
         throw new Error(`Failed to fetch Moxfield deck (${lastError || 'no successful endpoint'})`);
     }
 
-    private static async importDeck(payload: DeckImportPayload): Promise<void> {
+    private static async importDeck(
+        payload: DeckImportPayload,
+        accountingOptions: DeckAccountingProjectionOptions
+    ): Promise<void> {
         let importStatusStore: ReturnType<typeof useImportStatusStore> | null = null;
         let importId: string | null = null;
 
@@ -393,6 +408,11 @@ export class DeckImportService {
                 });
             }
 
+            await new DeckAccountingProjectionService(db).projectDeck(
+                deckId,
+                accountingOptions
+            );
+
             if (importStatusStore && importId) {
                 importStatusStore.completeImport(importId);
             }
@@ -413,8 +433,6 @@ export class DeckImportService {
         }
 
         await this.ensureCardExists(cardId, entry);
-        await this.ensureCollectionLotCoverage(cardId, entry);
-        const lotIdToLink = await this.findLotToLink(cardId, entry);
 
         const now = new Date();
         const db = getDb();
@@ -422,8 +440,9 @@ export class DeckImportService {
             id: this.generateId('deckcard'),
             deckId,
             cardId,
-            lotId: lotIdToLink,
             quantity: entry.quantity,
+            finish: entry.finish,
+            language: entry.language,
             role: entry.role,
             addedAt: now,
             createdAt: now,
@@ -511,62 +530,6 @@ export class DeckImportService {
         await upsertIfMissing('nonfoil', prices.nonfoil?.getCents());
         await upsertIfMissing('foil', prices.foil?.getCents());
         await upsertIfMissing('etched', prices.etched?.getCents());
-    }
-
-    private static lotMatchesEntry(lot: { finish?: string; language?: string }, entry: DeckImportEntry): boolean {
-        const lotFinish = String(lot.finish || 'nonfoil').toLowerCase();
-        const lotLanguage = String(lot.language || 'en').toLowerCase();
-        return lotFinish === entry.finish && lotLanguage === entry.language;
-    }
-
-    private static getRemainingQuantity(lot: { quantity: number; disposedQuantity?: number; disposedAt?: Date }): number {
-        if (!lot.disposedAt) {
-            return lot.quantity;
-        }
-        if (typeof lot.disposedQuantity === 'number') {
-            return Math.max(0, lot.quantity - lot.disposedQuantity);
-        }
-        return 0;
-    }
-
-    private static async ensureCollectionLotCoverage(cardId: string, entry: DeckImportEntry): Promise<void> {
-        const existingLots = await cardLotRepository.getByCardId(cardId);
-        const matchingLots = existingLots.filter(lot => this.lotMatchesEntry(lot, entry));
-        const totalOwned = matchingLots.reduce((sum, lot) => sum + this.getRemainingQuantity(lot), 0);
-        if (totalOwned >= entry.quantity) return;
-
-        const now = new Date();
-        await cardLotRepository.add({
-            id: this.generateId('lot'),
-            cardId,
-            quantity: entry.quantity - totalOwned,
-            unitCost: 0,
-            condition: 'unknown',
-            language: entry.language,
-            foil: entry.finish === 'foil',
-            finish: entry.finish,
-            source: 'deck_import',
-            currency: 'EUR',
-            purchasedAt: now,
-            createdAt: now,
-            updatedAt: now,
-        });
-    }
-
-    private static async findLotToLink(cardId: string, entry: DeckImportEntry): Promise<string | undefined> {
-        const existingLots = await cardLotRepository.getByCardId(cardId);
-        const matchingLots = existingLots.filter(lot => this.lotMatchesEntry(lot, entry));
-        if (matchingLots.length === 0) return undefined;
-
-        const activeWithQuantity = matchingLots.find(lot => {
-            return !lot.disposedAt && this.getRemainingQuantity(lot) >= entry.quantity;
-        });
-        if (activeWithQuantity) {
-            return activeWithQuantity.id;
-        }
-
-        const firstActive = matchingLots.find(lot => !lot.disposedAt);
-        return firstActive?.id || matchingLots[0].id;
     }
 
     private static generateId(prefix: string): string {

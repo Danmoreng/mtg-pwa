@@ -33,14 +33,15 @@ Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-f
 ## Data Model
 All monetary values are stored as integer cents (EUR) to avoid float drift.
 
-The current operational schema below describes the release-hardening baseline.
-The planned replacement accounting model is specified in
+The current operational schema contains the new canonical accounting model plus
+legacy compatibility tables that remain in use by screens awaiting Phase 4.
+The accounting contract is specified in
 [Accounting Target Model](ACCOUNTING_TARGET_MODEL.md) and visualized in
 [MTG Accounting Architecture.tldraw](MTG%20Accounting%20Architecture.tldraw).
 The Markdown target-model document is canonical when implementation notes and
 the visual diagram differ.
 
-The active browser database is the intentional fresh baseline `MtgTrackerDbV2`
+The active browser database is the intentional fresh baseline `MtgTrackerDbAccounting`
 at Dexie schema version 1. It has no migration path from prototype databases and
 never deletes an older database automatically.
 
@@ -55,6 +56,25 @@ never deletes an older database automatically.
 - **valuations** — Daily portfolio valuation snapshots  
 - **scan_sale_links** — Links between scans and sales for reconciliation
 - **sell_allocations** — Allocation of SELL transactions across multiple CardLots (id, transactionId, lotId, quantity, unitCostCentAtSale)  
+
+### Canonical Accounting Entities (Phases 1–3)
+
+- **inventory_lots** — Immutable starting quantity, allocated cost basis,
+  provenance origin, ownership status, finish/language/condition, and acquisition date
+- **inventory_lot_sources** — Many provenance records for a physical lot
+- **inventory_adjustments** — Immutable, reversible manual quantity/cost ledger
+- **sales**, **sale_lines** — Order- and line-level net proceeds in integer cents
+- **lot_allocations** — FIFO/manual sale-to-lot allocation with cost/proceeds snapshots
+- **deck_inventory_allocations** — Active/released physical deck reservations
+- **deck_import_runs** — Explicit inventory and missing-quantity policy per deck import
+- **reconciliation_issues** — Visible unmatched, oversold, ambiguous, quantity,
+  and possible-duplicate conflicts
+
+`AccountingProjectionCoordinator` runs sales before recomputing unlocked deck
+reservations. Cardmarket, ManaBox, and deck projections use stable source
+references and deterministic cent allocation, so reimporting converges without
+duplicating inventory. Existing UI consumers still read legacy fields until the
+separately reviewed Phase 4 cutover.
 
 ### Inventory Layer (lots)
 - **card_lots**  

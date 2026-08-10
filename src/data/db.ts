@@ -1,10 +1,11 @@
 import Dexie, {type EntityTable} from 'dexie';
+import type { CostBasisStatus } from '../features/accounting/AccountingTypes';
 
 /**
  * Fresh 2026 data baseline. The new database name deliberately avoids opening
  * any pre-baseline IndexedDB database that may still exist in a browser.
  */
-export const DATABASE_NAME = 'MtgTrackerDbV2';
+export const DATABASE_NAME = 'MtgTrackerDbAccounting';
 export const DATABASE_SCHEMA_VERSION = 1;
 
 export const DATABASE_TABLE_NAMES = [
@@ -26,6 +27,15 @@ export const DATABASE_TABLE_NAMES = [
     'cm_order_lines',
     'cm_ledger_transactions',
     'cm_order_ledger_links',
+    'inventory_lots',
+    'inventory_lot_sources',
+    'inventory_adjustments',
+    'sales',
+    'sale_lines',
+    'lot_allocations',
+    'reconciliation_issues',
+    'deck_inventory_allocations',
+    'deck_import_runs',
 ] as const;
 
 export type DatabaseTableName = typeof DATABASE_TABLE_NAMES[number];
@@ -51,17 +61,23 @@ export interface Card {
 // 1.1 New: parent entity for boxes/collections
 export interface Acquisition {
     id: string; // ulid/uuid
-    kind: 'box' | 'sealed' | 'single' | 'collection' | 'other';
+    kind: 'box' | 'sealed' | 'single' | 'collection' | 'deck_gap' | 'manual_entry' | 'other';
     source: string;               // 'manabox', 'cardmarket', ...
     externalRef?: string;         // import/order id
+    sourceRef?: string;           // canonical idempotency/provenance key
     currency: 'EUR';
     happenedAt: Date;
+    occurredAt?: Date;            // canonical accounting date during transition
 
     // Total cost at acquisition level
     totalPriceCent?: number;
     totalFeesCent?: number;
     totalShippingCent?: number;
     totalCostCent?: number;       // derived = sum of above
+    merchandiseCent?: number;
+    feesCent?: number;
+    shippingCent?: number;
+    projectionVersion?: number;
 
     allocationMethod?: 'equal_per_card' | 'by_market_price' | 'manual' | 'by_rarity';
     allocationAsOf?: Date;        // last allocation timestamp
@@ -157,6 +173,8 @@ export interface Deck {
     commander?: string;
     url?: string;
     faceCardId?: string;
+    inventoryMode?: 'requirements_only' | 'physical_exclusive';
+    status?: 'active' | 'inactive' | 'archived';
     importedAt: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -166,8 +184,12 @@ export interface DeckCard {
     id: string;
     deckId: string;
     cardId: string;
+    /** @deprecated Target accounting uses deck_inventory_allocations. */
     lotId?: string;
     quantity: number;
+    finish?: 'nonfoil' | 'foil' | 'etched';
+    language?: string;
+    condition?: string;
     role: 'main' | 'side' | 'maybeboard';
     addedAt: Date;
     removedAt?: Date;
@@ -331,6 +353,178 @@ export interface CardmarketOrderLedgerLink {
     createdAt: Date;
 }
 
+export interface InventoryLot {
+    id: string;
+    acquisitionId: string;
+    cardId: string;
+    initialQuantity: number;
+    allocatedCostCent?: number;
+    costBasisStatus: CostBasisStatus;
+    origin: 'purchase' | 'scan' | 'manual' | 'deck_import';
+    ownershipStatus: 'imported' | 'user_confirmed';
+    condition: string;
+    language: string;
+    finish: 'nonfoil' | 'foil' | 'etched';
+    acquiredAt: Date;
+    sourceRef: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface InventoryLotSource {
+    id: string;
+    lotId: string;
+    sourceRef: string;
+    role: 'created_from' | 'confirmed_by' | 'cost_basis_from';
+    quantity: number;
+    costBasisContributionCent?: number;
+    linkedAt: Date;
+}
+
+export interface InventoryAdjustment {
+    id: string;
+    lotId: string;
+    quantityDelta: number;
+    costBasisDeltaCent?: number;
+    costBasisStatus: CostBasisStatus;
+    kind: 'found' | 'correction' | 'lost' | 'gifted' | 'transferred' | 'damaged' | 'other';
+    effectiveAt: Date;
+    note?: string;
+    sourceRef: string;
+    reversesAdjustmentId?: string;
+    confirmedAt: Date;
+    createdAt: Date;
+}
+
+export interface Sale {
+    id: string;
+    occurredAt: Date;
+    currency: 'EUR';
+    grossMerchandiseCent: number;
+    platformFeesCent: number;
+    shippingIncomeCent: number;
+    shippingExpenseCent: number;
+    netProceedsCent: number;
+    sourceRef: string;
+    projectionVersion: number;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface SaleLine {
+    id: string;
+    saleId: string;
+    cardId: string;
+    quantity: number;
+    finish: 'nonfoil' | 'foil' | 'etched';
+    language: string;
+    grossLineCent: number;
+    allocatedFeesCent: number;
+    allocatedShippingIncomeCent: number;
+    allocatedShippingExpenseCent: number;
+    netLineProceedsCent: number;
+    sourceRef: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface LotAllocation {
+    id: string;
+    saleLineId: string;
+    lotId: string;
+    quantity: number;
+    costBasisCentSnapshot?: number;
+    costBasisStatus: CostBasisStatus;
+    netProceedsCentSnapshot: number;
+    method: 'auto' | 'manual';
+    lockedAt?: Date;
+    createdAt: Date;
+}
+
+export interface ReconciliationIssue {
+    id: string;
+    kind: 'unmatched' | 'oversold' | 'ambiguous' | 'quantity_conflict' | 'possible_duplicate_inventory';
+    sourceRef: string;
+    saleLineId?: string;
+    candidateLotId?: string;
+    candidateIds?: string[];
+    details?: Record<string, unknown>;
+    status: 'open' | 'resolved';
+    resolution?: 'same_physical_copy' | 'additional_copy' | 'ignored' | 'other';
+    resolutionData?: Record<string, unknown>;
+    resolvedAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DeckInventoryAllocation {
+    id: string;
+    deckCardId: string;
+    lotId: string;
+    quantity: number;
+    method: 'auto' | 'manual' | 'created_deficit';
+    lockedAt?: Date;
+    releasedAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DeckImportRun {
+    id: string;
+    sourceFileId?: string;
+    targetDeckId: string;
+    existingInventoryPolicy: 'allocate_available' | 'requirements_only';
+    missingInventoryPolicy: 'leave_missing' | 'create_deficit';
+    costBasisPolicy: 'unknown' | 'enter_total' | 'enter_per_card';
+    totalDeficitCostCent?: number;
+    unitCostCentByDeckCardId?: Record<string, number>;
+    defaultFinish: 'nonfoil' | 'foil' | 'etched';
+    defaultLanguage: string;
+    defaultCondition: string;
+    confirmedAt?: Date;
+    confirmedBy?: 'user';
+    createdAt: Date;
+}
+
+const BASELINE_SCHEMA_STORES = {
+    acquisitions: 'id, kind, source, externalRef, &sourceRef, currency, happenedAt, occurredAt, createdAt, updatedAt, [source+externalRef]',
+    cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
+    card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
+        '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
+    transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
+        '[lotId+kind], [cardId+kind], [source+externalRef]',
+    scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
+        '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
+    decks: 'id, platform, name, inventoryMode, status, importedAt, createdAt, updatedAt',
+    deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
+    price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
+        '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
+    valuations: 'id, asOf, createdAt, [asOf+createdAt]',
+    settings: 'k, createdAt, updatedAt',
+    scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score',
+    sell_allocations: 'id, transactionId, lotId, quantity, unitCostCentAtSale, createdAt, ' +
+        '[transactionId+lotId], [lotId], [transactionId]',
+    cm_import_files: 'id, source, kind, fileName, fileHash, periodStart, periodEnd, rowCount, importedAt, createdAt, &[source+fileHash]',
+    cm_orders: 'id, direction, orderDate, username, articleCount, currency, sourceFileId, sourceLineNumber, createdAt, updatedAt, [direction+orderDate]',
+    cm_order_parties: 'orderId, country, isProfessional, vatNumber, updatedAt',
+    cm_order_lines: 'id, orderId, lineNo, direction, purchasedAt, productId, articleName, localizedProductName, quantity, sourceFileId, sourceLineNumber, updatedAt, &[orderId+lineNo], [orderId+productId], [productId+direction]',
+    cm_ledger_transactions: 'id, happenedAt, category, type, counterpart, reference, amountCents, sourceFileId, sourceLineNumber, createdAt, [reference+happenedAt], [category+type], &[sourceFileId+sourceLineNumber]',
+    cm_order_ledger_links: 'id, orderId, ledgerTransactionId, relation, createdAt, &[orderId+ledgerTransactionId], [ledgerTransactionId+orderId], [orderId+relation]'
+};
+
+const ACCOUNTING_SCHEMA_STORES = {
+    ...BASELINE_SCHEMA_STORES,
+    inventory_lots: 'id, acquisitionId, cardId, &sourceRef, origin, ownershipStatus, acquiredAt, createdAt, updatedAt, [cardId+acquiredAt], [acquisitionId+acquiredAt]',
+    inventory_lot_sources: 'id, lotId, sourceRef, role, linkedAt, &[lotId+sourceRef+role], [sourceRef+role]',
+    inventory_adjustments: 'id, lotId, kind, effectiveAt, &sourceRef, reversesAdjustmentId, confirmedAt, createdAt, [lotId+effectiveAt]',
+    sales: 'id, occurredAt, &sourceRef, createdAt, updatedAt',
+    sale_lines: 'id, saleId, cardId, &sourceRef, createdAt, updatedAt, [saleId+cardId]',
+    lot_allocations: 'id, saleLineId, lotId, method, lockedAt, createdAt, &[saleLineId+lotId], [lotId+saleLineId]',
+    reconciliation_issues: 'id, kind, sourceRef, status, saleLineId, candidateLotId, createdAt, updatedAt, [status+kind]',
+    deck_inventory_allocations: 'id, deckCardId, lotId, method, lockedAt, releasedAt, createdAt, updatedAt, &[deckCardId+lotId], [lotId+releasedAt]',
+    deck_import_runs: 'id, sourceFileId, targetDeckId, existingInventoryPolicy, missingInventoryPolicy, costBasisPolicy, confirmedAt, createdAt, &[sourceFileId+targetDeckId]'
+};
+
 export default class MtgTrackerDb extends Dexie {
     cards!: EntityTable<Card, 'id'>;
     card_lots!: EntityTable<CardLot, 'id'>;
@@ -351,35 +545,19 @@ export default class MtgTrackerDb extends Dexie {
     cm_order_lines!: EntityTable<CardmarketOrderLine, 'id'>;
     cm_ledger_transactions!: EntityTable<CardmarketLedgerTransaction, 'id'>;
     cm_order_ledger_links!: EntityTable<CardmarketOrderLedgerLink, 'id'>;
+    inventory_lots!: EntityTable<InventoryLot, 'id'>;
+    inventory_lot_sources!: EntityTable<InventoryLotSource, 'id'>;
+    inventory_adjustments!: EntityTable<InventoryAdjustment, 'id'>;
+    sales!: EntityTable<Sale, 'id'>;
+    sale_lines!: EntityTable<SaleLine, 'id'>;
+    lot_allocations!: EntityTable<LotAllocation, 'id'>;
+    reconciliation_issues!: EntityTable<ReconciliationIssue, 'id'>;
+    deck_inventory_allocations!: EntityTable<DeckInventoryAllocation, 'id'>;
+    deck_import_runs!: EntityTable<DeckImportRun, 'id'>;
 
-    constructor() {
-        super(DATABASE_NAME);
+    constructor(databaseName: string = DATABASE_NAME) {
+        super(databaseName);
 
-        // Intentional fresh start: this is the complete baseline schema.
-        this.version(DATABASE_SCHEMA_VERSION).stores({
-            acquisitions: 'id, kind, source, externalRef, currency, happenedAt, createdAt, updatedAt, [source+externalRef]',
-            cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
-            card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +
-                '[cardId+purchasedAt], [acquisitionId+purchasedAt], [externalRef]',
-            transactions: 'id, kind, cardId, lotId, source, externalRef, happenedAt, relatedTransactionId, createdAt, updatedAt, finish, language, ' +
-                '[lotId+kind], [cardId+kind], [source+externalRef]',
-            scans: 'id, cardFingerprint, cardId, lotId, acquisitionId, source, scannedAt, boosterPackId, externalRef, createdAt, updatedAt, finish, language, ' +
-                '[lotId+scannedAt], [acquisitionId+scannedAt], [cardId+scannedAt], [acquisitionId+externalRef]',
-            decks: 'id, platform, name, importedAt, createdAt, updatedAt',
-            deck_cards: 'id, deckId, cardId, lotId, addedAt, removedAt, createdAt, [deckId+cardId], [lotId+addedAt]',
-            price_points: 'id, cardId, provider, finish, date, currency, priceCent, asOf, createdAt, ' +
-                '[cardId+date], [cardId+asOf], [provider+asOf], [cardId+provider+finish+date]',
-            valuations: 'id, asOf, createdAt, [asOf+createdAt]',
-            settings: 'k, createdAt, updatedAt',
-            scan_sale_links: 'id, scanId, transactionId, quantity, matchedAt, createdAt, strategy, score',
-            sell_allocations: 'id, transactionId, lotId, quantity, unitCostCentAtSale, createdAt, ' +
-                '[transactionId+lotId], [lotId], [transactionId]',
-            cm_import_files: 'id, source, kind, fileName, fileHash, periodStart, periodEnd, rowCount, importedAt, createdAt, &[source+fileHash]',
-            cm_orders: 'id, direction, orderDate, username, articleCount, currency, sourceFileId, sourceLineNumber, createdAt, updatedAt, [direction+orderDate]',
-            cm_order_parties: 'orderId, country, isProfessional, vatNumber, updatedAt',
-            cm_order_lines: 'id, orderId, lineNo, direction, purchasedAt, productId, articleName, localizedProductName, quantity, sourceFileId, sourceLineNumber, updatedAt, &[orderId+lineNo], [orderId+productId], [productId+direction]',
-            cm_ledger_transactions: 'id, happenedAt, category, type, counterpart, reference, amountCents, sourceFileId, sourceLineNumber, createdAt, [reference+happenedAt], [category+type], &[sourceFileId+sourceLineNumber]',
-            cm_order_ledger_links: 'id, orderId, ledgerTransactionId, relation, createdAt, &[orderId+ledgerTransactionId], [ledgerTransactionId+orderId], [orderId+relation]'
-        });
+        this.version(DATABASE_SCHEMA_VERSION).stores(ACCOUNTING_SCHEMA_STORES);
     }
 }

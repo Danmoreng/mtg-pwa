@@ -2,9 +2,11 @@
 
 _Design contract updated: 2026-08-10_
 
-This document is the canonical, text-searchable contract for the planned
-accounting and inventory model. It describes the target of the release-hardening
-work; it is not a claim that every table or flow is implemented already.
+This document is the canonical, text-searchable contract for the accounting and
+inventory model. Phases 0–3 (baseline, kernel, canonical persistence/commands,
+and import projections) are implemented on `stabilize/release-hardening`.
+Phase 4, cutting every existing screen and store over to these selectors, is
+deliberately still pending user review.
 
 The companion [Tldraw architecture diagram](MTG%20Accounting%20Architecture.tldraw)
 visualizes the current application, the target entities, their relationships,
@@ -221,12 +223,15 @@ successful correction, the UI offers a reversal rather than destructive deletion
 - Every source-of-truth table and open issue is visible to backup, restore, and
   diagnostics.
 
-## Implementation order
+## Implementation status
 
-1. Freeze terms, signs, constraints, table keys, and executable invariants.
-2. Implement the accounting kernel and canonical repositories.
-3. Project Cardmarket, ManaBox, deck, and manual actions into the canonical model.
-4. Cut all screens over to shared selectors, including the manual-correction UI.
-5. Remove legacy quantity/profit fields and duplicate reconciliation paths.
-6. Complete golden-path, reimport, multi-lot sale, deck-deficit, correction,
-   backup/restore, and performance tests before release.
+1. **Complete:** terms, signs, constraints, table keys, and executable invariants.
+2. **Complete:** accounting kernel, canonical repository, and atomic manual commands.
+3. **Complete:** idempotent Cardmarket, ManaBox, deck, and manual projections.
+4. **Pending review:** cut all screens over to shared selectors, including the
+   manual-correction UI.
+5. **Pending after cutover:** remove legacy quantity/profit fields and duplicate
+   reconciliation paths.
+6. **Partly complete:** golden-path, reimport, multi-lot sale, deck-deficit,
+   correction, and backup/restore tests exist; performance coverage remains a
+   release-hardening task.

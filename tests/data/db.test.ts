@@ -24,7 +24,7 @@ describe('fresh database baseline', () => {
     });
   });
 
-  it('uses the dedicated V2 database and schema version 1', () => {
+  it('uses the dedicated V2 database and current schema version', () => {
     expect(db.name).toBe(DATABASE_NAME);
     expect(db.verno).toBe(DATABASE_SCHEMA_VERSION);
   });
