@@ -455,6 +455,7 @@ export class DeckAccountingProjectionService {
   ): Promise<void> {
     const id = `issue:deck-deficit:${deficit.deckCard.id}`;
     const existing = await this.db.reconciliation_issues.get(id);
+    if (existing?.status === 'resolved' && existing.resolution === 'ignored') return;
     const issue: ReconciliationIssue = {
       id,
       kind: 'quantity_conflict',
