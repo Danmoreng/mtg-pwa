@@ -3,10 +3,9 @@
 _Design contract updated: 2026-08-10_
 
 This document is the canonical, text-searchable contract for the accounting and
-inventory model. Phases 0–3 (baseline, kernel, canonical persistence/commands,
-and import projections) are implemented on `stabilize/release-hardening`.
-Phase 4, cutting every existing screen and store over to these selectors, is
-deliberately still pending user review.
+inventory model. Phases 0–4 (baseline, kernel, canonical persistence/commands,
+import projections, and canonical UI consumers) are implemented on
+`stabilize/release-hardening`.
 
 The companion [Tldraw architecture diagram](MTG%20Accounting%20Architecture.tldraw)
 visualizes the current application, the target entities, their relationships,
@@ -228,10 +227,10 @@ successful correction, the UI offers a reversal rather than destructive deletion
 1. **Complete:** terms, signs, constraints, table keys, and executable invariants.
 2. **Complete:** accounting kernel, canonical repository, and atomic manual commands.
 3. **Complete:** idempotent Cardmarket, ManaBox, deck, and manual projections.
-4. **Pending review:** cut all screens over to shared selectors, including the
-   manual-correction UI.
+4. **Complete:** shared query service, canonical dashboard/holdings/P&L/box/deck
+   consumers, guided manual corrections, and reconciliation issue UI.
 5. **Pending after cutover:** remove legacy quantity/profit fields and duplicate
    reconciliation paths.
 6. **Partly complete:** golden-path, reimport, multi-lot sale, deck-deficit,
-   correction, and backup/restore tests exist; performance coverage remains a
-   release-hardening task.
+   correction/reversal, duplicate merge, deck archive, query, and backup/restore
+   tests exist; large-data performance coverage remains a release-hardening task.

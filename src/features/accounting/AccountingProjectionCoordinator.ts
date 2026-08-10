@@ -27,4 +27,9 @@ export class AccountingProjectionCoordinator {
     await new CardmarketAccountingProjectionService(this.db).projectAll();
     await new DeckAccountingProjectionService(this.db).reprojectStoredDecks();
   }
+
+  async projectAfterInventoryChange(): Promise<void> {
+    await new CardmarketAccountingProjectionService(this.db).projectAll();
+    await new DeckAccountingProjectionService(this.db).reprojectStoredDecks();
+  }
 }

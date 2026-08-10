@@ -1,376 +1,95 @@
 <template>
   <div class="container py-4">
-    <!-- Loading / Error -->
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border" role="status" aria-hidden="true"></div>
-      <div class="mt-2">Loading deck…</div>
-    </div>
-
-    <div v-else-if="!deck" class="text-center py-5">
-      <p class="mb-3">Deck not found.</p>
-      <router-link to="/decks" class="btn btn-outline-secondary">← Back to Decks</router-link>
-    </div>
-
-    <!-- Deck Detail -->
-    <div v-else>
-      <!-- Top bar: back + actions -->
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <router-link to="/decks" class="btn btn-link px-0">
-          ← Back to Decks
-        </router-link>
-        <div class="d-flex gap-2">
-          <button
-              @click="toggleFaceCardSelection"
-              :class="['btn', isSelectingFaceCard ? 'btn-glass-warning' : 'btn-glass-primary']"
-          >
-            {{ isSelectingFaceCard ? 'Cancel Select Mode' : 'Select Face Card' }}
-          </button>
-          <button
-              v-if="deck.faceCardId"
-              @click="clearFaceCard"
-              class="btn btn-glass-secondary"
-          >
-            Remove Face Card
-          </button>
-          <button @click="openDeleteModal" class="btn btn-glass-danger">
-            Delete Deck
-          </button>
-        </div>
+    <div v-if="loading" class="text-center py-5">Loading deck…</div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <div v-else-if="!summary" class="text-center py-5"><p>Deck not found.</p><router-link to="/decks" class="btn btn-outline-secondary">Back to decks</router-link></div>
+    <template v-else>
+      <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+        <router-link to="/decks" class="btn btn-link px-0">← Back to decks</router-link>
+        <div class="d-flex gap-2"><button class="btn" :class="selectingFaceCard ? 'btn-warning' : 'btn-outline-primary'" @click="selectingFaceCard = !selectingFaceCard">{{ selectingFaceCard ? 'Cancel face-card selection' : 'Select face card' }}</button><button class="btn btn-outline-danger" @click="showArchiveModal = true">Archive deck</button></div>
       </div>
 
-      <!-- Header: title + meta -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <!-- Title -->
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="w-100">
-              <h1
-                  v-if="!isEditingTitle"
-                  @click="startEditingTitle"
-                  class="h3 mb-2 editable"
-                  title="Click to edit title"
-              >
-                {{ deck.name }}
-                <span class="ms-2 small text-muted">✏️</span>
-              </h1>
+      <div class="card mb-4"><div class="card-body">
+        <div v-if="editingTitle" class="input-group mb-2 title-editor"><input ref="titleInput" v-model="editedTitle" class="form-control form-control-lg" @keyup.enter="saveTitle" @keyup.esc="editingTitle = false"><button class="btn btn-primary" @click="saveTitle">Save</button><button class="btn btn-outline-secondary" @click="editingTitle = false">Cancel</button></div>
+        <h1 v-else class="h3 editable" @click="startTitleEdit">{{ summary.deck.name }} <small class="text-muted">✏️</small></h1>
+        <div class="d-flex flex-wrap gap-2 mb-3"><span v-if="summary.deck.platform" class="badge bg-info text-dark text-uppercase">{{ summary.deck.platform }}</span><span class="badge" :class="summary.trackedPhysicalInventory ? 'bg-primary' : 'bg-secondary'">{{ summary.trackedPhysicalInventory ? 'Physical exclusive inventory' : 'Requirements only' }}</span><span v-if="summary.missingQuantity" class="badge bg-warning text-dark">{{ summary.missingQuantity }} missing</span><span v-else class="badge bg-success">Fully allocated</span></div>
+        <div class="d-flex justify-content-between small"><span>{{ summary.allocatedQuantity }} of {{ summary.requiredQuantity }} cards allocated</span><span>{{ Math.round(summary.coveragePercentage) }}%</span></div>
+        <div class="progress mt-2"><div class="progress-bar" :class="summary.missingQuantity ? 'bg-warning' : 'bg-success'" :style="{ width: `${summary.coveragePercentage}%` }"></div></div>
+        <div v-if="summary.openIssues.length" class="alert alert-warning mt-3 mb-0"><router-link to="/inventory?tab=issues">{{ summary.openIssues.length }} issue{{ summary.openIssues.length === 1 ? '' : 's' }} for this deck need attention.</router-link></div>
+        <div v-if="selectingFaceCard" class="alert alert-info mt-3 mb-0">Click one of the cards below to use it as the deck image.</div>
+      </div></div>
 
-              <div v-else class="d-flex align-items-center flex-nowrap gap-2">
-                <!-- Keep buttons on one line via input-group and max width -->
-                <div class="input-group input-group-lg w-auto" style="max-width: 480px;">
-                  <input
-                      ref="titleInput"
-                      v-model="editedTitle"
-                      @keyup.enter="saveTitle"
-                      @keyup.esc="cancelEditingTitle"
-                      type="text"
-                      class="form-control"
-                      placeholder="Deck title"
-                  />
-                  <button @click="saveTitle" class="btn btn-glass-primary">Save</button>
-                  <button @click="cancelEditingTitle" class="btn btn-outline-secondary">Cancel</button>
-                </div>
-              </div>
-
-              <!-- Meta -->
-              <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                <span v-if="deck.platform" class="badge text-uppercase bg-info text-dark">
-                  {{ deck.platform }}
-                </span>
-                <small class="text-muted">Imported: {{ formatDate(deck.importedAt) }}</small>
-                <small v-if="faceCard" class="text-success d-inline-flex align-items-center">
-                  <span class="me-1">★</span> Face card set
-                </small>
-              </div>
+      <h2 class="h5 mb-3">Cards in deck</h2>
+      <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6 g-3">
+        <div v-for="row in summary.rows" :key="row.deckCard.id" class="col">
+          <div class="h-100 position-relative" :class="{ 'face-select': selectingFaceCard }" @click="selectingFaceCard ? setFaceCard(row.deckCard.cardId) : undefined">
+            <CardComponent :card="row.card ?? fallbackCard(row.deckCard.cardId)" :disable-modal="selectingFaceCard" />
+            <div class="coverage-overlay p-2 rounded-bottom">
+              <div class="d-flex justify-content-between small"><strong>{{ row.deckCard.quantity }}× · {{ row.deckCard.role }}</strong><span :class="row.missingQuantity ? 'text-warning' : 'text-success'">{{ row.allocatedQuantity }}/{{ row.requiredQuantity }}</span></div>
+              <div v-if="row.missingQuantity" class="small text-warning">{{ row.missingQuantity }} missing</div>
             </div>
-          </div>
-
-          <!-- Select mode hint -->
-          <div v-if="isSelectingFaceCard" class="alert alert-warning mt-3 py-2 mb-0">
-            Select mode is active — click a card below to set it as the face card.
+            <span v-if="row.deckCard.cardId === summary.deck.faceCardId" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">★</span>
           </div>
         </div>
       </div>
 
-      <!-- Cards list -->
-      <div>
-        <h2 class="h5 mb-3">Cards in Deck</h2>
-        <div v-if="deckCards.length === 0" class="text-center py-5 text-muted">
-          No cards found in this deck.
-        </div>
-
-        <div
-            v-else
-            class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6 g-3"
-        >
-          <div
-              v-for="deckCard in deckCards"
-              :key="deckCard.id"
-              class="col"
-          >
-            <div
-                class="position-relative h-100"
-                :class="{
-                'border border-success rounded': deckCard.cardId === deck.faceCardId,
-                'cursor-pointer': isSelectingFaceCard
-              }"
-                role="button"
-                @click="isSelectingFaceCard ? handleFaceCardSelection(deckCard.cardId) : null"
-            >
-              <!-- CardComponent should render without our extra borders -->
-              <CardComponent
-                  :card="getCardDetails(deckCard.cardId)"
-                  :disable-modal="isSelectingFaceCard"
-              />
-
-              <!-- Star badge when selected as face -->
-              <span
-                  v-if="deckCard.cardId === deck.faceCardId"
-                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success"
-                  title="Face card"
-              >
-                ★
-                <span class="visually-hidden">Face card</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> <!-- /deck detail -->
-    <!-- Delete confirmation modal -->
-    <div
-        v-if="showDeleteModal"
-        class="modal fade show"
-        tabindex="-1"
-        style="display: block;"
-        aria-modal="true"
-        role="dialog"
-        aria-labelledby="deleteDeckLabel"
-        @click.self="closeDeleteModal"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 id="deleteDeckLabel" class="modal-title">Delete this deck?</h5>
-            <button type="button" class="btn-close" aria-label="Close" @click="closeDeleteModal"></button>
-          </div>
-          <div class="modal-body">
-            <p class="mb-0">
-              You’re about to delete <strong>{{ deck?.name }}</strong>. This action cannot be undone.
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-outline-secondary" :disabled="deleting" @click="closeDeleteModal">
-              Cancel
-            </button>
-            <button class="btn btn-danger" :disabled="deleting" @click="confirmDelete">
-          <span
-              v-if="deleting"
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-          ></span>
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-if="showDeleteModal" class="modal-backdrop fade show"></div>
+      <div v-if="showArchiveModal" class="modal d-block" tabindex="-1" role="dialog" @click.self="showArchiveModal = false"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5">Archive this deck?</h2><button class="btn-close" @click="showArchiveModal = false"></button></div><div class="modal-body"><p>Archiving releases all physical inventory reservations. The deck and its accounting history remain in the database.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" @click="showArchiveModal = false">Cancel</button><button class="btn btn-danger" :disabled="archiving" @click="archiveDeck">{{ archiving ? 'Archiving…' : 'Archive and release inventory' }}</button></div></div></div></div>
+      <div v-if="showArchiveModal" class="modal-backdrop show"></div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getDb } from '../../../data/init';
 import CardComponent from '../../../components/CardComponent.vue';
-
-type Deck = {
-  id: string;
-  name: string;
-  platform?: string;
-  importedAt?: string | Date;
-  faceCardId?: string;
-};
-
-type DeckCard = { id: string; deckId: string; cardId: string };
-type Card = {
-  id: string;
-  name: string;
-  set?: string;
-  setCode?: string;
-  imageUrl?: string;
-  number?: string;
-  lang?: string;
-  finish?: string;
-};
+import { getDb } from '../../../data/init';
+import { AccountingQueryService, type DeckCoverageSummary } from '../../accounting/AccountingQueryService';
+import { DeckManagementService } from '../DeckManagementService';
 
 const route = useRoute();
 const router = useRouter();
-
-const deck = ref<Deck | null>(null);
-const deckCards = ref<DeckCard[]>([]);
-const cards = ref<Record<string, Card>>({});
+const db = getDb();
+const queries = new AccountingQueryService(db);
+const summary = ref<DeckCoverageSummary>();
 const loading = ref(true);
-
-const isEditingTitle = ref(false);
+const error = ref('');
+const editingTitle = ref(false);
 const editedTitle = ref('');
-const titleInput = ref<HTMLInputElement | null>(null);
+const titleInput = ref<HTMLInputElement>();
+const selectingFaceCard = ref(false);
+const showArchiveModal = ref(false);
+const archiving = ref(false);
 
-const isSelectingFaceCard = ref(false);
-
-const showDeleteModal = ref(false);
-const deleting = ref(false);
-
-
-const placeholder = 'https://placehold.co/200x280?text=Card+Image';
-
-const faceCard = computed<Card | null>(() => {
-  if (!deck.value?.faceCardId) return null;
-  return getCardDetails(deck.value.faceCardId);
-});
-
-const formatDate = (d?: string | Date) => {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
-};
-
-const getCardDetails = (cardId: string): Card => {
-  return (
-      cards.value[cardId] || {
-        id: cardId,
-        name: 'Unknown Card',
-        set: 'Unknown Set',
-        setCode: '???',
-        number: '???',
-        lang: 'en',
-        finish: 'nonfoil',
-        imageUrl: placeholder
-      }
-  );
-};
-
-// Title editing
-const startEditingTitle = () => {
-  if (!deck.value) return;
-  isEditingTitle.value = true;
-  editedTitle.value = deck.value.name;
-  nextTick(() => {
-    titleInput.value?.focus();
-    titleInput.value?.select();
-  });
-};
-
-const saveTitle = async () => {
-  if (!deck.value) { isEditingTitle.value = false; return; }
-  const next = editedTitle.value.trim();
-  if (!next || next === deck.value.name) { isEditingTitle.value = false; return; }
-
-  try {
-    const db = getDb();
-    await db.decks.update(deck.value.id, { name: next });
-    deck.value.name = next;
-  } catch (err) {
-    console.error('Error updating deck title:', err);
-    alert('Failed to update deck title. Please try again.');
-  } finally {
-    isEditingTitle.value = false;
-  }
-};
-
-const cancelEditingTitle = () => {
-  isEditingTitle.value = false;
-  editedTitle.value = deck.value?.name ?? '';
-};
-
-// Face card selection
-const toggleFaceCardSelection = () => {
-  isSelectingFaceCard.value = !isSelectingFaceCard.value;
-};
-
-const handleFaceCardSelection = async (cardId: string) => {
-  await selectFaceCard(cardId);
-  isSelectingFaceCard.value = false;
-};
-
-const selectFaceCard = async (cardId: string) => {
-  if (!deck.value) return;
-  try {
-    const db = getDb();
-    await db.decks.update(deck.value.id, { faceCardId: cardId });
-    deck.value.faceCardId = cardId;
-  } catch (err) {
-    console.error('Error updating face card:', err);
-    alert('Failed to update face card. Please try again.');
-  }
-};
-
-const clearFaceCard = async () => {
-  if (!deck.value) return;
-  try {
-    const db = getDb();
-    await db.decks.update(deck.value.id, { faceCardId: undefined });
-    deck.value.faceCardId = undefined;
-  } catch (err) {
-    console.error('Error clearing face card:', err);
-    alert('Failed to clear face card. Please try again.');
-  }
-};
-
-// Modal handlers
-const openDeleteModal = () => { showDeleteModal.value = true; };
-const closeDeleteModal = () => { if (!deleting.value) showDeleteModal.value = false; };
-
-// Replace the old deleteDeck() implementation with this confirm action
-const confirmDelete = async () => {
-  if (!deck.value || deleting.value) return;
-  deleting.value = true;
-  try {
-    const db = getDb();
-    await db.deck_cards.where('deckId').equals(deck.value.id).delete();
-    await db.decks.delete(deck.value.id);
-    closeDeleteModal();
-    router.push('/decks');
-  } catch (err) {
-    console.error('Error deleting deck:', err);
-    alert('Failed to delete deck. Please try again.');
-  } finally {
-    deleting.value = false;
-  }
-};
-
-
-// Data load
-const loadDeck = async () => {
-  try {
-    const deckId = route.params.id as string;
-
-    const db = getDb();
-    const deckData = await db.decks.get(deckId);
-    if (!deckData) return;
-
-    deck.value = deckData as Deck;
-    editedTitle.value = deckData.name;
-
-    const cardsInDeck = await db.deck_cards.where('deckId').equals(deckId).toArray();
-    deckCards.value = cardsInDeck as DeckCard[];
-
-    const cardIds = cardsInDeck.map(c => c.cardId).filter(Boolean);
-    if (cardIds.length) {
-      const details = await db.cards.where('id').anyOf(cardIds).toArray();
-      cards.value = Object.fromEntries(details.map((c: Card) => [c.id, c]));
-    }
-  } catch (err) {
-    console.error('Error loading deck:', err);
-  } finally {
-    loading.value = false;
-  }
-};
-
-onMounted(loadDeck);
+const fallbackCard = (id: string) => ({ id, name: 'Unknown card', set: 'Unknown set', setCode: '???', number: '???', lang: 'en', finish: 'nonfoil' });
+async function load() {
+  summary.value = await queries.getDeckSummary(String(route.params.id));
+}
+function startTitleEdit() { if (!summary.value) return; editedTitle.value = summary.value.deck.name; editingTitle.value = true; void nextTick(() => titleInput.value?.focus()); }
+async function saveTitle() {
+  if (!summary.value || !editedTitle.value.trim()) return;
+  const now = new Date();
+  await db.decks.update(summary.value.deck.id, { name: editedTitle.value.trim(), updatedAt: now });
+  summary.value.deck.name = editedTitle.value.trim(); editingTitle.value = false;
+}
+async function setFaceCard(cardId: string) {
+  if (!summary.value) return;
+  const now = new Date();
+  await db.decks.update(summary.value.deck.id, { faceCardId: cardId, updatedAt: now });
+  summary.value.deck.faceCardId = cardId; selectingFaceCard.value = false;
+}
+async function archiveDeck() {
+  if (!summary.value) return;
+  archiving.value = true;
+  try { await new DeckManagementService(db).archiveDeck(summary.value.deck.id); await router.push('/decks'); }
+  catch (cause) { error.value = cause instanceof Error ? cause.message : 'Could not archive deck.'; showArchiveModal.value = false; }
+  finally { archiving.value = false; }
+}
+onMounted(async () => { try { await load(); } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Could not load deck.'; } finally { loading.value = false; } });
 </script>
 
 <style scoped>
-.editable { cursor: pointer; }
-.cursor-pointer { cursor: pointer; }
+.editable, .face-select { cursor: pointer; }
+.title-editor { max-width: 42rem; }
+.coverage-overlay { background: rgba(20, 20, 20, .88); color: white; margin-top: -.25rem; position: relative; z-index: 2; }
 </style>

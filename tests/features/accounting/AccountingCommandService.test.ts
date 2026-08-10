@@ -132,4 +132,93 @@ describe('AccountingCommandService', () => {
 
     expect(await db.inventory_adjustments.count()).toBe(0);
   });
+
+  it('corrects remaining quantity and allocates the removed cost in exact cents', async () => {
+    await service.createManualInventory({
+      acquisitionId: 'acquisition-manual-1',
+      lotId: 'lot-manual-1',
+      lotSourceId: 'lot-source-manual-1',
+      sourceRef: 'manual:entry:1',
+      cardId: 'card-1',
+      quantity: 3,
+      allocatedCostCent: 100,
+      costBasisStatus: 'known',
+      finish: 'nonfoil',
+      language: 'en',
+      condition: 'near_mint',
+      occurredAt: new Date('2026-08-10T12:00:00.000Z'),
+    });
+
+    const correction = await service.correctRemainingQuantity({
+      id: 'adjustment-correction-1',
+      sourceRef: 'manual:adjustment:correction:1',
+      lotId: 'lot-manual-1',
+      targetRemainingQuantity: 2,
+      kind: 'correction',
+      effectiveAt: new Date('2026-08-11T12:00:00.000Z'),
+      confirmedAt: new Date('2026-08-11T12:00:00.000Z'),
+    });
+
+    expect(correction.quantityDelta).toBe(-1);
+    expect(correction.costBasisDeltaCent).toBe(-33);
+    expect((await service.getLotSnapshot('lot-manual-1'))?.openCostBasis).toEqual({
+      status: 'known',
+      cents: 67,
+    });
+  });
+
+  it('does not let a correction remove inventory reserved by a deck', async () => {
+    await service.createManualInventory({
+      acquisitionId: 'acquisition-manual-1',
+      lotId: 'lot-manual-1',
+      lotSourceId: 'lot-source-manual-1',
+      sourceRef: 'manual:entry:1',
+      cardId: 'card-1',
+      quantity: 2,
+      costBasisStatus: 'unknown',
+      finish: 'nonfoil',
+      language: 'en',
+      condition: 'unknown',
+      occurredAt: new Date('2026-08-10T12:00:00.000Z'),
+    });
+    const now = new Date('2026-08-10T12:00:00.000Z');
+    await db.decks.add({
+      id: 'deck-1',
+      name: 'Test Deck',
+      importedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.deck_cards.add({
+      id: 'deck-card-1',
+      deckId: 'deck-1',
+      cardId: 'card-1',
+      quantity: 2,
+      section: 'main',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.deck_inventory_allocations.add({
+      id: 'deck-allocation-1',
+      deckCardId: 'deck-card-1',
+      lotId: 'lot-manual-1',
+      quantity: 2,
+      method: 'manual',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await expect(
+      service.correctRemainingQuantity({
+        id: 'adjustment-correction-1',
+        sourceRef: 'manual:adjustment:correction:1',
+        lotId: 'lot-manual-1',
+        targetRemainingQuantity: 1,
+        kind: 'lost',
+        effectiveAt: new Date('2026-08-11T12:00:00.000Z'),
+        confirmedAt: new Date('2026-08-11T12:00:00.000Z'),
+      })
+    ).rejects.toThrow('deck reservations exceed inventory');
+    expect(await db.inventory_adjustments.count()).toBe(0);
+  });
 });

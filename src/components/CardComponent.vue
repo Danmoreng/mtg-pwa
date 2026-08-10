@@ -11,6 +11,9 @@
     <div class="card-body">
       <h3 class="card-title fs-6 fw-medium mb-1">{{ card.name }}</h3>
       <p class="card-text small text-muted mb-2">{{ card.set }} #{{ card.number }}</p>
+      <span v-if="ownedQuantity" class="badge bg-secondary-subtle text-secondary-emphasis mb-2">
+        Owned: {{ ownedQuantity }}<template v-if="reservedQuantity"> · {{ reservedQuantity }} in decks</template>
+      </span>
       <div class="ms-auto">
                     <span v-if="currentPriceNonfoil" class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
                       Regular: {{ currentPriceNonfoil.format('de-DE') }}
@@ -132,7 +135,7 @@
                   <!-- Historic Price Chart -->
                   <div v-if="pricePoints && pricePoints.length > 0" class="mb-3">
                     <h3 class="h6 mb-2">Price History</h3>
-                    <PriceHistoryChart :price-points="pricePoints" :transactions="transactions"/>
+                    <PriceHistoryChart :price-points="pricePoints" :transactions="[]"/>
                   </div>
 
                   <!-- Ownership (summary first, expandable details) -->
@@ -158,24 +161,24 @@
                     >
                       <div
                           v-for="lot in lots"
-                          :key="lot.id"
+                          :key="lot.lot.id"
                           class="border rounded p-2 mb-2"
                       >
                         <div class="row g-2 align-items-center">
                           <div class="col-6 col-md-3">
-                            <span class="text-muted">Qty:</span> <span class="fw-medium">{{ lot.quantity }}</span>
+                            <span class="text-muted">Remaining:</span> <span class="fw-medium">{{ lot.snapshot.remainingQuantity }}</span>
                           </div>
                           <div class="col-6 col-md-3">
                             <span class="text-muted">Unit Cost:</span>
-                            <span class="fw-medium">{{ formatMoney(lot.unitCost, lot.currency || 'EUR') }}</span>
+                            <span class="fw-medium">{{ formatAccountingMoney(lot.snapshot.openCostBasis) }}</span>
                           </div>
                           <div class="col-6 col-md-3">
                             <span class="text-muted">Purchased:</span>
-                            <span class="fw-medium">{{ formatDate(lot.purchasedAt) }}</span>
+                            <span class="fw-medium">{{ formatDate(lot.lot.acquiredAt) }}</span>
                           </div>
-                          <div v-if="lot.disposedQuantity" class="col-6 col-md-3">
-                            <span class="text-muted">Disposed:</span>
-                            <span class="fw-medium">{{ lot.disposedQuantity }}</span>
+                          <div v-if="lot.snapshot.deckReservedQuantity" class="col-6 col-md-3">
+                            <span class="text-muted">In decks:</span>
+                            <span class="fw-medium">{{ lot.snapshot.deckReservedQuantity }}</span>
                           </div>
                         </div>
                       </div>
@@ -188,26 +191,21 @@
                     <div class="mt-2 small" style="max-height: 30vh; overflow: auto;">
                       <div
                           v-for="t in transactionsSorted"
-                          :key="t.id"
-                          class="tx-item d-flex align-items-center gap-2 p-2 mb-2 rounded border"
-                          :class="{
-      buy: /buy/i.test(t.kind),
-      sell: /sell/i.test(t.kind)
-    }"
+                          :key="t.line.id"
+                          class="tx-item sell d-flex align-items-center gap-2 p-2 mb-2 rounded border"
                       >
     <span
-        class="badge me-1"
-        :class="/buy/i.test(t.kind) ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis'"
+        class="badge me-1 bg-danger-subtle text-danger-emphasis"
     >
-      {{ t.kind }}
+      Sale
     </span>
 
                         <div class="flex-grow-1">
-                          <div class="fw-medium">{{ formatDate(t.happenedAt) }}</div>
-                          <div class="text-muted">Qty: {{ t.quantity }}</div>
+                          <div class="fw-medium">{{ formatDate(t.sale.occurredAt) }}</div>
+                          <div class="text-muted">Qty: {{ t.line.quantity }}</div>
                         </div>
 
-                        <div class="fw-semibold">{{ formatMoney(t.unitPrice, t.currency) }}</div>
+                        <div class="fw-semibold">{{ formatMoney(t.line.netLineProceedsCent, 'EUR') }}</div>
                       </div>
                     </div>
 
@@ -226,14 +224,18 @@
 
 <script setup lang="ts">
 import {computed, ref} from 'vue';
-import { cardLotRepository, transactionRepository } from '../data/repos';
 import {Money} from '../core/Money';
 import {DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle} from 'reka-ui';
 import PriceHistoryChart from './PriceHistoryChart.vue';
 import { useCardsStore } from '../stores';
 import { ScryfallProvider } from '../features/pricing/ScryfallProvider';
+import { AccountingQueryService, type CardAccountingActivity } from '../features/accounting/AccountingQueryService';
+import type { AccountingMoney } from '../features/accounting/AccountingTypes';
+import { useHoldingsStore } from '../stores/holdings';
 
 const cardsStore = useCardsStore();
+const holdingsStore = useHoldingsStore();
+const accountingQueries = new AccountingQueryService();
 
 const currentPriceNonfoil = computed(() => cardsStore.getLatestNonfoil(props.card.id));
 const currentPriceFoil    = computed(() => cardsStore.getLatestFoil(props.card.id));
@@ -252,8 +254,9 @@ const props = defineProps<{
 // Reactive state
 const showModal = ref(false);
 const loadingPrice = computed(() => cardsStore.loadingPrices);
-const lots = ref<any[]>([]);
-const transactions = ref<any[]>([]);
+const activity = ref<CardAccountingActivity>({ lots: [], sales: [] });
+const lots = computed(() => activity.value.lots.filter(row => row.snapshot.remainingQuantity > 0));
+const transactions = computed(() => activity.value.sales);
 const pricePoints = ref<any[]>([]);
 const isFlipped = ref(false);
 
@@ -264,7 +267,7 @@ const resolvingCardmarketUrl = ref(false);
 const transactionsSorted = computed(() => {
   if (!transactions.value) return [];
   return [...transactions.value].sort(
-      (a: any, b: any) => new Date(b.happenedAt).getTime() - new Date(a.happenedAt).getTime()
+      (a, b) => b.sale.occurredAt.getTime() - a.sale.occurredAt.getTime()
   );
 });
 
@@ -272,15 +275,10 @@ const transactionsSorted = computed(() => {
 const totalOwnedQuantity = computed(() => {
   if (!lots.value || lots.value.length === 0) return 0;
 
-  return lots.value.reduce((total, lot) => {
-    // Only count lots that haven't been fully disposed
-    if (!lot.disposedAt || (lot.disposedQuantity && lot.disposedQuantity < lot.quantity)) {
-      const remainingQuantity = lot.disposedQuantity ? lot.quantity - lot.disposedQuantity : lot.quantity;
-      return total + remainingQuantity;
-    }
-    return total;
-  }, 0);
+  return lots.value.reduce((total, lot) => total + lot.snapshot.remainingQuantity, 0);
 });
+const ownedQuantity = computed(() => holdingsStore.getTotalQuantityByCardId(props.card.id));
+const reservedQuantity = computed(() => holdingsStore.getHoldingByCardId(props.card.id)?.deckReservedQuantity ?? 0);
 
 // Methods
 const openModal = async () => {
@@ -312,9 +310,7 @@ const handleBackdropClick = (event: MouseEvent) => {
 
 const loadCardDetails = async () => {
   try{
-    // ---- lots & transactions (as before) ----
-    lots.value = await cardLotRepository.getByCardId(props.card.id);
-    transactions.value = await transactionRepository.getByCardId(props.card.id);
+    activity.value = await accountingQueries.getCardActivity(props.card.id);
 
     if (props.card.cardmarketId) {
       await resolveCardmarketUrl();
@@ -323,6 +319,9 @@ const loadCardDetails = async () => {
     console.error('Error loading card details:', error);
   }
 };
+
+const formatAccountingMoney = (money: AccountingMoney) =>
+  money.status === 'unknown' ? 'Unknown' : `${formatMoney(money.cents, 'EUR')} (${money.status})`;
 
 // Helper methods for external links
 const formatSetNameForCardmarket = (setName: string) => {

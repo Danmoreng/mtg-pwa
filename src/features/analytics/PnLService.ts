@@ -1,10 +1,8 @@
-// 8) Per-box analytics (P&L)
+import type MtgTrackerDb from '../../data/db';
+import { getDb } from '../../data/init';
+import { AccountingQueryService } from '../accounting/AccountingQueryService';
 
-import { acquisitionRepository, cardLotRepository, transactionRepository, sellAllocationRepository } from '../../data/repos';
-import { PriceQueryService } from '../../features/pricing/PriceQueryService';
-// import { parseIdentity } from '../../shared/identity'; // Not currently used in this file, removing unused import
-
-interface LotPnL {
+export interface LotPnL {
   lotId: string;
   cardId: string;
   quantity: number;
@@ -13,110 +11,73 @@ interface LotPnL {
   feesCent: number;
   shippingCent: number;
   realizedPnLCent: number;
+  costBasisStatus: 'known' | 'estimated' | 'unknown';
 }
 
-interface AcquisitionPnL {
+export interface AcquisitionPnL {
   totalCostCent: number;
   totalRevenueCent: number;
   realizedPnLCent: number;
   unrealizedPnLCent: number;
+  costBasisStatus: 'known' | 'estimated' | 'unknown';
+  realizedPnLStatus: 'known' | 'estimated' | 'unknown';
+  unrealizedPnLStatus: 'known' | 'estimated' | 'unknown';
   lots: LotPnL[];
 }
 
-/**
- * Calculate P&L for an acquisition
- * @param acquisitionId 
- * @param asOf 
- * @returns Promise<AcquisitionPnL>
- */
-async function getAcquisitionPnL(
+export async function getAcquisitionPnL(
   acquisitionId: string,
-  asOf: Date = new Date()
+  _asOf: Date = new Date(),
+  db: MtgTrackerDb = getDb()
 ): Promise<AcquisitionPnL> {
-  const A = await acquisitionRepository.getById(acquisitionId);
-  if (!A) throw new Error('Acquisition not found');
+  const summary = await new AccountingQueryService(db).getAcquisitionSummary(acquisitionId);
+  if (!summary) throw new Error('Acquisition not found');
 
-  const totalCostCent = (A.totalPriceCent ?? 0) + (A.totalFeesCent ?? 0) + (A.totalShippingCent ?? 0);
-  
-  // Get all lots associated with this acquisition
-  const lots = await cardLotRepository.getByAcquisitionId(acquisitionId);
-  
-  let totalRevenueCent = 0;
-  let realizedPnLCent = 0;
-  let unrealizedPnLCent = 0;
-  const lotPnLs: LotPnL[] = [];
-
-  // Process each lot
-  for (const lot of lots) {
-    const allocations = await sellAllocationRepository.getByLotId(lot.id);
-
-    let revenue_t = 0;
-    let cogs_t = 0;
-    let fees_t = 0;
-    let shipping_t = 0;
-    let realized_pnl_t = 0;
-
-    for (const alloc of (allocations || [])) {
-        const sell = await transactionRepository.getById(alloc.transactionId);
-        if (!sell || sell.happenedAt > asOf) continue;
-
-        const proportion = alloc.quantity / sell.quantity;
-
-        revenue_t += proportion * (sell.quantity * sell.unitPrice - (sell.fees || 0) + (sell.shipping || 0));
-        cogs_t += alloc.quantity * (alloc.unitCostCentAtSale ?? lot.unitCost);
-        fees_t += proportion * (sell.fees || 0);
-        shipping_t += proportion * (sell.shipping || 0);
-    }
-    realized_pnl_t = revenue_t - cogs_t;
-
-    totalRevenueCent += revenue_t;
-    realizedPnLCent += realized_pnl_t;
-
-    // 8.2 Unrealized P&L (remaining)
-    const soldQuantity = (allocations || []).reduce((sum, alloc) => sum + alloc.quantity, 0);
-    const remainingQuantity = lot.quantity - soldQuantity;
-    
-    if (remainingQuantity > 0) {
-      // Get current market price for the card
-      const latestPrice = await PriceQueryService.getLatestPriceForCard(lot.cardId);
-      const currentPriceCent = latestPrice ? latestPrice.price.getCents() : 0;
-      
-      // Only calculate unrealized P&L if we have a current market price
-      if (latestPrice) {
-        // mtm_lot = remaining_q * current_price(cardId, finish)
-        const mtm_lot = remainingQuantity * currentPriceCent;
-        
-        // unrealized_pnl_lot = mtm_lot - (remaining_q * lot.unitCostCent)
-        const acquisitionCost = lot.totalAcquisitionCostCent || 
-          (lot.unitCost * lot.quantity);
-        const unitCostCent = acquisitionCost / lot.quantity;
-        const unrealized_pnl_lot = mtm_lot - (remainingQuantity * unitCostCent);
-        
-        unrealizedPnLCent += unrealized_pnl_lot;
-      }
-      // If no current market price is available, unrealized P&L remains unchanged (0 for this lot)
-    }
-
-    // Add to lot P&L details
-    lotPnLs.push({
-      lotId: lot.id,
-      cardId: lot.cardId,
-      quantity: lot.quantity,
-      acquisitionCostCent: lot.totalAcquisitionCostCent || (lot.unitCost * lot.quantity),
-      saleRevenueCent: revenue_t,
-      feesCent: fees_t,
-      shippingCent: shipping_t,
-      realizedPnLCent: realized_pnl_t
-    });
+  const allocations = await db.lot_allocations.toArray();
+  const allocationsByLot = new Map<string, typeof allocations>();
+  for (const allocation of allocations) {
+    const rows = allocationsByLot.get(allocation.lotId) ?? [];
+    rows.push(allocation);
+    allocationsByLot.set(allocation.lotId, rows);
   }
 
   return {
-    totalCostCent,
-    totalRevenueCent,
-    realizedPnLCent,
-    unrealizedPnLCent,
-    lots: lotPnLs
+    totalCostCent: summary.acquisitionCost.cents ?? summary.acquisitionCost.knownCents,
+    totalRevenueCent: summary.netSaleProceedsCent,
+    realizedPnLCent: summary.realizedPnL.cents ?? summary.realizedPnL.knownCents,
+    unrealizedPnLCent: summary.unrealizedPnL.cents ?? summary.unrealizedPnL.knownCents,
+    costBasisStatus: summary.acquisitionCost.status,
+    realizedPnLStatus: summary.realizedPnL.status,
+    unrealizedPnLStatus: summary.unrealizedPnL.status,
+    lots: summary.lots.map(row => {
+      const lotAllocations = allocationsByLot.get(row.lot.id) ?? [];
+      const saleRevenueCent = lotAllocations.reduce(
+        (sum, allocation) => sum + allocation.netProceedsCentSnapshot,
+        0
+      );
+      const soldCost = lotAllocations.reduce(
+        (sum, allocation) => sum + (allocation.costBasisCentSnapshot ?? 0),
+        0
+      );
+      const openCost =
+        row.snapshot.openCostBasis.status === 'unknown'
+          ? 0
+          : row.snapshot.openCostBasis.cents;
+      const realized =
+        row.snapshot.realizedPnL.status === 'unknown'
+          ? 0
+          : row.snapshot.realizedPnL.cents;
+      return {
+        lotId: row.lot.id,
+        cardId: row.lot.cardId,
+        quantity: row.lot.initialQuantity,
+        acquisitionCostCent: openCost + soldCost,
+        saleRevenueCent,
+        feesCent: 0,
+        shippingCent: 0,
+        realizedPnLCent: realized,
+        costBasisStatus: row.lot.costBasisStatus,
+      };
+    }),
   };
 }
-
-export { getAcquisitionPnL, type AcquisitionPnL, type LotPnL };

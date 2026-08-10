@@ -1,4 +1,4 @@
-import { cardRepository, cardLotRepository } from '../../data/repos';
+import { cardRepository } from '../../data/repos';
 import { EntityLinker } from '../linker/EntityLinker';
 import { ScryfallProvider } from '../pricing/ScryfallProvider';
 import { type Card } from '../../data/db';
@@ -9,6 +9,7 @@ import {
     DeckAccountingProjectionService,
     type DeckAccountingProjectionOptions,
 } from './DeckAccountingProjectionService';
+import { AccountingQueryService } from '../accounting/AccountingQueryService';
 
 type DeckPlatform = 'moxfield' | 'csv';
 type DeckRole = 'main' | 'side' | 'maybeboard';
@@ -542,21 +543,13 @@ export class DeckImportService {
         coveragePercentage: number;
     }> {
         try {
-            const db = getDb();
-            const deckCards = await db.deck_cards.where('deckId').equals(deckId).toArray();
-
-            let totalCards = 0;
-            let ownedCards = 0;
-
-            for (const deckCard of deckCards) {
-                totalCards += deckCard.quantity;
-                const lots = await cardLotRepository.getActiveLotsByCardId(deckCard.cardId);
-                const totalOwned = lots.reduce((sum, lot) => sum + lot.quantity, 0);
-                ownedCards += Math.min(deckCard.quantity, totalOwned);
-            }
-
-            const coveragePercentage = totalCards > 0 ? Math.round((ownedCards / totalCards) * 100) : 100;
-            return { totalCards, ownedCards, coveragePercentage };
+            const summary = await new AccountingQueryService(getDb()).getDeckSummary(deckId);
+            if (!summary) throw new Error(`Deck not found: ${deckId}`);
+            return {
+                totalCards: summary.requiredQuantity,
+                ownedCards: summary.allocatedQuantity,
+                coveragePercentage: Math.round(summary.coveragePercentage),
+            };
         } catch (error) {
             console.error('Error calculating deck coverage:', error);
             throw error;

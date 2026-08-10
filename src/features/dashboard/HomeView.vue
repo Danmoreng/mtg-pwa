@@ -1,264 +1,138 @@
 <template>
   <div class="home">
-    <div class="row">
-      <div class="col-12">
-        <h1 class="mb-4">MTG Collection Tracker</h1>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+      <div>
+        <h1 class="mb-1">MTG Collection Tracker</h1>
+        <p class="text-muted mb-0">Canonical inventory, cost basis and profit/loss</p>
       </div>
-      <div class="col-lg-9">
-        <div class="card mb-4">
-          <div class="card-body">
-            <h5 class="card-title">Portfolio Value Over Time</h5>
+      <router-link v-if="summary?.openIssueCount" to="/inventory?tab=issues" class="btn btn-warning">
+        {{ summary.openIssueCount }} issue{{ summary.openIssueCount === 1 ? '' : 's' }} need attention
+      </router-link>
+    </div>
+
+    <div v-if="loading" class="text-center py-5">Loading accounting summary…</div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <template v-else-if="summary">
+      <div class="row g-3 mb-4">
+        <div v-for="stat in headlineStats" :key="stat.label" class="col-xl-3 col-md-6">
+          <div class="card h-100"><div class="card-body">
+            <div class="small text-muted">{{ stat.label }}</div>
+            <div class="stat-value" :class="stat.className">{{ stat.value }}</div>
+            <div v-if="stat.detail" class="small text-muted mt-1">{{ stat.detail }}</div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-8">
+          <div class="card h-100"><div class="card-body">
+            <h2 class="h5">Portfolio Value Over Time</h2>
             <PortfolioValueChart />
-          </div>
+          </div></div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card h-100"><div class="card-body">
+            <h2 class="h5">Inventory health</h2>
+            <dl class="row small mb-3">
+              <dt class="col-7 text-muted">Unique printings</dt><dd class="col-5 text-end">{{ summary.cardCount }}</dd>
+              <dt class="col-7 text-muted">Physical cards</dt><dd class="col-5 text-end">{{ summary.quantity }}</dd>
+              <dt class="col-7 text-muted">Reserved in decks</dt><dd class="col-5 text-end">{{ summary.deckReservedQuantity }}</dd>
+              <dt class="col-7 text-muted">Available</dt><dd class="col-5 text-end">{{ summary.availableQuantity }}</dd>
+              <dt class="col-7 text-muted">Unpriced lots</dt><dd class="col-5 text-end">{{ summary.unpricedLotCount }}</dd>
+              <dt class="col-7 text-muted">Unknown-cost lots</dt><dd class="col-5 text-end">{{ summary.unknownCostLotCount }}</dd>
+            </dl>
+            <router-link to="/inventory" class="btn btn-outline-primary w-100">Manage inventory</router-link>
+          </div></div>
         </div>
       </div>
-      <div class="col-lg-3">
-        <div class="card mb-4">
-          <div class="card-body">
-            <h5 class="card-title">Price Updates</h5>
-            <div class="small text-muted mb-1">
-              Last: {{ formatDate(lastUpdate) }} | Next: {{ formatDate(nextUpdate) }}
-            </div>
-                  <button @click="refreshPrices" class="btn btn-glass-primary" :disabled="isUpdating">
-                    {{ isUpdating ? 'Updating...' : 'Refresh Now' }}
-                  </button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Quick Stats</h5>
-            <div class="small">
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Portfolio Value:</span>
-                <span class="fw-medium">{{ portfolioValue }}</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Total Cost:</span>
-                <span class="fw-medium">{{ totalCost }}</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Net Profit/Loss:</span>
-                <span class="fw-medium" :class="parseFloat(netProfitValue) >= 0 ? 'text-success' : 'text-danger'">{{ netProfitValue }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div class="row g-4">
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">Unrealized P/L</h5>
-            <p class="stat-value" :class="parseFloat(unrealizedPL) >= 0 ? 'positive' : 'negative'">{{ unrealizedPL }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">Realized P/L</h5>
-            <p class="stat-value" :class="parseFloat(realizedPL) >= 0 ? 'positive' : 'negative'">{{ realizedPL }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">Total Revenue</h5>
-            <p class="stat-value text-success">{{ totalRevenue }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">Total Costs</h5>
-            <p class="stat-value text-danger">{{ totalCosts }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Detailed breakdown section -->
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Financial Breakdown</h5>
-            <div class="row">
-              <div class="col-md-3">
-                <h6 class="text-muted">Sales Revenue</h6>
-                <p class="stat-value text-success">{{ salesRevenue }}</p>
-              </div>
-              <div class="col-md-3">
-                <h6 class="text-muted">Purchase Costs</h6>
-                <p class="stat-value text-danger">{{ purchaseCosts }}</p>
-              </div>
-              <div class="col-md-3">
-                <h6 class="text-muted">Fees & Commission</h6>
-                <p class="stat-value text-danger">{{ totalFees }}</p>
-              </div>
-              <div class="col-md-3">
-                <h6 class="text-muted">Shipping Costs</h6>
-                <p class="stat-value text-danger">{{ shippingCosts }}</p>
-              </div>
+      <div class="row g-4 mt-1">
+        <div class="col-lg-8">
+          <div class="card"><div class="card-body">
+            <h2 class="h5">Financial breakdown</h2>
+            <div class="row g-3 small">
+              <div class="col-md-4"><span class="text-muted d-block">Gross sales</span><strong>{{ euros(summary.grossSalesCent) }}</strong></div>
+              <div class="col-md-4"><span class="text-muted d-block">Net sales</span><strong>{{ euros(summary.netSalesCent) }}</strong></div>
+              <div class="col-md-4"><span class="text-muted d-block">Sales fees</span><strong>{{ euros(summary.salesFeesCent) }}</strong></div>
+              <div class="col-md-4"><span class="text-muted d-block">Purchase fees</span><strong>{{ euros(summary.purchaseFeesCent) }}</strong></div>
+              <div class="col-md-4"><span class="text-muted d-block">Purchase shipping</span><strong>{{ euros(summary.purchaseShippingCent) }}</strong></div>
+              <div class="col-md-4"><span class="text-muted d-block">Shipping result</span><strong>{{ euros(summary.shippingIncomeCent - summary.shippingExpenseCent) }}</strong></div>
             </div>
-          </div>
+          </div></div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card"><div class="card-body">
+            <h2 class="h5">Price updates</h2>
+            <div class="small text-muted mb-3">Last: {{ formatDate(lastUpdate) }}<br>Next: {{ formatDate(nextUpdate) }}</div>
+            <button @click="refreshPrices" class="btn btn-glass-primary" :disabled="isUpdating">
+              {{ isUpdating ? 'Updating…' : 'Refresh now' }}
+            </button>
+          </div></div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useCardsStore } from '../../stores/cards';
-import { useHoldingsStore } from '../../stores/holdings';
-import { useTransactionsStore } from '../../stores/transactions';
-import { ValuationEngine } from '../analytics/ValuationEngine';
-import { FinanceService } from '../analytics/FinanceService';
-import { Money } from '../../core/Money';
+import { computed, onMounted, ref } from 'vue';
 import PortfolioValueChart from '../../components/PortfolioValueChart.vue';
-import {usePriceUpdates} from "../../composables/usePriceUpdates.ts";
+import { usePriceUpdates } from '../../composables/usePriceUpdates';
+import {
+  AccountingQueryService,
+  type AmountSummary,
+  type PortfolioSummary,
+} from '../accounting/AccountingQueryService';
 
-// Get the stores
-const cardsStore = useCardsStore();
-const holdingsStore = useHoldingsStore();
-const transactionsStore = useTransactionsStore();
-
-// Get price update composable
+const queries = new AccountingQueryService();
+const summary = ref<PortfolioSummary>();
+const loading = ref(true);
+const error = ref('');
 const { formatDate, checkAndScheduleUpdate, forceUpdatePrices, lastUpdate, nextUpdate, isUpdating } = usePriceUpdates();
 
-// Reactive state
-const portfolioValue = ref('€0.00');
-const totalCost = ref('€0.00');
-const unrealizedPL = ref('€0.00');
-const realizedPL = ref('€0.00');
-const totalRevenue = ref('€0.00');
-const totalCosts = ref('€0.00');
-const netProfitValue = ref('€0.00');
-const salesRevenue = ref('€0.00');
-const purchaseCosts = ref('€0.00');
-const totalFees = ref('€0.00');
-const shippingCosts = ref('€0.00');
-
-// Format money values
-const formatMoney = (money: Money): string => {
-  return money.format('de-DE');
-};
-
-// Load initial data
-const loadData = async () => {
-  try {
-    // Load data from stores
-    await cardsStore.loadCards();
-    await holdingsStore.loadHoldings();
-    await transactionsStore.loadTransactions();
-    
-    const value = await ValuationEngine.calculatePortfolioValue();
-    const cost = await ValuationEngine.calculateTotalCostBasis();
-    const unrealized = await ValuationEngine.calculateUnrealizedPnL();
-    const realized = await ValuationEngine.calculateRealizedPnL();
-
-    portfolioValue.value = formatMoney(value);
-    totalCost.value = formatMoney(cost);
-    unrealizedPL.value = formatMoney(unrealized);
-    realizedPL.value = formatMoney(realized);
-    
-    // NEW FINANCIAL CALCULATIONS
-    const revenue = await FinanceService.getTotalRevenue();
-    const costs = await FinanceService.getTotalCosts();
-    const fees = await FinanceService.getTotalFees();
-    const shipping = await FinanceService.getTotalShippingCosts('purchase');
-    const shippingRevenue = await FinanceService.getTotalShippingCosts('sale');
-    const netProfit = await FinanceService.getTotalNetProfit();
-
-    totalRevenue.value = formatMoney(revenue);
-    totalCosts.value = formatMoney(costs);
-    salesRevenue.value = formatMoney(revenue);
-    purchaseCosts.value = formatMoney(costs);
-    totalFees.value = formatMoney(fees);
-    shippingCosts.value = formatMoney(shipping.subtract(shippingRevenue));
-
-    netProfitValue.value = formatMoney(netProfit);
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
+const euros = (cents: number) => (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const amount = (value: AmountSummary) => {
+  if (value.status === 'unknown') {
+    return value.knownCents ? `${euros(value.knownCents)} + unknown` : 'Unknown';
   }
+  return `${euros(value.cents ?? value.knownCents)}${value.status === 'estimated' ? ' (estimated)' : ''}`;
+};
+const amountClass = (value: AmountSummary) => {
+  const cents = value.cents ?? value.knownCents;
+  return cents > 0 ? 'text-success' : cents < 0 ? 'text-danger' : '';
 };
 
-// Refresh prices
-const refreshPrices = async () => {
+const headlineStats = computed(() => summary.value ? [
+  { label: 'Market value', value: amount(summary.value.marketValue), detail: `${summary.value.quantity} cards`, className: '' },
+  { label: 'Open cost basis', value: amount(summary.value.openCostBasis), detail: 'Remaining inventory', className: '' },
+  { label: 'Unrealized P/L', value: amount(summary.value.unrealizedPnL), detail: 'Market value minus open costs', className: amountClass(summary.value.unrealizedPnL) },
+  { label: 'Realized P/L', value: amount(summary.value.realizedPnL), detail: 'Net proceeds minus sold costs', className: amountClass(summary.value.realizedPnL) },
+] : []);
+
+async function loadData() {
+  loading.value = true;
+  error.value = '';
   try {
-    await forceUpdatePrices();
-    // Reload data to reflect updated prices
-    await loadData();
-  } catch (error) {
-    console.error('Error refreshing prices:', error);
+    summary.value = await queries.getPortfolioSummary();
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not load accounting data.';
+  } finally {
+    loading.value = false;
   }
-};
+}
 
-// Load data when component mounts
-onMounted(async () => {
-  // Load the dashboard data immediately without waiting for price updates
+async function refreshPrices() {
+  await forceUpdatePrices();
   await loadData();
-  
-  // Check if we need to update prices automatically in the background
-  setTimeout(async () => {
-    await checkAndScheduleUpdate();
-  }, 0);
+}
+
+onMounted(async () => {
+  await loadData();
+  setTimeout(() => void checkAndScheduleUpdate(), 0);
 });
 </script>
 
 <style scoped>
-.home {
-  padding: var(--space-lg);
-}
-
-.dashboard-stats {
-  margin: var(--space-xl) 0;
-}
-
-.stat-value {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-}
-
-.stat-value.positive {
-  color: var(--color-success);
-}
-
-.stat-value.negative {
-  color: var(--color-error);
-}
-
-.import-section {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  margin-top: var(--space-xl);
-}
-
-.import-section h2 {
-  margin-top: 0;
-}
-
-.import-buttons {
-  display: flex;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-/* Financial breakdown section */
-.card-title {
-  margin-bottom: var(--space-md);
-}
-
-.text-muted {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-xs);
-}
+.home { padding: var(--space-lg); }
+.stat-value { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); }
 </style>

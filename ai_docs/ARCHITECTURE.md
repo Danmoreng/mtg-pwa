@@ -33,8 +33,9 @@ Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-f
 ## Data Model
 All monetary values are stored as integer cents (EUR) to avoid float drift.
 
-The current operational schema contains the new canonical accounting model plus
-legacy compatibility tables that remain in use by screens awaiting Phase 4.
+The current operational schema contains the canonical accounting model plus
+legacy compatibility tables retained by older ingestion/reconciliation paths.
+All user-facing accounting screens use canonical selectors.
 The accounting contract is specified in
 [Accounting Target Model](ACCOUNTING_TARGET_MODEL.md) and visualized in
 [MTG Accounting Architecture.tldraw](MTG%20Accounting%20Architecture.tldraw).
@@ -48,7 +49,10 @@ never deletes an older database automatically.
 ### Core Entities
 - **cards** — Scryfall-identified print (id, oracleId, setCode, number, lang, finish, imageUrl, timestamps)  
 - **acquisitions** — Grouped purchases with total cost (id, kind, source, externalRef, currency, happenedAt, total cost fields, allocation metadata)  
-- **card_lots** — Inventory lots with financial tracking (id, cardId, acquisitionId, quantity, unitCost, acquisitionPriceCent, totalAcquisitionCostCent, salePriceCent, totalSaleRevenueCent, source, acquiredAt, disposedAt, externalRef, timestamps)  
+- **inventory_lots** — Canonical physical inventory with immutable starting quantity and explicit cost-basis status
+- **inventory_adjustments** — Reversible manual quantity/cost ledger
+- **sales**, **sale_lines**, **lot_allocations** — Canonical sale evidence, net proceeds, and sold-cost snapshots
+- **deck_inventory_allocations** — Active/released reservations of physical lots for deck requirements
 - **price_points** — Historical price snapshots per cardId/provider/asOf  
 - **transactions** — BUY/SELL with fees/shipping, `externalRef` idempotency key, timestamps  
 - **decks**, **deck_cards** — Imported Moxfield decks and their cards  
@@ -73,20 +77,16 @@ never deletes an older database automatically.
 `AccountingProjectionCoordinator` runs sales before recomputing unlocked deck
 reservations. Cardmarket, ManaBox, and deck projections use stable source
 references and deterministic cent allocation, so reimporting converges without
-duplicating inventory. Existing UI consumers still read legacy fields until the
-separately reviewed Phase 4 cutover.
+duplicating inventory. `AccountingQueryService` is the only accounting read
+model used by the dashboard, holdings/cards, P/L, valuations, boxes, decks, and
+manual inventory/reconciliation UI.
 
 ### Inventory Layer (lots)
-- **card_lots**  
-  - `id` (uuid)  
-  - `cardId` → cards.id  
-  - `quantity`  
-  - `disposedQuantity` (derived)  
-  - `unitCost` (cents)  
-  - `currency` ("EUR")  
-  - `source` (e.g., cardmarket, deck-import)  
-  - `acquiredAt`, `createdAt`, `updatedAt`  
-  - Enhanced financial tracking fields (acquisitionPriceCent, acquisitionFeesCent, acquisitionShippingCent, totalAcquisitionCostCent, salePriceCent, saleFeesCent, saleShippingCent, totalSaleRevenueCent)
+- `inventory_lots.initialQuantity` plus `inventory_adjustments` derives effective quantity.
+- `lot_allocations` derives sold and remaining quantity.
+- Active `deck_inventory_allocations` derives reserved and freely available quantity.
+- `inventory_lot_sources` retains multiple pieces of provenance for one physical lot.
+- Unknown cost and price are first-class states and are never represented as zero.
 
 - **scan_sale_links**  
   - `id`  
@@ -96,7 +96,7 @@ separately reviewed Phase 4 cutover.
   - `createdAt`, `updatedAt`  
 
 ### Derived Store
-- **holdings** — computed from lots; no longer persisted in database  
+- **holdings** — computed from canonical lots/allocations; not persisted
 
 ### Scans
 - **scans** — ManaBox exports, normalized fingerprint; may resolve to `cardId` post-linking  
@@ -116,9 +116,9 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - Automatic valuation snapshots after price updates  
 
 ## Valuation Engine
-- FIFO per-lot; realized P/L from sells uses proportional FIFO  
-- Unrealized cost basis uses remaining lot quantities  
-- Daily snapshots in `valuations`  
+- FIFO/manual `lot_allocations` snapshot sold cost and net proceeds.
+- Unrealized P/L uses canonical remaining cost basis and finish-aware prices.
+- Daily snapshots are written only when required price/cost inputs are complete.
 
 ## Import Infrastructure
 - **Cardmarket Import Wizard** (UI): multi-step (Upload → Map → Preview → Conflicts → Summary)  
@@ -130,8 +130,10 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - **Idempotency**: All imports are idempotent with external references preventing duplicate data  
 
 ## Deck Ownership
-- Computed from lots (remaining units); UI highlights coverage  
-- All deck operations now use lots as the source of truth  
+- Computed from `deck_cards` requirements and active
+  `deck_inventory_allocations`; UI shows per-card deficits and total coverage.
+- Deck imports default to visible deficits and only create inventory after
+  explicit user confirmation. Archiving releases reservations without deleting history.
 
 ## PWA / Offline Strategy
 - **App shell caching** for instant loads  
@@ -145,7 +147,8 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - Cards store centralizes price data with getters/selectors  
 
 ## Current Capabilities
-- Fresh `MtgTrackerDbV2` schema 1 baseline with all operational and Cardmarket staging tables
+- Fresh `MtgTrackerDbAccounting` schema 1 baseline with canonical, operational,
+  and Cardmarket staging tables
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
 - Cardmarket Import Wizard with ID-first resolution  
@@ -163,4 +166,7 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - Reconciler service for matching scans to lots and sales to lots (currently experiencing DataError and NotFoundError issues that require fixing)
 
 ## Current Issues
-- **Critical Reconciler Issue**: The reconciliation service is experiencing DataError and NotFoundError issues when attempting to link scans to lots and sales to lots. This prevents proper functionality of scan-to-lot and sell-to-lot matching.  
+- Legacy `card_lots`/`transactions` and the old provisional-lot reconciler still
+  exist for compatibility and should be removed after manual import acceptance.
+- Large-dataset performance budgets and populated/offline browser acceptance
+  remain release-hardening work.

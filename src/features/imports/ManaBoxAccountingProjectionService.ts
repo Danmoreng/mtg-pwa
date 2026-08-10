@@ -233,8 +233,18 @@ export class ManaBoxAccountingProjectionService {
     for (const candidate of candidates) {
       const snapshot = await this.accounting.getLotSnapshot(candidate.id);
       if (!snapshot || snapshot.remainingQuantity <= 0) continue;
+      const issueId = `issue:possible-duplicate:${incomingLot.id}:${candidate.id}`;
+      const existing = await this.db.reconciliation_issues.get(issueId);
+      if (
+        existing?.status === 'resolved' &&
+        ['same_physical_copy', 'additional_copy', 'ignored'].includes(
+          existing.resolution ?? ''
+        )
+      ) {
+        continue;
+      }
       await this.putIssue(
-        `issue:possible-duplicate:${incomingLot.id}:${candidate.id}`,
+        issueId,
         'possible_duplicate_inventory',
         incomingLot.sourceRef,
         updatedAt,
