@@ -1,74 +1,55 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { getDb } from '../../src/data/init';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  DATABASE_NAME,
+  DATABASE_SCHEMA_VERSION,
+  DATABASE_TABLE_NAMES,
+  type Card,
+  type CardLot,
+  type PricePoint,
+  type Transaction,
+} from '../../src/data/db';
 import MtgTrackerDb from '../../src/data/db';
+import { getDb } from '../../src/data/init';
 
 let db: MtgTrackerDb;
 
-beforeAll(async () => {
+beforeAll(() => {
   db = getDb();
 });
 
-describe('Database', () => {
+describe('fresh database baseline', () => {
   beforeEach(async () => {
-    // Clear the database before each test
-    await db.cards.clear();
-    await db.card_lots.clear();
-    await db.transactions.clear();
-    await db.scans.clear();
-    await db.decks.clear();
-    await db.deck_cards.clear();
-    await db.price_points.clear();
-    await db.valuations.clear();
-    await db.settings.clear();
-    await db.scan_sale_links.clear();
+    await db.transaction('rw', db.tables, async () => {
+      await Promise.all(db.tables.map(table => table.clear()));
+    });
   });
 
-  it('should create all tables', async () => {
-    // Check that all tables exist by trying to count records
-    const tables = [
-      'cards',
-      'card_lots',
-      'transactions',
-      'scans',
-      'decks',
-      'deck_cards',
-      'price_points',
-      'valuations',
-      'settings',
-      'scan_sale_links'
-    ];
-
-    for (const table of tables) {
-      const count = await (db as any)[table].count();
-      expect(typeof count).toBe('number');
-    }
+  it('uses the dedicated V2 database and schema version 1', () => {
+    expect(db.name).toBe(DATABASE_NAME);
+    expect(db.verno).toBe(DATABASE_SCHEMA_VERSION);
   });
 
-  it('should add and retrieve a card', async () => {
+  it('creates every table in the baseline schema', () => {
+    expect(db.tables.map(table => table.name).sort()).toEqual([...DATABASE_TABLE_NAMES].sort());
+  });
+
+  it('stores cards, lots, transactions, and historical prices', async () => {
     const now = new Date();
-    const card = {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const card: Card = {
       id: 'test-card-id',
       name: 'Test Card',
       set: 'Test Set',
-      setCode: 'TS',
+      setCode: 'tst',
       number: '1',
       lang: 'en',
       finish: 'nonfoil',
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
-
-    await db.cards.add(card);
-    const retrieved = await db.cards.get('test-card-id');
-    
-    expect(retrieved).toEqual(card);
-  });
-
-  it('should add and retrieve a card lot', async () => {
-    const now = new Date();
-    const cardLot = {
+    const lot: CardLot = {
       id: 'test-lot-id',
-      cardId: 'test-card-id',
+      cardId: card.id,
       quantity: 1,
       unitCost: 100,
       source: 'test',
@@ -79,20 +60,13 @@ describe('Database', () => {
       currency: 'EUR',
       purchasedAt: now,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
-
-    await db.card_lots.add(cardLot);
-    const retrieved = await db.card_lots.get('test-lot-id');
-    
-    expect(retrieved).toEqual(cardLot);
-  });
-
-  it('should add and retrieve a transaction', async () => {
-    const now = new Date();
-    const transaction = {
+    const transaction: Transaction = {
       id: 'test-transaction-id',
-      kind: 'BUY' as const,
+      kind: 'BUY',
+      cardId: card.id,
+      lotId: lot.id,
       quantity: 1,
       unitPrice: 100,
       fees: 10,
@@ -102,188 +76,44 @@ describe('Database', () => {
       externalRef: 'test-ref',
       happenedAt: now,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
-
-    await db.transactions.add(transaction);
-    const retrieved = await db.transactions.get('test-transaction-id');
-    
-    expect(retrieved).toEqual(transaction);
-  });
-
-  it('should store and query historical prices', async () => {
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    
-    // Add price points for a card
-    const pricePoints = [
+    const prices: PricePoint[] = [
       {
-        id: 'price-1',
-        cardId: 'test-card-id',
+        id: `${card.id}:scryfall:nonfoil:2026-08-09`,
+        cardId: card.id,
         provider: 'scryfall',
+        finish: 'nonfoil',
+        date: '2026-08-09',
         currency: 'EUR',
-        price: 100,
+        priceCent: 100,
         asOf: yesterday,
-        createdAt: yesterday
+        createdAt: yesterday,
       },
       {
-        id: 'price-2',
-        cardId: 'test-card-id',
+        id: `${card.id}:scryfall:nonfoil:2026-08-10`,
+        cardId: card.id,
         provider: 'scryfall',
+        finish: 'nonfoil',
+        date: '2026-08-10',
         currency: 'EUR',
-        price: 150,
+        priceCent: 150,
         asOf: now,
-        createdAt: now
-      }
-    ];
-
-    await db.price_points.bulkAdd(pricePoints);
-    
-    // Retrieve price points for the card
-    const retrieved = await db.price_points.where('cardId').equals('test-card-id').sortBy('asOf');
-    
-    expect(retrieved).toHaveLength(2);
-    expect(retrieved[0].price).toBe(100);
-    expect(retrieved[1].price).toBe(150);
-  });
-});
-
-describe('Database', () => {
-  beforeEach(async () => {
-    // Clear the database before each test
-    await db.cards.clear();
-    await db.card_lots.clear();
-    await db.transactions.clear();
-    await db.scans.clear();
-    await db.decks.clear();
-    await db.deck_cards.clear();
-    await db.price_points.clear();
-    await db.valuations.clear();
-    await db.settings.clear();
-    await db.scan_sale_links.clear();
-  });
-
-  it('should create all tables', async () => {
-    // Check that all tables exist by trying to count records
-    const tables = [
-      'cards',
-      'card_lots',
-      'transactions',
-      'scans',
-      'decks',
-      'deck_cards',
-      'price_points',
-      'valuations',
-      'settings',
-      'scan_sale_links'
-    ];
-
-    for (const table of tables) {
-      const count = await (db as any)[table].count();
-      expect(typeof count).toBe('number');
-    }
-  });
-
-  it('should add and retrieve a card', async () => {
-    const now = new Date();
-    const card = {
-      id: 'test-card-id',
-      name: 'Test Card',
-      set: 'Test Set',
-      setCode: 'TS',
-      number: '1',
-      lang: 'en',
-      finish: 'nonfoil',
-      createdAt: now,
-      updatedAt: now
-    };
-
-    await db.cards.add(card);
-    const retrieved = await db.cards.get('test-card-id');
-    
-    expect(retrieved).toEqual(card);
-  });
-
-  it('should add and retrieve a card lot', async () => {
-    const now = new Date();
-    const cardLot = {
-      id: 'test-lot-id',
-      cardId: 'test-card-id',
-      quantity: 1,
-      unitCost: 100,
-      source: 'test',
-      condition: 'NM',
-      language: 'en',
-      foil: false,
-      finish: 'nonfoil',
-      currency: 'EUR',
-      purchasedAt: now,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    await db.card_lots.add(cardLot);
-    const retrieved = await db.card_lots.get('test-lot-id');
-    
-    expect(retrieved).toEqual(cardLot);
-  });
-
-  it('should add and retrieve a transaction', async () => {
-    const now = new Date();
-    const transaction = {
-      id: 'test-transaction-id',
-      kind: 'BUY' as const,
-      quantity: 1,
-      unitPrice: 100,
-      fees: 10,
-      shipping: 5,
-      currency: 'EUR',
-      source: 'test',
-      externalRef: 'test-ref',
-      happenedAt: now,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    await db.transactions.add(transaction);
-    const retrieved = await db.transactions.get('test-transaction-id');
-    
-    expect(retrieved).toEqual(transaction);
-  });
-
-  it('should store and query historical prices', async () => {
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    
-    // Add price points for a card
-    const pricePoints = [
-      {
-        id: 'price-1',
-        cardId: 'test-card-id',
-        provider: 'scryfall',
-        currency: 'EUR',
-        price: 100,
-        asOf: yesterday,
-        createdAt: yesterday
+        createdAt: now,
       },
-      {
-        id: 'price-2',
-        cardId: 'test-card-id',
-        provider: 'scryfall',
-        currency: 'EUR',
-        price: 150,
-        asOf: now,
-        createdAt: now
-      }
     ];
 
-    await db.price_points.bulkAdd(pricePoints);
-    
-    // Retrieve price points for the card
-    const retrieved = await db.price_points.where('cardId').equals('test-card-id').sortBy('asOf');
-    
-    expect(retrieved).toHaveLength(2);
-    expect(retrieved[0].price).toBe(100);
-    expect(retrieved[1].price).toBe(150);
+    await db.transaction('rw', db.cards, db.card_lots, db.transactions, db.price_points, async () => {
+      await db.cards.add(card);
+      await db.card_lots.add(lot);
+      await db.transactions.add(transaction);
+      await db.price_points.bulkAdd(prices);
+    });
+
+    expect(await db.cards.get(card.id)).toEqual(card);
+    expect(await db.card_lots.get(lot.id)).toEqual(lot);
+    expect(await db.transactions.get(transaction.id)).toEqual(transaction);
+    const storedPrices = await db.price_points.where('cardId').equals(card.id).sortBy('asOf');
+    expect(storedPrices.map(price => price.priceCent)).toEqual([100, 150]);
   });
 });

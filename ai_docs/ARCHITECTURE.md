@@ -1,6 +1,6 @@
 # Architecture (Authoritative)
 
-_Status updated: 2025-10-12_
+_Status updated: 2026-08-10_
 
 ## Overview
 Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-first design; all card data, pricing history, and user state live on-device. Background work handled via Web Workers.
@@ -32,6 +32,10 @@ Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-f
 
 ## Data Model
 All monetary values are stored as integer cents (EUR) to avoid float drift.
+
+The active browser database is the intentional fresh baseline `MtgTrackerDbV2`
+at Dexie schema version 1. It has no migration path from prototype databases and
+never deletes an older database automatically.
 
 ### Core Entities
 - **cards** — Scryfall-identified print (id, oracleId, setCode, number, lang, finish, imageUrl, timestamps)  
@@ -106,14 +110,15 @@ Multi-layer caching with standardized Cardmarket EUR pricing:
 - **App shell caching** for instant loads  
 - **Navigation fallback** to `/index.html` for offline deep-link refresh  
 - **Background sync**: planned for periodic price updates and offline import staging  
-- **Backup/Restore**: Full DB export/import including lots + provenance  
+- **Backup/Restore**: Versioned full-schema JSON export/import with validation,
+  Date revival, and atomic replacement. The UI is available at `/backup`.
 
 ## State Management
 - Pinia stores for cards/holdings/transactions/decks/settings  
 - Cards store centralizes price data with getters/selectors  
 
 ## Current Capabilities
-- Database v10 with acquisitions and lots as source of truth; holdings derived from lots  
+- Fresh `MtgTrackerDbV2` schema 1 baseline with all operational and Cardmarket staging tables
 - Price sync worker with TTL checks  
 - SW caching for Scryfall API + images  
 - Cardmarket Import Wizard with ID-first resolution  
