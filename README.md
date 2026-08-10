@@ -42,6 +42,8 @@ All current tables are included in the versioned JSON backup format.
 ## Documentation
 
 - [Architecture](ai_docs/ARCHITECTURE.md) - Technical architecture and data model
+- [Accounting Target Model](ai_docs/ACCOUNTING_TARGET_MODEL.md) - Canonical contract for the planned inventory and accounting rebuild
+- [Accounting Architecture Diagram](ai_docs/MTG%20Accounting%20Architecture.tldraw) - Tldraw views of the current model, target ERDs, migration plan, and correction UI
 - [Importers](ai_docs/IMPORTERS.md) - Specifications for Cardmarket, ManaBox, and Moxfield importers
 - [Roadmap](ai_docs/ROADMAP.md) - Project milestones and future plans
 - [AI Collaboration](ai_docs/QWEN.md) - Guidelines for working with the AI assistant
