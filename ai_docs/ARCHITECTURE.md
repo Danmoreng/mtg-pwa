@@ -33,6 +33,13 @@ Client-only Vue 3 + TypeScript PWA with IndexedDB (Dexie) and plain CSS. Local-f
 ## Data Model
 All monetary values are stored as integer cents (EUR) to avoid float drift.
 
+The current operational schema below describes the release-hardening baseline.
+The planned replacement accounting model is specified in
+[Accounting Target Model](ACCOUNTING_TARGET_MODEL.md) and visualized in
+[MTG Accounting Architecture.tldraw](MTG%20Accounting%20Architecture.tldraw).
+The Markdown target-model document is canonical when implementation notes and
+the visual diagram differ.
+
 The active browser database is the intentional fresh baseline `MtgTrackerDbV2`
 at Dexie schema version 1. It has no migration path from prototype databases and
 never deletes an older database automatically.
