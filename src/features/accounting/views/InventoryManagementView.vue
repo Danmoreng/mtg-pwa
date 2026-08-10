@@ -137,15 +137,81 @@
       </div>
       <div v-if="!visibleIssues.length" class="alert alert-success">No {{ issueStatus }} reconciliation issues.</div>
       <div v-for="issue in visibleIssues" :key="issue.id" class="card mb-3"><div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between gap-2">
-          <div><span class="badge bg-warning-subtle text-warning-emphasis">{{ issue.kind }}</span><h2 class="h6 mt-2 mb-1">{{ issue.sourceRef }}</h2><small class="text-muted">Updated {{ formatDateTime(issue.updatedAt) }}</small></div>
+        <div class="d-flex flex-wrap justify-content-between gap-3">
+          <div class="d-flex gap-3 issue-card-summary">
+            <div class="issue-card-image flex-shrink-0">
+              <img v-if="issuePresentation(issue).card?.imageUrl" :src="issuePresentation(issue).card?.imageUrl" :alt="issuePresentation(issue).title">
+              <div v-else class="issue-card-placeholder">{{ issuePresentation(issue).card?.setCode.toUpperCase() || '?' }}</div>
+            </div>
+            <div>
+              <span class="badge bg-warning-subtle text-warning-emphasis">{{ issue.kind }}</span>
+              <h2 class="h5 mt-2 mb-1">{{ issuePresentation(issue).title }}</h2>
+              <div class="text-muted small">{{ issuePresentation(issue).printing }}</div>
+              <div v-if="issuePresentation(issue).context" class="small mt-1">{{ issuePresentation(issue).context }}</div>
+              <small class="text-muted d-block mt-1">Updated {{ formatDateTime(issue.updatedAt) }}</small>
+            </div>
+          </div>
           <span class="badge align-self-start" :class="issue.status === 'open' ? 'bg-danger' : 'bg-success'">{{ issue.status }}</span>
         </div>
-        <pre v-if="issue.details" class="issue-details mt-3 mb-3">{{ formatDetails(issue.details) }}</pre>
+        <details class="technical-details mt-3 mb-3">
+          <summary>Technical details</summary>
+          <div class="small text-muted mt-2"><strong>Source:</strong> {{ issue.sourceRef }}</div>
+          <pre v-if="issue.details" class="issue-details mt-2 mb-0">{{ formatDetails(issue.details) }}</pre>
+        </details>
+        <p v-if="issue.status === 'open'" class="small text-muted">
+          {{ issueGuidance(issue) }}
+        </p>
+
+        <div v-if="activeInventoryIssueId === issue.id && missingInventoryContext" class="issue-action-panel border rounded p-3 mb-3">
+          <h3 class="h6">Add the missing physical inventory</h3>
+          <p class="small mb-3">
+            <strong>{{ missingInventoryContext.card.name }}</strong> ·
+            {{ missingInventoryContext.card.setCode.toUpperCase() }} #{{ missingInventoryContext.card.number }} ·
+            {{ missingInventoryContext.quantity }} × {{ missingInventoryContext.finish }} · {{ missingInventoryContext.language }}
+          </p>
+          <div class="row g-3">
+            <div class="col-sm-4"><label class="form-label">Acquired date</label><input v-model="issueInventory.date" type="date" class="form-control" required></div>
+            <div class="col-sm-4"><label class="form-label">Condition</label><select v-model="issueInventory.condition" class="form-select"><option value="near_mint">Near mint</option><option value="excellent">Excellent</option><option value="good">Good</option><option value="light_played">Light played</option><option value="played">Played</option><option value="poor">Poor</option><option value="unknown">Unknown</option></select></div>
+            <div class="col-sm-4"><label class="form-label">Cost basis</label><select v-model="issueInventory.costStatus" class="form-select"><option value="unknown">Unknown</option><option value="known">Known</option><option value="estimated">Estimated</option></select></div>
+            <div v-if="issueInventory.costStatus !== 'unknown'" class="col-sm-4"><label class="form-label">Total cost (€)</label><input v-model="issueInventory.costEuro" inputmode="decimal" class="form-control" required></div>
+          </div>
+          <div class="form-check mt-3"><input :id="`confirm-${issue.id}`" v-model="issueInventory.confirmed" class="form-check-input" type="checkbox"><label :for="`confirm-${issue.id}`" class="form-check-label">I confirm that I physically own these {{ missingInventoryContext.quantity }} card(s).</label></div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-sm btn-primary" :disabled="busy || !issueInventory.confirmed" @click="submitMissingInventory">Add and reconcile</button>
+            <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="closeIssueActions">Cancel</button>
+          </div>
+        </div>
+
+        <div v-if="activeMappingIssueId === issue.id" class="issue-action-panel border rounded p-3 mb-3">
+          <h3 class="h6">Map the imported row to a printing</h3>
+          <p class="small text-muted">Choose the exact printing. The import is then projected again automatically.</p>
+          <div class="input-group mb-2"><input v-model="mappingSearch" class="form-control" placeholder="Search local cards" @keyup.enter="searchMappingCards"><button class="btn btn-outline-primary" @click="searchMappingCards">Search</button></div>
+          <div class="list-group local-card-results mb-2">
+            <button v-for="card in mappingCardResults" :key="card.id" class="list-group-item list-group-item-action" :class="{ active: mappingCard?.id === card.id }" @click="mappingCard = card">
+              {{ card.name }} <small>· {{ card.setCode.toUpperCase() }} #{{ card.number }}</small>
+            </button>
+          </div>
+          <button class="btn btn-link btn-sm px-0" @click="showMappingLookup = !showMappingLookup">{{ showMappingLookup ? 'Hide Scryfall lookup' : 'Printing not local? Resolve it via Scryfall' }}</button>
+          <div v-if="showMappingLookup" class="row g-2 mt-1">
+            <div class="col-12"><input v-model="mappingLookup.scryfallId" class="form-control" placeholder="Scryfall ID (most precise)"></div>
+            <div class="col-sm-4"><input v-model="mappingLookup.setCode" class="form-control" placeholder="Set code"></div>
+            <div class="col-sm-4"><input v-model="mappingLookup.collectorNumber" class="form-control" placeholder="Collector number"></div>
+            <div class="col-sm-4"><input v-model="mappingLookup.name" class="form-control" placeholder="Card name"></div>
+            <div class="col-12"><button class="btn btn-sm btn-outline-primary" :disabled="busy" @click="resolveMappingCard">Resolve printing</button></div>
+          </div>
+          <p v-if="mappingCard" class="small mt-3 mb-2">Selected: <strong>{{ mappingCard.name }}</strong> · {{ mappingCard.setCode.toUpperCase() }} #{{ mappingCard.number }}</p>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-sm btn-primary" :disabled="busy || !mappingCard" @click="submitIssueMapping">Save mapping and reconcile</button>
+            <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="closeIssueActions">Cancel</button>
+          </div>
+        </div>
+
         <div v-if="issue.status === 'open'" class="d-flex flex-wrap gap-2">
+          <button v-if="canAddMissingInventory(issue)" class="btn btn-sm btn-primary" :disabled="busy" @click="openMissingInventory(issue.id)">{{ issue.kind === 'oversold' ? 'Add missing acquisition' : 'Add missing physical card' }}</button>
+          <button v-if="issue.kind === 'unmatched'" class="btn btn-sm btn-primary" :disabled="busy" @click="openIssueMapping(issue.id)">Map card printing</button>
           <button v-if="issue.kind === 'possible_duplicate_inventory'" class="btn btn-sm btn-primary" :disabled="busy" @click="mergeIssue(issue.id)">Same physical copy</button>
           <button v-if="issue.kind === 'possible_duplicate_inventory'" class="btn btn-sm btn-outline-success" :disabled="busy" @click="resolveIssue(issue.id, 'additional_copy')">Both are separate copies</button>
-          <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="resolveIssue(issue.id, 'ignored')">Ignore</button>
+          <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="resolveIssue(issue.id, 'ignored')">Dismiss as intentional</button>
         </div>
         <div v-else>
           <p class="small mb-2">Resolution: <strong>{{ issue.resolution }}</strong></p>
@@ -164,7 +230,7 @@ import { getDb } from '../../../data/init';
 import type { AccountingMoney, CostBasisStatus } from '../AccountingTypes';
 import { AccountingQueryService, type CanonicalLotView, type PortfolioSummary } from '../AccountingQueryService';
 import { ManualInventoryService } from '../ManualInventoryService';
-import { ReconciliationActionService } from '../ReconciliationActionService';
+import { ReconciliationActionService, type MissingInventoryIssueContext, type ReconciliationIssuePresentation } from '../ReconciliationActionService';
 
 type Tab = 'inventory' | 'add' | 'issues';
 type AdjustmentKind = InventoryAdjustment['kind'];
@@ -186,18 +252,28 @@ const portfolio = ref<PortfolioSummary>();
 const lots = ref<CanonicalLotView[]>([]);
 const adjustments = ref<InventoryAdjustment[]>([]);
 const issues = ref<ReconciliationIssue[]>([]);
+const issuePresentationById = ref(new Map<string, ReconciliationIssuePresentation>());
 const inventoryFilter = ref('');
 const selectedLot = ref<CanonicalLotView>();
 const issueStatus = ref<ReconciliationIssue['status']>('open');
+const activeInventoryIssueId = ref('');
+const missingInventoryContext = ref<MissingInventoryIssueContext>();
+const activeMappingIssueId = ref('');
+const mappingSearch = ref('');
+const mappingCardResults = ref<Card[]>([]);
+const mappingCard = ref<Card>();
+const showMappingLookup = ref(false);
 
 const cardSearch = ref('');
 const cardResults = ref<Card[]>([]);
 const selectedCard = ref<Card>();
 const showScryfallLookup = ref(false);
 const lookup = reactive({ scryfallId: '', name: '', setCode: '', collectorNumber: '' });
+const mappingLookup = reactive({ scryfallId: '', name: '', setCode: '', collectorNumber: '' });
 const today = () => new Date().toISOString().slice(0, 10);
 const newInventory = reactive({ quantity: 1, finish: 'nonfoil' as 'nonfoil' | 'foil' | 'etched', language: 'en', condition: 'near_mint', costStatus: 'unknown' as CostBasisStatus, costEuro: '', date: today(), confirmed: false });
 const correction = reactive({ target: 0, kind: 'correction' as AdjustmentKind, costStatus: 'unknown' as CostBasisStatus, costEuro: '', date: today(), note: '' });
+const issueInventory = reactive({ costStatus: 'unknown' as CostBasisStatus, costEuro: '', date: today(), condition: 'unknown', confirmed: false });
 
 const filteredLots = computed(() => {
   const query = inventoryFilter.value.trim().toLowerCase();
@@ -231,12 +307,45 @@ const formatDateTime = (value: Date) => new Date(value).toLocaleString();
 const formatDetails = (details: Record<string, unknown>) => JSON.stringify(details, null, 2);
 function announce(text: string, kind: 'success' | 'error' = 'success') { message.value = text; messageKind.value = kind; window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
+function canAddMissingInventory(issue: ReconciliationIssue): boolean {
+  const missingQuantity = Number(issue.details?.missingQuantity);
+  return Number.isSafeInteger(missingQuantity) && missingQuantity > 0 && (
+    issue.kind === 'oversold' ||
+    (issue.kind === 'quantity_conflict' && Boolean(issue.details?.deckCardId))
+  );
+}
+
+function issueGuidance(issue: ReconciliationIssue): string {
+  if (issue.kind === 'oversold') return 'This sale cannot be fully allocated because the accounting inventory is short. Add the historically missing acquisition if you really owned the sold copy.';
+  if (issue.kind === 'unmatched') return 'The imported row could not be matched to an exact card printing. Map it manually, then the import will be projected again.';
+  if (issue.kind === 'possible_duplicate_inventory') return 'Decide whether both imports describe one physical copy or two separate copies.';
+  if (issue.kind === 'quantity_conflict' && issue.details?.deckCardId) return 'This deck requires more physical copies than the current inventory can provide. Add the missing card only if you really own it.';
+  if (issue.kind === 'quantity_conflict') return 'The imported quantity or a locked allocation is inconsistent. Correct the source/allocation and retry, or dismiss it only when the discrepancy is intentional.';
+  return 'Review the candidates or source data, then retry reconciliation. Dismiss only if the discrepancy is intentional.';
+}
+
+function issuePresentation(issue: ReconciliationIssue): ReconciliationIssuePresentation {
+  return issuePresentationById.value.get(issue.id) ?? {
+    issueId: issue.id,
+    title: issue.kind,
+    printing: 'Card details unavailable',
+    context: '',
+  };
+}
+
 async function reload() {
   loading.value = true;
   try {
-    [portfolio.value, lots.value, adjustments.value, issues.value] = await Promise.all([
+    const [loadedPortfolio, loadedLots, loadedAdjustments, loadedIssues] = await Promise.all([
       queries.getPortfolioSummary(), queries.getLotViews(), db.inventory_adjustments.toArray(), reconciliation.getIssues(),
     ]);
+    portfolio.value = loadedPortfolio;
+    lots.value = loadedLots;
+    adjustments.value = loadedAdjustments;
+    issues.value = loadedIssues;
+    issuePresentationById.value = new Map(
+      (await reconciliation.getIssuePresentations(loadedIssues)).map(row => [row.issueId, row])
+    );
     if (selectedLot.value) {
       const refreshed = lots.value.find(row => row.lot.id === selectedLot.value?.lot.id);
       if (refreshed) selectLot(refreshed); else selectedLot.value = undefined;
@@ -244,9 +353,9 @@ async function reload() {
   } finally { loading.value = false; }
 }
 
-async function run(action: () => Promise<void>, success: string) {
+async function run(action: () => Promise<void>, success: string | (() => string)) {
   busy.value = true; message.value = '';
-  try { await action(); await reload(); announce(success); }
+  try { await action(); await reload(); announce(typeof success === 'function' ? success() : success); }
   catch (cause) { announce(cause instanceof Error ? cause.message : 'The operation failed.', 'error'); }
   finally { busy.value = false; }
 }
@@ -281,6 +390,65 @@ async function submitCorrection() {
 }
 async function reverseAdjustment(id: string) { await run(async () => { await inventoryService.reverseAdjustment(id, 'Reversed from inventory UI'); }, 'Adjustment reversed.'); }
 async function resolveIssue(id: string, resolution: 'additional_copy' | 'ignored') { await run(() => reconciliation.resolve(id, resolution), 'Reconciliation decision saved.'); }
+function closeIssueActions() {
+  activeInventoryIssueId.value = '';
+  missingInventoryContext.value = undefined;
+  activeMappingIssueId.value = '';
+  mappingCard.value = undefined;
+}
+async function openMissingInventory(id: string) {
+  busy.value = true; message.value = '';
+  try {
+    const context = await reconciliation.getMissingInventoryContext(id);
+    closeIssueActions();
+    activeInventoryIssueId.value = id;
+    missingInventoryContext.value = context;
+    issueInventory.costStatus = 'unknown'; issueInventory.costEuro = ''; issueInventory.confirmed = false;
+    issueInventory.condition = context.condition;
+    issueInventory.date = context.occurredAt.toISOString().slice(0, 10);
+  } catch (cause) { announce(cause instanceof Error ? cause.message : 'Could not prepare this resolution.', 'error'); }
+  finally { busy.value = false; }
+}
+async function submitMissingInventory() {
+  if (!activeInventoryIssueId.value || !missingInventoryContext.value) return;
+  let resolved = false;
+  await run(async () => {
+    const result = await reconciliation.createMissingInventory(activeInventoryIssueId.value, {
+      costBasisStatus: issueInventory.costStatus,
+      totalCostCent: issueInventory.costStatus === 'unknown' ? undefined : parseEuro(issueInventory.costEuro),
+      occurredAt: new Date(`${issueInventory.date}T12:00:00`),
+      condition: issueInventory.condition,
+    });
+    resolved = result.resolved;
+    closeIssueActions();
+  }, () => resolved
+    ? 'Missing physical inventory added and the issue was resolved.'
+    : 'Inventory was added, but competing sales or deck requirements still leave an open issue. Review the remaining issues.');
+}
+async function openIssueMapping(id: string) {
+  closeIssueActions();
+  activeMappingIssueId.value = id;
+  mappingSearch.value = '';
+  mappingCardResults.value = await inventoryService.findCards('');
+  showMappingLookup.value = false;
+  Object.assign(mappingLookup, { scryfallId: '', name: '', setCode: '', collectorNumber: '' });
+}
+async function searchMappingCards() { mappingCardResults.value = await inventoryService.findCards(mappingSearch.value); }
+async function resolveMappingCard() {
+  await run(async () => {
+    mappingCard.value = await inventoryService.resolveAndSaveCard({ ...mappingLookup });
+    mappingCardResults.value = [mappingCard.value];
+  }, 'Printing resolved. Confirm the mapping to re-run the import.');
+}
+async function submitIssueMapping() {
+  if (!activeMappingIssueId.value || !mappingCard.value) return;
+  let resolved = false;
+  await run(async () => {
+    const result = await reconciliation.mapUnmatchedIssue(activeMappingIssueId.value, mappingCard.value!.id);
+    resolved = result.resolved;
+    closeIssueActions();
+  }, () => resolved ? 'Card printing mapped and the issue was resolved.' : 'Mapping saved, but the issue remains open. Review its updated details.');
+}
 async function mergeIssue(id: string) {
   if (!window.confirm('Confirm that both records describe the same physical card. The duplicate quantity will be removed and provenance retained.')) return;
   await run(() => reconciliation.resolveAsSamePhysicalCopy(id), 'Duplicate records merged without double counting inventory.');
@@ -298,4 +466,11 @@ onMounted(async () => { await Promise.all([reload(), searchCards()]); });
 .correction-panel { top: 6rem; }
 .local-card-results { max-height: 18rem; overflow: auto; }
 .issue-details { white-space: pre-wrap; font-size: .8rem; background: rgba(127,127,127,.1); padding: .75rem; border-radius: .5rem; }
+.issue-action-panel { background: rgba(13, 110, 253, .04); }
+.issue-card-summary { min-width: 0; }
+.issue-card-image { width: 92px; aspect-ratio: 5 / 7; border-radius: .5rem; overflow: hidden; background: rgba(127,127,127,.14); }
+.issue-card-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.issue-card-placeholder { width: 100%; height: 100%; display: grid; place-items: center; color: var(--bs-secondary-color); font-weight: 600; }
+.technical-details summary { cursor: pointer; color: var(--bs-secondary-color); font-size: .875rem; }
+@media (max-width: 575.98px) { .issue-card-image { width: 68px; } }
 </style>

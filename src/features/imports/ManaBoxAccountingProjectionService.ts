@@ -205,6 +205,7 @@ export class ManaBoxAccountingProjectionService {
     candidateLotId?: string
   ): Promise<void> {
     const existing = await this.db.reconciliation_issues.get(id);
+    if (existing?.status === 'resolved' && existing.resolution === 'ignored') return;
     await this.db.reconciliation_issues.put({
       id,
       kind,
