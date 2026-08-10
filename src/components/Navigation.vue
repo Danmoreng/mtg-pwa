@@ -30,6 +30,9 @@
           <li class="nav-item">
             <router-link to="/import" class="nav-link" :class="{ active: route.path.startsWith('/import') }" @mouseenter="hover" @focusin="hover">Data Import</router-link>
           </li>
+          <li class="nav-item">
+            <router-link to="/backup" class="nav-link" :class="{ active: route.name === 'backup' }" @mouseenter="hover" @focusin="hover">Backup</router-link>
+          </li>
         </ul>
 
         <div class="d-flex align-items-center">

@@ -1,10 +1,30 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ImportService } from '@/features/imports/ImportService';
 import { ScryfallProvider } from '@/features/pricing/ScryfallProvider';
 import * as ImportPipelines from '@/features/imports/ImportPipelines';
 import { getDb } from '@/data/init';
 
 describe('ImportService Cardmarket product fallback', () => {
+  beforeEach(async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [] }),
+    }));
+
+    const db = getDb();
+    const now = new Date();
+    await db.settings.put({
+      k: 'scryfall_sets_cache',
+      v: { sets: [], fetchedAt: Date.now() },
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('uses synthetic cm:<productId> card IDs when Scryfall cannot resolve Cardmarket product IDs', async () => {
     const importSellsSpy = vi
       .spyOn(ImportPipelines, 'importCardmarketSells')
@@ -71,6 +91,14 @@ describe('ImportService Cardmarket product fallback', () => {
   }, 15000);
 
   it('resolves Art Series cards via order-description collector number when Cardmarket ID lookup fails', async () => {
+    const settingsNow = new Date();
+    await getDb().settings.put({
+      k: 'set_code_aliases',
+      v: { 'avatar the last airbender extras': 'tla' },
+      createdAt: settingsNow,
+      updatedAt: settingsNow,
+    });
+
     const importSellsSpy = vi
       .spyOn(ImportPipelines, 'importCardmarketSells')
       .mockResolvedValue([]);

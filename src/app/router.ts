@@ -10,6 +10,7 @@ import DecksView from '../features/decks/views/DecksView.vue';
 import DeckDetailView from '../features/decks/views/DeckDetailView.vue';
 import CardsView from '../features/cards/views/CardsView.vue';
 import BoosterBoxesView from '../features/dashboard/BoosterBoxesView.vue';
+import BackupRestoreView from '../features/backup/views/BackupRestoreView.vue';
 
 const routes = [
   {
@@ -73,6 +74,11 @@ const routes = [
     path: '/cards',
     name: 'cards',
     component: CardsView,
+  },
+  {
+    path: '/backup',
+    name: 'backup',
+    component: BackupRestoreView,
   },
 ];
 

@@ -8,12 +8,19 @@ A Progressive Web App (PWA) for tracking the value of your Magic: The Gathering 
 - Import data from Cardmarket CSV exports with improved reliability and idempotency
 - Import ManaBox scanned cards
 - Import decks from Moxfield
+- Export and atomically restore the complete local database from the Backup page
 - View portfolio statistics including value, cost basis, and profit/loss
 - Historical price charts for individual cards
 - Real-time import progress tracking
 - Interactive card details with image flipping for transform cards
 - Offline functionality with PWA support
 - Responsive design that works on desktop and mobile
+
+## Local data baseline
+
+The app uses the fresh `MtgTrackerDbV2` IndexedDB database with schema version 1.
+This baseline intentionally does not migrate or delete databases created by earlier prototypes.
+All current tables are included in the versioned JSON backup format.
 
 ## Quick Start
 

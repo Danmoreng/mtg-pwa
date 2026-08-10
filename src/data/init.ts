@@ -1,4 +1,3 @@
-import Dexie from 'dexie';
 import MtgTrackerDb from './db';
 
 let dbInstance: MtgTrackerDb | null = null;
@@ -8,22 +7,10 @@ const initialize = async (): Promise<MtgTrackerDb> => {
     return dbInstance;
   }
 
-  try {
-    const db = new MtgTrackerDb();
-    await db.open();
-    dbInstance = db;
-    return db;
-  } catch (error) {
-    // Clean-start mode: when local browser has an older/higher schema, reset DB.
-    if (error instanceof Error && error.name === 'VersionError') {
-      await Dexie.delete('MtgTrackerDb');
-      const db = new MtgTrackerDb();
-      await db.open();
-      dbInstance = db;
-      return db;
-    }
-    throw error;
-  }
+  const db = new MtgTrackerDb();
+  await db.open();
+  dbInstance = db;
+  return db;
 };
 
 export const dbPromise = initialize();

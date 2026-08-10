@@ -1,5 +1,35 @@
 import Dexie, {type EntityTable} from 'dexie';
 
+/**
+ * Fresh 2026 data baseline. The new database name deliberately avoids opening
+ * any pre-baseline IndexedDB database that may still exist in a browser.
+ */
+export const DATABASE_NAME = 'MtgTrackerDbV2';
+export const DATABASE_SCHEMA_VERSION = 1;
+
+export const DATABASE_TABLE_NAMES = [
+    'acquisitions',
+    'cards',
+    'card_lots',
+    'transactions',
+    'scans',
+    'decks',
+    'deck_cards',
+    'price_points',
+    'valuations',
+    'settings',
+    'scan_sale_links',
+    'sell_allocations',
+    'cm_import_files',
+    'cm_orders',
+    'cm_order_parties',
+    'cm_order_lines',
+    'cm_ledger_transactions',
+    'cm_order_ledger_links',
+] as const;
+
+export type DatabaseTableName = typeof DATABASE_TABLE_NAMES[number];
+
 // Define our data models
 export interface Card {
     id: string; // scryfall_id
@@ -323,10 +353,10 @@ export default class MtgTrackerDb extends Dexie {
     cm_order_ledger_links!: EntityTable<CardmarketOrderLedgerLink, 'id'>;
 
     constructor() {
-        super('MtgTrackerDb');
+        super(DATABASE_NAME);
 
-        // Fresh start: single clean schema (no migrations)
-        this.version(1).stores({
+        // Intentional fresh start: this is the complete baseline schema.
+        this.version(DATABASE_SCHEMA_VERSION).stores({
             acquisitions: 'id, kind, source, externalRef, currency, happenedAt, createdAt, updatedAt, [source+externalRef]',
             cards: 'id, oracleId, name, set, setCode, number, lang, finish, layout, imageUrl, imageUrlBack, cardmarketId, createdAt, updatedAt',
             card_lots: 'id, cardId, acquisitionId, source, purchasedAt, disposedAt, createdAt, updatedAt, externalRef, ' +

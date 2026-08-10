@@ -1,101 +1,66 @@
-# Current Project Status - October 12, 2025
+# Current Project Status — August 10, 2026
 
-## Overview
+## Release-hardening baseline
 
-The MTG Collection Value Tracker has successfully completed Milestone 3 (M3) implementation, which focused on ManaBox scans & reconciliation. The system now supports acquisition-based inventory management, precise cost allocation, and sophisticated sell allocation for accurate P&L tracking.
+Development currently continues on `stabilize/release-hardening`. The project is
+being recovered as an advanced alpha: existing UI and import integrations are
+kept, while persistence and the financial accounting kernel are hardened before
+new product features are added.
 
-## Completed Milestones
+The active IndexedDB database is the deliberate fresh start `MtgTrackerDbV2`,
+Dexie schema version 1. There is no legacy v10 migration because no legacy user
+database needs to be retained. The app does not delete or overwrite older
+prototype databases.
 
-### M1 - Inventory Truth & Importer Reliability ✓
-- Made `card_lots` the single source of truth for inventory
-- Removed the `holdings` table (now computed from lots)
-- Implemented idempotent imports with Product-ID-first resolution
+## Phase 0 — completed baseline work
 
-### M2 - Pricing Throughput, History & Snapshots ✓
-- Implemented price history with provider precedence (Price Guide > MTGJSON > Scryfall)
-- Added MTGJSON and Cardmarket Price Guide importers
-- Added automatic valuation snapshots
-- Implemented finish-aware price processing (foil/nonfoil)
+- All 18 current schema tables are declared in one baseline schema.
+- `examples_temp/` is ignored because local Cardmarket exports can contain
+  personal or financial data.
+- Automatic database deletion on `VersionError`/`UpgradeError` was removed.
+- Backup/restore is exposed through the main navigation.
+- Backups contain every table, format and schema metadata, and all records.
+- Restore validates the complete snapshot before writing, revives Date fields,
+  and replaces all tables inside one Dexie transaction.
+- Database and backup round-trip tests cover the complete schema and transaction
+  rollback.
 
-### M3 - ManaBox Scans & Reconciliation ✓
-- Acquisition-based inventory management with cost allocation
-- Sell allocation system for distributing sales across multiple lots
-- Reconciler service for matching scans to lots and sales to lots
-- Enhanced analytics with per-box P&L calculations
+## Existing capabilities retained
 
-## Current Capabilities
+- Cardmarket multi-file CSV import and normalized `cm_*` staging tables
+- ManaBox scan/acquisition import
+- Scryfall card hydration and price updates
+- MTGJSON and Cardmarket PriceGuide imports
+- Card, lot, transaction, price history, valuation, and portfolio screens
+- Deck text import and Moxfield URL import
+- Booster-box views
+- Local-first PWA and offline caching
 
-### Data Model
-- **Database Version 10** with acquisitions, lots, and sell allocations
-- All monetary values stored as integer cents (EUR) to avoid float drift
-- Comprehensive financial tracking per lot with acquisition/sale costs
+## Known correctness gaps
 
-### Import Functionality
-- Cardmarket CSV import with high reliability
-- ManaBox scan import with acquisition cost allocation
-- Moxfield deck import
-- Idempotent imports using external reference keys
+The following items remain intentionally open for the next phases:
 
-### Analytics & Valuation
-- Automatic valuation snapshots
-- Realized/unrealized P&L calculations using FIFO methodology
-- Per-box analytics and cost allocation
-- Sell allocation system for precise P&L tracking across multiple lots
+- Remaining inventory is not yet derived consistently from
+  `card_lots.quantity - sell_allocations.quantity`.
+- Some screens still use `disposedQuantity`/`disposedAt` and can disagree with
+  reconciliation and P&L.
+- Provisional-lot creation and lot merging need allocation-safe rules.
+- Acquisition/box costs are not consistently allocated to lots.
+- Shipping and fee semantics differ across analytics services.
+- The Cardmarket `cm_*` shadow-write path has not yet become the single canonical
+  projection path.
+- ManaBox UI imports do not yet use deterministic external references.
 
-### User Interface
-- Dashboard with portfolio analytics
-- Holdings view computed from lots
-- Deck management with ownership tracking
-- Scan reconciliation interface
-- Settings and backup/restore functionality
+Until these items are resolved, displayed holdings and P&L figures should not be
+treated as authoritative accounting results.
 
-### PWA Features
-- Offline capability with service worker
-- Local-first design with IndexedDB storage
-- Responsive design working on desktop and mobile
+## Next implementation order
 
-## Technical Architecture
-
-### Core Components
-- **Vue 3 + TypeScript** frontend framework
-- **IndexedDB via Dexie** for local storage and migrations
-- **Web Workers** for background processing (CSV parsing, price sync, reconciliation)
-- **Bootstrap 5** for UI styling
-- **Chart.js** for data visualization
-
-### Service Layer
-- **Import Pipelines** for Cardmarket, ManaBox, and Moxfield imports
-- **Reconciler Service** for scan-to-sale matching
-- **Cost Allocation Service** for distributing acquisition costs
-- **P&L Service** for realized and unrealized profit calculations
-- **Price Update Service** with multi-provider precedence
-
-## Recent Updates
-
-- M3 implementation completed with sell allocations feature
-- Reconciler moved from web worker to main thread to fix stability issues
-- Database schema updated to version 10 with sell_allocations table
-- Feature flags removed to enable M3 functionality by default
-
-## Next Milestones
-
-### M4 - Manual Add & Correction
-- UI for manual lot creation
-- Override functionality for card resolution
-- Lock mechanism to preserve manual corrections
-
-### M5 - ManaBox Group Pricing
-- Purchase groups functionality
-- UI for grouping scans into purchase groups
-- Per-group pricing and analytics
-
-## Known Issues
-
-- **Critical Reconciler Issue**: The reconciliation service is experiencing DataError and NotFoundError issues when attempting to link scans to lots and sales to lots. Based on console logs, the reconciler is failing with messages such as:
-  - "DataError: Data provided to an operation does not meet requirements"
-  - "NotFoundError: The operation failed because the requested database object could not be found"
-- Ongoing work on Manabox import tracking card sales per box
-
-## Development Status
-
-The project is stable with M3 features largely implemented but requires urgent fixes for the reconciliation service. Current work must focus on resolving the critical reconciler errors before proceeding with M4 features.
+1. Phase 1: define and implement one accounting kernel for remaining quantity,
+   acquisition cost, net sale proceeds, and realized/unrealized P&L.
+2. Phase 2: make Cardmarket raw/staging data project idempotently into the
+   canonical model and remove duplicate import paths.
+3. Phase 3: add end-to-end golden-path, migration/baseline, re-import,
+   multi-lot sale, backup, and performance coverage.
+4. Only then continue manual correction UI, deck coverage, box analytics, and
+   deployment automation.
