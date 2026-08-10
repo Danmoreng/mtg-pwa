@@ -18,7 +18,7 @@ A Progressive Web App (PWA) for tracking the value of your Magic: The Gathering 
 
 ## Local data baseline
 
-The app uses the fresh `MtgTrackerDbV2` IndexedDB database with schema version 1.
+The app uses the fresh `MtgTrackerDbAccounting` IndexedDB database with schema version 1.
 This baseline intentionally does not migrate or delete databases created by earlier prototypes.
 All current tables are included in the versioned JSON backup format.
 
@@ -42,7 +42,7 @@ All current tables are included in the versioned JSON backup format.
 ## Documentation
 
 - [Architecture](ai_docs/ARCHITECTURE.md) - Technical architecture and data model
-- [Accounting Target Model](ai_docs/ACCOUNTING_TARGET_MODEL.md) - Canonical contract for the planned inventory and accounting rebuild
+- [Accounting Target Model](ai_docs/ACCOUNTING_TARGET_MODEL.md) - Canonical contract and implementation status for the inventory/accounting rebuild
 - [Accounting Architecture Diagram](ai_docs/MTG%20Accounting%20Architecture.tldraw) - Tldraw views of the current model, target ERDs, migration plan, and correction UI
 - [Importers](ai_docs/IMPORTERS.md) - Specifications for Cardmarket, ManaBox, and Moxfield importers
 - [Roadmap](ai_docs/ROADMAP.md) - Project milestones and future plans

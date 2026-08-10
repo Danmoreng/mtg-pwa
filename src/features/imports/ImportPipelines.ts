@@ -7,6 +7,7 @@ import type { Scan } from '../../data/db';
 import { scanRepository } from '../../data/repos';
 import { ScanProcessingService } from '../scans/ScanProcessingService';
 import { kickReconciler } from '../../workers/WorkerManager';
+import { AccountingProjectionCoordinator } from '../accounting/AccountingProjectionCoordinator';
 
 // 5.1 Manabox scans with box cost
 // Input: CSV rows + total cost (price/fees/shipping) + date.
@@ -121,6 +122,8 @@ export async function importManaboxScansWithBoxCost(
     }
     
     await ScanProcessingService.processScans(onProgress);
+
+    await new AccountingProjectionCoordinator().projectAfterManaBoxImport(acquisitionId);
 
     // Trigger reconciliation
     await kickReconciler('after manabox import');
